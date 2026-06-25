@@ -1,0 +1,48 @@
+SAFINICRAFT.DE – PUBLIC ONLINE VERSION
+
+Diese Version ist dafür vorbereitet, dass jeder über das Internet spielen kann.
+
+ENTHALTEN:
+- index.html  = Website / Spiel
+- server.js   = Online-Server mit Accounts, Freunde, Serverräume, Chat, Live-Spieler
+- package.json = Startdatei für Hosting
+- render.yaml = automatische Render-Konfiguration
+- railway.json = Railway-Konfiguration
+
+WICHTIG:
+Eine einzelne HTML-Datei kann nicht dafür sorgen, dass jeder von anderen Geräten online zusammenspielt.
+Dafür braucht man einen echten Server. Diese Version enthält den Server.
+
+LOKAL TESTEN:
+1. Node.js installieren
+2. Terminal in diesem Ordner öffnen
+3. npm install
+4. npm start
+5. Browser öffnen: http://localhost:3000
+
+IM INTERNET VERÖFFENTLICHEN, DAMIT JEDER SPIELEN KANN:
+
+OPTION A – Render:
+1. Kostenloses Render-Konto erstellen
+2. Neues Web Service Projekt erstellen
+3. Diese Dateien hochladen / GitHub Repository verbinden
+4. Build Command: npm install
+5. Start Command: npm start
+6. Danach bekommst du einen öffentlichen Link, z.B. https://safinicraft-de.onrender.com
+7. Diesen Link kann jeder öffnen und mitspielen.
+
+OPTION B – Railway:
+1. Railway Konto erstellen
+2. Neues Projekt mit diesen Dateien erstellen
+3. Start Command: npm start
+4. Railway gibt dir einen öffentlichen Link.
+
+DOMAIN SAFINICRAFT.DE VERBINDEN:
+Wenn du wirklich safinicraft.de benutzen willst:
+1. Beim Hosting-Anbieter die Domain safinicraft.de hinzufügen
+2. Beim Domain-Anbieter DNS auf den Hosting-Link setzen
+3. Danach kann jeder über https://safinicraft.de spielen.
+
+HINWEIS:
+Diese Demo speichert Daten in server_data.json.
+Für ein richtig großes Spiel mit vielen Spielern wäre später eine echte Datenbank besser.

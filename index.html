@@ -1,0 +1,2564 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Safinicraft.de</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0e0e0e;color:white;font-family:Arial,sans-serif;text-align:center}
+  h1{margin:10px 0 4px;color:#ffd84d}
+  .topbar{position:sticky;top:0;z-index:50;background:#1d1d1d;border-bottom:3px solid #333;padding:9px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+  button,select,input[type=color]{border:none;border-radius:8px;background:#3a3a3a;color:white;font-weight:bold;cursor:pointer;padding:9px 12px;font-size:14px}
+  button:hover,select:hover{background:#565656}
+  button.active{background:#00c853;color:#000}
+  button.selected{outline:3px solid #ffd84d;box-shadow:0 0 10px #ffd84d}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  .page{display:none;padding:10px}
+  .page.active{display:block}
+  .box{background:#202020;border:2px solid #3b3b3b;border-radius:12px;padding:10px;margin:8px auto;max-width:1160px;line-height:1.45}
+  .inventory{display:flex;justify-content:center;flex-wrap:wrap;gap:7px;margin:8px auto;max-width:1160px}
+  .itemBtn{min-width:116px;border:2px solid #555;background:#222;font-size:13px;padding:8px 9px}
+  .dot{display:inline-block;width:13px;height:13px;border-radius:3px;margin-right:5px;vertical-align:-2px;border:1px solid rgba(255,255,255,.45)}
+  canvas{image-rendering:pixelated}
+  #game{width:min(98vw,960px);height:auto;background:#87ceeb;border:5px solid #303030;cursor:crosshair;display:block;margin:10px auto;touch-action:none}
+  #skinCanvas{background:#222;border:4px solid #555;cursor:crosshair;width:320px;height:640px;max-width:95vw}
+  .message{color:#ffd84d;font-weight:bold;min-height:24px;margin:8px}
+  .book{width:min(95vw,760px);background:#d9c18a;color:#1f1607;border:5px solid #6b4e1e;border-radius:16px;padding:14px;box-shadow:inset 0 0 0 3px #f0dda8;text-align:left;margin:auto}
+  .book h3{text-align:center;margin-top:0;color:#3b2606}
+  .recipeLine{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px;border-radius:9px;margin-bottom:7px;border:2px solid rgba(0,0,0,.25);line-height:1.3}
+  .green{background:#9be67d}
+  .red{background:#f27f7f}
+  .recipeLine small{color:#2b210e;font-weight:bold}
+  .wrap{display:flex;justify-content:center;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-top:12px}
+  .small{font-size:13px;color:#bdbdbd}
+  .title{color:#ffd84d;margin:12px 0 6px}
+  .skinTools{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:8px auto}
+
+  .secretInput{
+    padding:10px;
+    border-radius:8px;
+    border:2px solid #555;
+    background:#111;
+    color:#fff;
+    font-size:16px;
+    font-weight:bold;
+    text-align:center;
+  }
+  .mobileControls{
+    display:none;
+    position:sticky;
+    bottom:0;
+    z-index:60;
+    background:rgba(15,15,15,.92);
+    border-top:3px solid #333;
+    padding:8px;
+    gap:8px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .mobileControls button{
+    min-width:70px;
+    min-height:48px;
+    font-size:16px;
+    border:2px solid #555;
+  }
+  .skinUploadBox{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin:8px auto;
+  }
+  .skinUploadBox input{
+    background:#222;
+    border:2px solid #555;
+    border-radius:8px;
+    padding:8px;
+    color:white;
+  }
+  @media (max-width: 800px){
+    body{font-size:14px}
+    .topbar button{font-size:12px;padding:8px}
+    .mobileControls{display:flex}
+    #game{width:100vw;border-left:none;border-right:none}
+    .itemBtn{min-width:100px;font-size:12px}
+  }
+
+
+  body.loggedOut .topbar,
+  body.loggedOut #worldPage,
+  body.loggedOut #craftPage,
+  body.loggedOut #skinPage,
+  body.loggedOut #creativePage,
+  body.loggedOut #friendsPage{
+    display:none !important;
+  }
+  body.loggedIn #loginPage{
+    display:none !important;
+  }
+  #loginPage{
+    display:block;
+    padding:18px;
+  }
+  .loginCard{
+    max-width:460px;
+    margin:30px auto;
+    background:#202020;
+    border:3px solid #444;
+    border-radius:16px;
+    padding:18px;
+  }
+  .loginCard input{
+    width:90%;
+    padding:12px;
+    margin:7px auto;
+    border-radius:9px;
+    border:2px solid #555;
+    background:#111;
+    color:#fff;
+    font-size:16px;
+    display:block;
+  }
+  .friendGrid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:12px;
+    max-width:1100px;
+    margin:12px auto;
+  }
+  .friendPanel{
+    background:#202020;
+    border:2px solid #444;
+    border-radius:12px;
+    padding:12px;
+    text-align:left;
+  }
+  .friendPanel input{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:2px solid #555;
+    background:#111;
+    color:#fff;
+    margin:6px 0;
+  }
+  .chatBox{
+    height:260px;
+    overflow:auto;
+    background:#111;
+    border:2px solid #444;
+    border-radius:10px;
+    padding:10px;
+    margin:8px 0;
+  }
+  .chatMsg{
+    background:#2b2b2b;
+    border-radius:8px;
+    padding:7px;
+    margin:6px 0;
+  }
+  .chatMsg.mine{
+    background:#245b37;
+  }
+  .chatMsg.system{
+    background:#3b2f11;
+    border:1px solid #ffd84d;
+  }
+  .onlineTag{
+    color:#70ff70;
+    font-weight:bold;
+  }
+
+
+  .playerCard{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    background:#111;
+    border:2px solid #444;
+    border-radius:10px;
+    padding:8px;
+    margin:7px 0;
+  }
+  .miniSkin{
+    width:40px;
+    height:80px;
+    border:2px solid #555;
+    image-rendering:pixelated;
+    background:#222;
+    flex:0 0 auto;
+  }
+  .playerCardInfo{
+    flex:1;
+  }
+  .badge{
+    display:inline-block;
+    padding:2px 7px;
+    border-radius:20px;
+    background:#333;
+    color:#ddd;
+    font-size:12px;
+    margin-top:3px;
+  }
+  .badge.friend{background:#185c2e;color:#9dffb3}
+  .badge.pending{background:#665200;color:#ffe680}
+  .badge.self{background:#294e8f;color:#b9d4ff}
+  .roomPlayers{
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+    margin:8px 0;
+  }
+
+
+  .gameWrap{
+    position:relative;
+    width:min(98vw,960px);
+    margin:10px auto;
+  }
+  .gameWrap #game{width:100%;margin:0 auto;}
+  .gameChatOverlay{
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:270px;
+    max-width:42vw;
+    background:rgba(0,0,0,.72);
+    border:2px solid #555;
+    border-radius:12px;
+    padding:8px;
+    text-align:left;
+    z-index:30;
+    backdrop-filter: blur(3px);
+  }
+  .gameChatTitle{font-weight:bold;color:#ffd84d;margin-bottom:5px;font-size:13px;}
+  #gameChatBox{
+    height:145px;
+    overflow:auto;
+    background:rgba(20,20,20,.82);
+    border:1px solid #444;
+    border-radius:8px;
+    padding:6px;
+    font-size:12px;
+  }
+  .gameChatOverlay input{
+    width:100%;
+    margin-top:6px;
+    padding:7px;
+    border-radius:8px;
+    border:1px solid #555;
+    background:#111;
+    color:#fff;
+  }
+  .serverCard{
+    background:#111;
+    border:2px solid #444;
+    border-radius:10px;
+    padding:9px;
+    margin:8px 0;
+  }
+  .serverCard.activeServer{border-color:#00c853;box-shadow:0 0 8px rgba(0,200,83,.45)}
+  @media (max-width:800px){
+    .gameChatOverlay{position:static;width:100%;max-width:100%;margin-top:8px;}
+    #gameChatBox{height:110px;}
+  }
+
+</style>
+</head>
+<body class="loggedOut">
+
+<h1>Safinicraft.de</h1>
+<p class="small" style="text-align:center">Für echtes Spielen auf anderen Geräten muss diese Website über <b>server.js</b> laufen, nicht als einzelne Datei.</p>
+
+<div id="loginPage">
+  <div class="loginCard">
+    <h2>Spieler anmelden</h2>
+    <p class="small">
+      Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
+      Demo-Speicherung läuft im Browser.
+    </p>
+
+    <input id="loginName" placeholder="Spielername">
+    <input id="loginPass" placeholder="Passwort" type="password">
+
+    <button id="btnCreateAccount">Neuen Spieler erstellen</button>
+    <button id="btnLoginAccount">Einloggen</button>
+
+    <div id="onlineStatus" class="message">Online-Server wird geprüft...</div>
+    <div id="loginMsg" class="message"></div>
+  </div>
+</div>
+
+
+<div class="topbar">
+  <button id="tabWorld" class="active">Spielwelt</button>
+  <button id="tabCraft">Crafting / Mods</button>
+  <button id="tabSkin">Skin malen</button>
+  <button id="tabCreative">Kreativ Mode</button>
+  <button id="tabFriends">Freunde / Online</button>
+  <button id="btnMode">Modus: Bauen</button>
+  <button id="btnSpawnMob">Mob spawnen</button>
+  <button id="btnSave">Speichern</button>
+  <button id="btnLoad">Laden</button>
+  <button id="btnReset">Neue Welt</button>
+  <button id="btnLogout">Logout</button>
+</div>
+
+<div id="worldPage" class="page active">
+  <div class="box">
+    <b>Steuerung:</b> A/D = laufen, W/Leertaste = springen, J = Jetpack benutzen, E = Auto ein-/aussteigen. 
+    Mit Jetpack ganz nach oben fliegen = nächster Planet. Mit Planetenportal kannst du den Planet auswählen. Es gibt jetzt auch Hunger. Pixel-Pistole ist nur eine Fantasy-Spielwaffe.
+    <br>
+    <span class="small">Standard-Skin ist als Pixel-Version vom Foto: dunkles Shirt, beige Hose, schwarze Schuhe, dunkle Haare.</span>
+  </div>
+
+  <div class="box">
+    <b>Planet:</b> <span id="planetName">Erde</span> |
+    <b>Leben:</b> <span id="hpText">10/10</span> |
+    <b>Hunger:</b> <span id="hungerText">10/10</span> |
+    <b>Jetpack-Fuel:</b> <span id="fuelText">0</span> |
+    <b>Im Auto:</b> <span id="carText">Nein</span> |
+    <b>In der Hand:</b> <span id="heldText">Hand</span>
+  </div>
+
+  <div class="box">
+    <b>Portal-Ziel wählen:</b>
+    <select id="portalTarget">
+      <option value="earth">Erde</option>
+      <option value="moon">Mond</option>
+      <option value="mars">Mars</option>
+      <option value="ice">Eisplanet</option>
+    </select>
+    <span class="small">Wenn du ein Planetenportal anklickst, reist du zu diesem Planeten.</span>
+  </div>
+
+  <div class="box">
+    <b>Inventar:</b>
+    <div id="gameInventory" class="inventory"></div>
+  </div>
+
+  <div class="gameWrap">
+    <canvas id="game" width="960" height="640"></canvas>
+    <div id="gameChatOverlay" class="gameChatOverlay">
+      <div class="gameChatTitle">Online Chat oben rechts</div>
+      <div id="gameChatBox"></div>
+      <input id="gameChatInput" placeholder="Nachricht... Enter = senden">
+      <button id="btnGameChatSend">Senden</button>
+    </div>
+  </div>
+  <div id="msg" class="message"></div>
+  <div class="mobileControls">
+    <button id="mobileLeft">◀</button>
+    <button id="mobileRight">▶</button>
+    <button id="mobileJump">⬆ Springen</button>
+    <button id="mobileDown">⬇ Runter</button>
+    <button id="mobileJet">🚀 Jetpack</button>
+    <button id="mobileUse">E / Auto</button>
+  </div>
+</div>
+
+<div id="craftPage" class="page">
+  <div class="box">
+    <b>Rezeptbuch:</b> Grün = du kannst es craften. Rot = Material fehlt. 
+    Hier sind auch Mods wie Auto, Jetpack, Küche, Kühlschrank und Pixel-Pistole.
+  </div>
+
+  <div class="box">
+    <b>Inventar mit Mengen:</b>
+    <div id="craftInventory" class="inventory"></div>
+  </div>
+
+  <div class="book">
+    <h3>📖 Rezeptbuch / Mod-Buch</h3>
+    <div id="recipeBook"></div>
+  </div>
+</div>
+
+<div id="skinPage" class="page">
+  <div class="box">
+    <b>Skin selber malen:</b> Wähle eine Farbe und male direkt auf den Skin. 
+    Dann auf <b>Skin benutzen</b> klicken.
+  </div>
+
+  <div class="skinTools">
+    <select id="skinPreset">
+      <option value="photo">Foto-Standard</option>
+      <option value="ninja">Ninja</option>
+      <option value="knight">Ritter</option>
+      <option value="astronaut">Astronaut</option>
+      <option value="robot">Roboter</option>
+      <option value="zombie">Zombie</option>
+    </select>
+    <button id="btnPreset">Preset laden</button>
+    Farbe <input type="color" id="paintColor" value="#2f80ed">
+    <button id="btnEraseSkin">Radierer</button>
+    <button id="btnUsePaint">Pinsel</button>
+    <button id="btnApplySkin">Skin benutzen</button>
+    <button id="btnClearSkin">Skin leeren</button>
+  </div>
+
+  <div class="skinUploadBox">
+    <input type="file" id="skinUpload" accept="image/*">
+    <button id="btnImageToSkin">Bild automatisch als Skin benutzen</button>
+  </div>
+
+  <canvas id="skinCanvas" width="320" height="640"></canvas>
+  <div id="skinMsg" class="message"></div>
+</div>
+
+<div id="creativePage" class="page">
+  <div class="box">
+    <h2 class="title">Kreativ Mode freischalten</h2>
+    <p>
+      Der Kreativ Mode ist versteckt. Du brauchst den geheimen Code.
+      Der Code liegt auf dem Mond als lila ?-Block. Du kannst ihn jetzt mit Linksklick oder Rechtsklick öffnen.
+    </p>
+
+    <input id="creativeCodeInput" class="secretInput" placeholder="Geheimcode eingeben">
+    <button id="btnUnlockCreative">Code prüfen</button>
+    <button id="btnCreativeOff">Kreativ Mode AUS</button>
+  </div>
+
+  <div class="box">
+    <b>Status:</b>
+    <div id="creativeStatus" class="message">Kreativ Mode ist gesperrt.</div>
+    <p class="small">
+      Wenn der richtige Code eingegeben wird, wird Kreativ Mode aktiviert.
+      Dann ist im Crafting-Buch alles grün, du bekommst keinen Schaden,
+      kannst fliegen und Blöcke werden nicht verbraucht.
+    </p>
+  </div>
+</div>
+
+
+<div id="friendsPage" class="page">
+  <div class="box">
+    <h2 class="title">Freunde & Server</h2>
+    <p>
+      Erstelle einen Server, lade mehrere Freunde ein und spiele zusammen.
+      Spieler im gleichen Server und auf dem gleichen Planeten werden direkt im Spiel angezeigt.
+    </p>
+    <b>Angemeldet als:</b> <span id="currentUserLabel">---</span><br>
+    <b>Aktiver Server:</b> <span id="activeServerLabel">Kein Server</span>
+  </div>
+
+  <div class="friendGrid">
+    <div class="friendPanel">
+      <h3>Server erstellen</h3>
+      <input id="serverNameInput" placeholder="Servername, z.B. Safa Welt">
+      <input id="serverMaxInput" type="number" min="2" max="20" value="8" placeholder="Max. Spieler">
+      <button id="btnCreateServer">Server erstellen</button>
+      <div id="serverMsg" class="message"></div>
+    </div>
+
+    <div class="friendPanel">
+      <h3>Serverliste</h3>
+      <div id="serverList"></div>
+    </div>
+
+    <div class="friendPanel">
+      <h3>Alle Spieler</h3>
+      <p class="small">Hier sieht man alle erstellten Spieler mit Skin.</p>
+      <div id="allPlayersList"></div>
+    </div>
+
+    <div class="friendPanel">
+      <h3>Spieler suchen</h3>
+      <input id="friendSearchInput" placeholder="Spielername suchen, z.B. 2">
+      <button id="btnSearchPlayer">Freundschaftsanfrage senden</button>
+      <div id="searchResult" class="message"></div>
+      <div style="margin-top:10px;">
+        <b>Entfreundete / nicht befreundete Spieler</b>
+        <p class="small">Diese Spieler sind nicht in deiner Freundesliste. Von hier kannst du wieder eine Anfrage schicken.</p>
+        <div id="notFriendList"></div>
+      </div>
+    </div>
+
+    <div class="friendPanel">
+      <h3>Anfragen & Server-Einladungen</h3>
+      <div id="inviteList"></div>
+    </div>
+
+    <div class="friendPanel">
+      <h3>Meine Freunde</h3>
+      <p class="small">Hier stehen nur angenommene Freunde. Von hier kannst du sie einladen oder entfreunden.</p>
+      <div id="friendList"></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>Spieler im Server</h3>
+    <div id="roomPlayers" class="roomPlayers"></div>
+  </div>
+
+  <div class="box">
+    <h3>Online Chat</h3>
+    <p>Der gleiche Chat erscheint im Spiel oben rechts.</p>
+    <div id="chatBox" class="chatBox"></div>
+    <input id="chatInput" class="secretInput" placeholder="Nachricht schreiben">
+    <button id="btnSendChat">Senden</button>
+  </div>
+
+  <div class="box">
+    <h3>Voice Chat</h3>
+    <p class="small">
+      Mikrofon kann aktiviert werden. Für echte Sprachübertragung zwischen Geräten braucht Safinicraft.de später WebRTC/Server.
+    </p>
+    <button id="btnVoiceStart">Mikrofon erlauben</button>
+    <button id="btnVoiceStop">Voice Chat stoppen</button>
+    <div id="voiceStatus" class="message">Voice Chat aus.</div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  const game = document.getElementById("game");
+  const ctx = game.getContext("2d");
+  const skinCanvas = document.getElementById("skinCanvas");
+  const sctx = skinCanvas.getContext("2d");
+
+  const cell = 20;
+  const worldCols = 150;
+  const worldRows = 230;
+  const worldW = worldCols * cell;
+  const worldH = worldRows * cell;
+
+  let camX = 0, camY = 0, tick = 0;
+  let currentUser = null;
+  let selectedChatFriend = null;
+  let voiceStream = null;
+  let currentServerId = null;
+
+  // Echter Online-Modus:
+  // Wenn diese Datei über server.js läuft, werden Accounts, Freunde, Items, Server und Chat
+  // auf dem Server gespeichert und können von anderen Geräten geladen werden.
+  let onlineAccountsCache = null;
+  let onlineServersCache = null;
+  let onlineMessagesCache = null;
+  let onlineSocket = null;
+  let onlineMode = false;
+  let currentPlanet = "earth";
+  let buildMode = true;
+  let creativeMode = false;
+  let selected = "hand";
+  let paintMode = "paint";
+
+  const planets = {
+    earth:{name:"Erde",sky:"#87ceeb",ground:"#45ad48",dirt:"#8b5a2b",stone:"#808080",gravity:.45,mobRate:1000},
+    moon:{name:"Mond",sky:"#11172b",ground:"#b7b7b7",dirt:"#777777",stone:"#5a5a5a",gravity:.22,mobRate:1300},
+    mars:{name:"Mars",sky:"#33160d",ground:"#b45b36",dirt:"#7a3522",stone:"#6b5148",gravity:.34,mobRate:1100},
+    ice:{name:"Eisplanet",sky:"#b9efff",ground:"#a8f1ff",dirt:"#d7faff",stone:"#9db7c5",gravity:.38,mobRate:1200}
+  };
+  const planetOrder = ["earth","moon","mars","ice"];
+
+  const defs = {
+    hand:{name:"Hand",color:"#fff",place:false,tool:"hand",tier:0},
+    air:{name:"Luft",color:"#87ceeb",place:false},
+    grass:{name:"Gras",color:"#45ad48",place:true},
+    dirt:{name:"Erde",color:"#8b5a2b",place:true},
+    sand:{name:"Sand",color:"#e5c76b",place:true},
+    stone:{name:"Stein",color:"#808080",place:true},
+    cobblestone:{name:"Pflasterstein",color:"#6f6f6f",place:true},
+    wood:{name:"Holz",color:"#8b4a20",place:true},
+    planks:{name:"Holzbretter",color:"#b77739",place:true},
+    leaves:{name:"Blätter",color:"#2e8b57",place:true},
+    water:{name:"Wasser",color:"#2388ff",place:true},
+    lava:{name:"Lava",color:"#ff5b16",place:true},
+    fire:{name:"Feuer",color:"#ff2b00",place:true},
+    glass:{name:"Glas",color:"#bff6ff",place:true},
+    coal_ore:{name:"Kohleerz",color:"#4b4b4b",place:true},
+    iron_ore:{name:"Eisenerz",color:"#b48768",place:true},
+    gold_ore:{name:"Golderz",color:"#d9b544",place:true},
+    diamond_ore:{name:"Diamanterz",color:"#5de9ff",place:true},
+    crafting_table:{name:"Werkbank",color:"#a66a2d",place:true},
+    furnace:{name:"Ofen",color:"#4f4f4f",place:true},
+    torch:{name:"Fackel",color:"#ffb347",place:true},
+    kitchen:{name:"Küchenblock",color:"#d6d6d6",place:true},
+    fridge:{name:"Kühlschrank",color:"#e9f6ff",place:true},
+    microwave:{name:"Mikrowelle",color:"#808080",place:true},
+    coffee_machine:{name:"Kaffeemaschine",color:"#3d2b1f",place:true},
+    secret_code:{name:"Geheimer Code-Block",color:"#7c3cff",place:false},
+    obsidian:{name:"Obsidian",color:"#241638",place:true},
+    planet_portal:{name:"Planetenportal",color:"#8e24aa",place:true},
+    bedrock:{name:"Bedrock",color:"#111",place:false},
+    wheat:{name:"Weizen",color:"#d7b44a",place:true},
+
+    stick:{name:"Stock",color:"#c58b45",place:false},
+    coal:{name:"Kohle",color:"#151515",place:false},
+    iron_ingot:{name:"Eisenbarren",color:"#d6d6d6",place:false},
+    gold_ingot:{name:"Goldbarren",color:"#ffd84d",place:false},
+    diamond:{name:"Diamant",color:"#62f3ff",place:false},
+    apple:{name:"Apfel",color:"#e53935",place:false},
+    bread:{name:"Brot",color:"#c98f43",place:false},
+    raw_meat:{name:"Rohes Fleisch",color:"#c75b5b",place:false},
+    cooked_meat:{name:"Gebratenes Fleisch",color:"#8b3f20",place:false},
+    fuel_cell:{name:"Fuel-Cell",color:"#67ff6a",place:false},
+    engine:{name:"Motor",color:"#777",place:false},
+    wheel:{name:"Rad",color:"#111",place:false},
+    battery:{name:"Batterie",color:"#66ff99",place:false},
+
+    stone_pickaxe:{name:"Steinspitzhacke",color:"#cfcfcf",place:false,tool:"pickaxe",tier:1},
+    iron_pickaxe:{name:"Eisenspitzhacke",color:"#e0e0e0",place:false,tool:"pickaxe",tier:2},
+    diamond_pickaxe:{name:"Diamantspitzhacke",color:"#62f3ff",place:false,tool:"pickaxe",tier:3},
+    stone_shovel:{name:"Steinschaufel",color:"#cfcfcf",place:false,tool:"shovel",tier:1},
+    stone_axe:{name:"Steinaxt",color:"#cfcfcf",place:false,tool:"axe",tier:1},
+    stone_sword:{name:"Steinschwert",color:"#cfcfcf",place:false,tool:"sword",tier:1},
+    pixel_pistol:{name:"Pixel-Pistole",color:"#444",place:false,tool:"pistol",tier:1},
+    jetpack:{name:"Jetpack",color:"#5e6bff",place:false,tool:"jetpack",tier:1},
+    car_item:{name:"Auto",color:"#e53935",place:false,tool:"car",tier:1}
+  };
+
+  const inventoryOrder = [
+    "grass","dirt","sand","stone","cobblestone","wood","planks","leaves","water","lava","fire","glass",
+    "coal_ore","iron_ore","gold_ore","diamond_ore","crafting_table","furnace","torch","kitchen","fridge","microwave","coffee_machine",
+    "obsidian","planet_portal","wheat","stick","coal","iron_ingot","gold_ingot","diamond","apple","bread","raw_meat","cooked_meat",
+    "fuel_cell","engine","wheel","battery","stone_pickaxe","iron_pickaxe","diamond_pickaxe","stone_shovel","stone_axe","stone_sword","pixel_pistol","jetpack","car_item"
+  ];
+
+  let inv = {};
+  inventoryOrder.forEach(id=>inv[id]=0);
+  Object.assign(inv,{dirt:20,grass:5,sand:15,cobblestone:14,wood:8,water:4,fire:4,lava:2,wheat:3,coal:3,iron_ingot:4});
+
+  let worlds = {};
+  let world = [];
+  let fireLife = [];
+  let mobs = [];
+  let vehicles = [];
+  let bullets = [];
+
+  let player = {
+    x:10*cell,y:20*cell,w:16,h:34,vx:0,vy:0,
+    hp:10,maxHp:10,hurt:0,onGround:false,hunger:10,maxHunger:10,hungerTimer:0,
+    spawnX:10*cell,spawnY:20*cell,
+    fuel:0,inCar:null,facing:1
+  };
+
+  let keys = {left:false,right:false,jump:false,jet:false,down:false};
+
+  let skinPixels = makeDefaultSkin("photo");
+  let activeSkin = JSON.parse(JSON.stringify(skinPixels));
+
+  function msg(t){document.getElementById("msg").textContent=t;document.getElementById("skinMsg").textContent=t}
+  function inBounds(x,y){return x>=0&&x<worldCols&&y>=0&&y<worldRows}
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+  function tile(px,py){return{x:Math.floor(px/cell),y:Math.floor(py/cell)}}
+  function setBlock(x,y,b){if(!inBounds(x,y))return;world[y][x]=b;fireLife[y][x]=b==="fire"?160:0}
+  function passable(b){return b==="air"||b==="water"||b==="fire"||b==="torch"||b==="wheat"}
+  function solidTile(tx,ty){if(!inBounds(tx,ty))return true;return !passable(world[ty][tx])}
+  function rectCollides(x,y,w,h){
+    const l=Math.floor(x/cell),r=Math.floor((x+w-1)/cell),t=Math.floor(y/cell),b=Math.floor((y+h-1)/cell);
+    for(let yy=t;yy<=b;yy++){for(let xx=l;xx<=r;xx++){if(solidTile(xx,yy))return true}}
+    return false;
+  }
+
+  function createWorld(planet){
+    const p = planets[planet];
+    world=[];fireLife=[];mobs=[];vehicles=[];bullets=[];
+    for(let y=0;y<worldRows;y++){
+      world[y]=[];fireLife[y]=[];
+      for(let x=0;x<worldCols;x++){world[y][x]="air";fireLife[y][x]=0}
+    }
+    for(let x=0;x<worldCols;x++){
+      let ground=33+Math.floor(Math.sin(x*.14)*3)+Math.floor(Math.sin(x*.045)*4);
+      for(let y=ground;y<worldRows;y++){
+        if(y>=worldRows-2)setBlock(x,y,"bedrock");
+        else if(y===ground)setBlock(x,y,"grass");
+        else if(y<ground+5)setBlock(x,y,"dirt");
+        else setBlock(x,y,"stone");
+      }
+    }
+    createCaves();
+    if(planet==="earth"){
+      for(let x=4;x<16;x++)for(let y=34;y<40;y++)setBlock(x,y,"sand");
+      for(let x=56;x<68;x++)for(let y=36;y<42;y++)setBlock(x,y,"water");
+      makeTree(18);makeTree(36);makeTree(52);makeTree(72);makeTree(94);makeTree(118);
+    }
+    if(planet==="moon"){
+      for(let x=10;x<50;x+=13)crater(x,groundAt(x),5);
+      const codeX = 92;
+      const codeY = groundAt(codeX) - 1;
+      setBlock(codeX, codeY, "secret_code");
+    }
+    if(planet==="mars"){
+      for(let x=0;x<worldCols;x+=3){let g=groundAt(x);setBlock(x,g,"sand")}
+      for(let x=25;x<33;x++)for(let y=146;y<151;y++)setBlock(x,y,"lava");
+    }
+    if(planet==="ice"){
+      for(let x=0;x<worldCols;x+=2){let g=groundAt(x);setBlock(x,g,"glass")}
+      for(let x=40;x<55;x++)for(let y=38;y<44;y++)setBlock(x,y,"water");
+    }
+    makeOre("coal_ore",120,42,120);
+    makeOre("iron_ore",80,55,145);
+    makeOre("gold_ore",45,85,160);
+    makeOre("diamond_ore",22,125,175);
+    spawnMob("cow",12);spawnMob("pig",22);spawnMob("zombie",58);spawnMob("creeper",78);spawnMob("slime",92);spawnMob("skeleton",112);
+    worlds[planet]={world,fireLife,mobs,vehicles};
+  }
+
+  function createCaves(){
+    for(let i=0;i<45;i++){
+      const cx=Math.floor(Math.random()*worldCols),cy=58+Math.floor(Math.random()*105),r=3+Math.floor(Math.random()*5);
+      for(let y=cy-r;y<=cy+r;y++)for(let x=cx-r;x<=cx+r;x++){
+        if(!inBounds(x,y))continue;
+        const d=Math.hypot(x-cx,y-cy);
+        if(d<=r&&world[y][x]!=="bedrock")setBlock(x,y,"air");
+      }
+    }
+  }
+  function crater(cx,cy,r){for(let y=cy-r;y<=cy+r;y++)for(let x=cx-r;x<=cx+r;x++){if(inBounds(x,y)&&Math.hypot(x-cx,y-cy)<r)setBlock(x,y,"air")}}
+  function makeOre(type,amount,minY,maxY){for(let i=0;i<amount;i++){let x=Math.floor(Math.random()*worldCols),y=minY+Math.floor(Math.random()*(maxY-minY+1));if(inBounds(x,y)&&world[y][x]==="stone")setBlock(x,y,type)}}
+  function groundAt(x){x=clamp(Math.floor(x),0,worldCols-1);for(let y=0;y<worldRows;y++){let b=world[y][x];if(!passable(b)&&b!=="leaves")return y}return worldRows-1}
+  function makeTree(x){const g=groundAt(x);for(let y=g-1;y>=g-5;y--)setBlock(x,y,"wood");for(let y=g-9;y<=g-5;y++)for(let dx=-3;dx<=3;dx++){let nx=x+dx;if(inBounds(nx,y)&&Math.abs(dx)+Math.abs(y-(g-7))<6&&world[y][nx]==="air")setBlock(nx,y,"leaves")}}
+
+  const mobDefs = {
+    cow:{name:"Kuh",hp:4,hostile:false,drop:"raw_meat"},
+    pig:{name:"Schwein",hp:4,hostile:false,drop:"raw_meat"},
+    zombie:{name:"Zombie",hp:6,hostile:true,drop:"apple"},
+    skeleton:{name:"Skelett",hp:5,hostile:true,drop:"coal"},
+    creeper:{name:"Creeper",hp:5,hostile:true,drop:"coal"},
+    slime:{name:"Schleim",hp:4,hostile:true,drop:"stick"}
+  };
+  function spawnMob(type,tileX){
+    let g=groundAt(tileX),d=mobDefs[type];
+    mobs.push({type,x:tileX*cell,y:(g-2)*cell,w:type==="slime"?34:36,h:type==="slime"?28:36,vx:Math.random()<.5?-.55:.55,vy:0,hp:d.hp,maxHp:d.hp,hurt:0});
+  }
+  function randomMob(){let a=Object.keys(mobDefs);return a[Math.floor(Math.random()*a.length)]}
+
+  function switchPlanet(next){
+    worlds[currentPlanet]={world,fireLife,mobs,vehicles};
+    currentPlanet=next;
+    if(!worlds[currentPlanet])createWorld(currentPlanet);
+    world=worlds[currentPlanet].world;
+    fireLife=worlds[currentPlanet].fireLife;
+    mobs=worlds[currentPlanet].mobs;
+    vehicles=worlds[currentPlanet].vehicles;
+    bullets=[];
+    let x=Math.floor(player.x/cell);
+    let g=groundAt(clamp(x,2,worldCols-2));
+    player.x=clamp(x,2,worldCols-2)*cell+2;
+    player.y=(g-2)*cell;
+    player.vx=0;player.vy=0;player.inCar=null;
+    player.spawnX=player.x;player.spawnY=player.y;
+    msg("Du bist auf dem Planet: "+planets[currentPlanet].name);
+    renderAll();
+  }
+
+  function updateCamera(){
+    camX=clamp(player.x+player.w/2-game.width/2,0,worldW-game.width);
+    camY=clamp(player.y+player.h/2-game.height/2,0,worldH-game.height);
+  }
+
+  function draw(){
+    updateCamera();
+    const p=planets[currentPlanet];
+    ctx.fillStyle=p.sky;ctx.fillRect(0,0,game.width,game.height);
+    ctx.fillStyle=currentPlanet==="moon"?"#f8f3aa":"#ffe066";
+    ctx.beginPath();ctx.arc(currentPlanet==="mars"?800:140,75,28,0,Math.PI*2);ctx.fill();
+    if(currentPlanet==="space"){ctx.fillStyle="#000";ctx.fillRect(0,0,game.width,game.height)}
+    drawStars();
+
+    const sx=Math.floor(camX/cell),ex=Math.ceil((camX+game.width)/cell);
+    const sy=Math.floor(camY/cell),ey=Math.ceil((camY+game.height)/cell);
+    for(let y=sy;y<=ey;y++)for(let x=sx;x<=ex;x++){
+      if(!inBounds(x,y))continue;
+      let b=world[y][x];if(b==="air")continue;
+      drawBlock(x*cell-camX,y*cell-camY,b);
+    }
+    drawBlockEvents();
+    vehicles.forEach(drawVehicle);
+    mobs.forEach(drawMob);
+    bullets.forEach(drawBullet);
+    drawOtherPlayers();
+    drawPlayer();
+    drawHUD();
+  }
+
+  function drawStars(){if(currentPlanet==="earth")return;ctx.fillStyle="rgba(255,255,255,.8)";for(let i=0;i<45;i++){let x=(i*97+tick/5)%960,y=(i*53)%260;ctx.fillRect(x,y,2,2)}}
+  function blockColor(b){
+    if(b==="grass")return planets[currentPlanet].ground;
+    if(b==="dirt")return planets[currentPlanet].dirt;
+    if(b==="stone")return planets[currentPlanet].stone;
+    if(b==="water")return"rgba(35,136,255,.78)";
+    if(b==="lava")return tick%20<10?"#ff5b16":"#ff9a1f";
+    if(b==="fire")return tick%12<4?"#ff2b00":tick%12<8?"#ff9800":"#ffeb3b";
+    if(b==="glass")return"rgba(191,246,255,.72)";
+    return defs[b].color;
+  }
+  function drawBlock(px,py,b){
+    ctx.fillStyle=blockColor(b);ctx.fillRect(px,py,cell,cell);
+    ctx.strokeStyle="rgba(0,0,0,.25)";ctx.strokeRect(px,py,cell,cell);
+    if(b==="grass"){ctx.fillStyle="#2e7d32";ctx.fillRect(px,py,cell,5)}
+    if(b==="dirt"){ctx.fillStyle="rgba(0,0,0,.18)";ctx.fillRect(px+4,py+5,4,3);ctx.fillRect(px+12,py+13,5,3)}
+    if(b==="stone"||b==="cobblestone"){ctx.strokeStyle="rgba(255,255,255,.16)";ctx.beginPath();ctx.moveTo(px+3,py+7);ctx.lineTo(px+12,py+7);ctx.moveTo(px+9,py+14);ctx.lineTo(px+18,py+14);ctx.stroke()}
+    if(b==="wood"){ctx.strokeStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.moveTo(px+6,py);ctx.lineTo(px+6,py+cell);ctx.moveTo(px+14,py);ctx.lineTo(px+14,py+cell);ctx.stroke()}
+    if(b==="planks"){ctx.strokeStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.moveTo(px,py+10);ctx.lineTo(px+cell,py+10);ctx.moveTo(px+10,py);ctx.lineTo(px+10,py+cell);ctx.stroke()}
+    if(b.includes("_ore")){ctx.fillStyle=oreDot(b);ctx.fillRect(px+4,py+4,4,4);ctx.fillRect(px+11,py+10,5,5)}
+    if(["kitchen","fridge","microwave","coffee_machine"].includes(b)){ctx.fillStyle="#111";ctx.fillRect(px+4,py+5,12,8);ctx.fillStyle="#9ff";ctx.fillRect(px+6,py+7,4,3)}
+    if(b==="secret_code"){ctx.fillStyle="#fff";ctx.font="14px Arial";ctx.fillText("?",px+6,py+15)}
+    if(b==="torch"){ctx.fillStyle="#fff067";ctx.fillRect(px+6,py+2,8,7)}
+    if(b==="planet_portal"){ctx.fillStyle="#2b003b";ctx.fillRect(px+3,py+2,14,18);ctx.fillStyle=tick%30<15?"#b441ff":"#4dd0ff";ctx.fillRect(px+6,py+5,8,12)}
+  }
+  function oreDot(b){return b==="coal_ore"?"#111":b==="iron_ore"?"#e2a47a":b==="gold_ore"?"#ffd84d":"#62f3ff"}
+
+
+  function drawOtherPlayers(){
+    if(!currentUser) return;
+    const server = getActiveServer();
+    if(!server) return;
+    const accounts = getAccounts();
+    (server.players||[]).forEach(name=>{
+      if(name===currentUser) return;
+      const acc = accounts[name];
+      if(!acc || !acc.live) return;
+      if(acc.live.serverId !== currentServerId) return;
+      if(acc.live.planet !== currentPlanet) return;
+      if(Date.now() - (acc.live.lastSeen||0) > 35000) return;
+      const px = acc.live.x - camX;
+      const py = acc.live.y - camY;
+      if(px < -80 || px > game.width+80 || py < -120 || py > game.height+120) return;
+      ctx.fillStyle='rgba(0,0,0,.7)';
+      ctx.fillRect(px-10, py-25, 95, 18);
+      ctx.fillStyle='#70ff70';
+      ctx.font='12px Arial';
+      ctx.fillText(name, px-2, py-12);
+      drawSkinAt(ctx, acc.skin || makeDefaultSkin('photo'), px, py, 2);
+      if(acc.live.held && acc.live.held!=='hand' && defs[acc.live.held]){
+        ctx.fillStyle=defs[acc.live.held].color;
+        ctx.fillRect(px+28,py+22,10,6);
+        ctx.strokeStyle='#111';ctx.strokeRect(px+28,py+22,10,6);
+      }
+    });
+  }
+
+  function drawBlockEvents(){
+    if(!currentUser) return;
+    const server=getActiveServer();
+    if(!server || !server.blockEvents) return;
+    const now=Date.now();
+    const events=(server.blockEvents||[]).filter(ev=>
+      ev.serverId===currentServerId &&
+      ev.planet===currentPlanet &&
+      ev.from!==currentUser &&
+      now-ev.time<14000
+    ).slice(-8);
+
+    events.forEach((ev,idx)=>{
+      const px=ev.x*cell-camX;
+      const py=ev.y*cell-camY;
+      if(px<-80||px>game.width+80||py<-80||py>game.height+80) return;
+
+      const age=now-ev.time;
+      const alpha=Math.max(0.2,1-age/14000);
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle=ev.action==='break'?'#ffeb3b':'#70ff70';
+      ctx.lineWidth=3;
+      ctx.strokeRect(px+2,py+2,cell-4,cell-4);
+      ctx.lineWidth=1;
+      ctx.fillStyle='rgba(0,0,0,.78)';
+      ctx.fillRect(px-15,py-35,190,24);
+      ctx.fillStyle=ev.action==='break'?'#ffeb3b':'#70ff70';
+      ctx.font='12px Arial';
+      const verb=ev.action==='break'?'abgebaut':'platziert';
+      ctx.fillText(ev.from+' hat '+ev.blockName+' '+verb,px-10,py-18);
+      ctx.globalAlpha=1;
+    });
+  }
+
+  function drawPlayer(){
+    const px=player.x-camX,py=player.y-camY;
+    if(player.hurt>0&&tick%8<4)ctx.globalAlpha=.55;
+
+    // Jetpack auf dem Rücken: zuerst zeichnen, damit er hinter dem Skin sitzt
+    if(inv.jetpack>0 || creativeMode){
+      ctx.fillStyle="#4b55d9";
+      ctx.fillRect(px+2,py+13,12,18);
+      ctx.fillStyle="#2b2f88";
+      ctx.fillRect(px+4,py+15,8,12);
+      ctx.fillStyle=keys.jet?"#ff9800":"#333";
+      ctx.fillRect(px+3,py+31,4,8);
+      ctx.fillRect(px+9,py+31,4,8);
+      if(keys.jet){
+        ctx.fillStyle="#ffd84d";
+        ctx.fillRect(px+3,py+39,4,8);
+        ctx.fillRect(px+9,py+39,4,8);
+      }
+    }
+
+    drawSkinAt(ctx,activeSkin,px,py,player.inCar?1.25:2);
+
+    // sichtbares Item in der Hand
+    if(selected!=="hand"){
+      ctx.fillStyle=defs[selected].color;
+      const hx=player.facing>=0?px+28:px-10;
+      const hy=py+22;
+      ctx.fillRect(hx,hy,10,6);
+      ctx.strokeStyle="#111";ctx.strokeRect(hx,hy,10,6);
+      if(selected==="pixel_pistol"){ctx.fillStyle="#111";ctx.fillRect(hx+(player.facing>=0?8:-4),hy+2,6,2)}
+    }
+    ctx.globalAlpha=1;
+  }
+
+  function drawSkinAt(context,pixels,x,y,scale){
+    for(let py=0;py<32;py++)for(let px=0;px<16;px++){
+      let c=pixels[py][px];if(!c)continue;
+      context.fillStyle=c;context.fillRect(x+px*scale,y+py*scale,scale,scale);
+    }
+  }
+
+  function drawMob(m){
+    if(m.x<camX-90||m.x>camX+game.width+90||m.y<camY-90||m.y>camY+game.height+90)return;
+    const px=m.x-camX,py=m.y-camY,d=mobDefs[m.type];
+    ctx.fillStyle="rgba(0,0,0,.65)";ctx.fillRect(px-4,py-24,88,18);
+    ctx.fillStyle="#fff";ctx.font="12px Arial";ctx.fillText(d.name,px+2,py-11);
+    ctx.fillStyle="#ff3333";ctx.fillRect(px-1,py-5,Math.max(0,(m.hp/m.maxHp)*36),4);
+    if(m.hurt>0&&tick%8<4)ctx.globalAlpha=.55;
+    if(m.type==="cow"){ctx.fillStyle="#fff";ctx.fillRect(px,py+12,34,20);ctx.fillStyle="#5a3825";ctx.fillRect(px+5,py+16,8,7);ctx.fillRect(px+20,py+22,8,6);ctx.fillStyle="#f2c28b";ctx.fillRect(px+24,py+6,13,13);ctx.fillStyle="#111";ctx.fillRect(px+29,py+11,3,3)}
+    else if(m.type==="pig"){ctx.fillStyle="#ff9fba";ctx.fillRect(px,py+12,34,20);ctx.fillStyle="#ff7fa0";ctx.fillRect(px+24,py+8,13,12);ctx.fillStyle="#111";ctx.fillRect(px+29,py+12,3,3)}
+    else if(m.type==="zombie"){ctx.fillStyle="#3fa35c";ctx.fillRect(px+9,py+2,18,16);ctx.fillStyle="#315c9b";ctx.fillRect(px+7,py+18,22,18);ctx.fillStyle="#111";ctx.fillRect(px+13,py+8,3,3);ctx.fillRect(px+22,py+8,3,3)}
+    else if(m.type==="skeleton"){ctx.fillStyle="#ddd";ctx.fillRect(px+10,py+2,16,15);ctx.fillRect(px+15,py+17,6,19);ctx.strokeStyle="#ddd";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px+16,py+22);ctx.lineTo(px+5,py+30);ctx.moveTo(px+20,py+22);ctx.lineTo(px+32,py+30);ctx.stroke();ctx.lineWidth=1;ctx.fillStyle="#111";ctx.fillRect(px+14,py+8,3,3)}
+    else if(m.type==="creeper"){ctx.fillStyle="#44cc44";ctx.fillRect(px+8,py+1,22,35);ctx.fillStyle="#111";ctx.fillRect(px+13,py+10,4,5);ctx.fillRect(px+23,py+10,4,5);ctx.fillRect(px+17,py+19,8,9)}
+    else if(m.type==="slime"){ctx.fillStyle="rgba(121,217,107,.85)";ctx.fillRect(px+2,py+10,33,26);ctx.fillStyle="#1d5e21";ctx.fillRect(px+9,py+20,5,5);ctx.fillRect(px+23,py+20,5,5)}
+    ctx.globalAlpha=1;
+  }
+  function drawVehicle(v){
+    let px=v.x-camX,py=v.y-camY;
+    ctx.fillStyle="#b71c1c";ctx.fillRect(px,py+14,64,22);
+    ctx.fillStyle="#e53935";ctx.fillRect(px+5,py+8,42,16);
+    ctx.fillStyle="#7ddcff";ctx.fillRect(px+15,py+10,18,10);
+    ctx.fillStyle="#111";ctx.beginPath();ctx.arc(px+13,py+38,8,0,Math.PI*2);ctx.arc(px+51,py+38,8,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#333";ctx.fillRect(px+25,py+20,10,12);
+    if(player.inCar===v){
+      ctx.fillStyle="#fff";ctx.font="11px Arial";ctx.fillText("Du sitzt im Auto",px+1,py-4);
+    }
+  }
+  function drawBullet(b){ctx.fillStyle="#ffd84d";ctx.fillRect(b.x-camX,b.y-camY,8,3)}
+  function drawHUD(){
+    document.getElementById("planetName").textContent=planets[currentPlanet].name;
+    document.getElementById("hpText").textContent=player.hp+"/"+player.maxHp;
+    document.getElementById("hungerText").textContent=player.hunger+"/"+player.maxHunger;
+    document.getElementById("fuelText").textContent=player.fuel;
+    document.getElementById("carText").textContent=player.inCar?"Ja":"Nein";
+    document.getElementById("heldText").textContent=selected==="hand" ? "Hand" : defs[selected].name;
+    ctx.fillStyle="rgba(0,0,0,.62)";ctx.fillRect(8,8,365,60);
+    ctx.fillStyle="#fff";ctx.font="14px Arial";ctx.fillText("Planet: "+planets[currentPlanet].name+" | Tiefe: "+Math.floor(player.y/cell)+(creativeMode?" | Kreativ":" | Survival"),18,30);
+    for(let i=0;i<player.maxHp;i++){ctx.fillStyle=i<player.hp?"#ff3333":"#555";ctx.fillRect(18+i*24,40,18,16)}
+    ctx.fillStyle="#fff";ctx.font="13px Arial";ctx.fillText("Hunger:",270,53);
+    for(let i=0;i<player.maxHunger;i++){
+      ctx.fillStyle=i<player.hunger?"#d38b2a":"#555";
+      ctx.fillRect(322+i*12,42,9,14);
+      ctx.fillStyle="rgba(255,255,255,.25)";
+      ctx.fillRect(324+i*12,44,3,3);
+    }
+  }
+
+  function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderRecipes();renderSkinCanvas();draw()}
+  function renderInventory(id,craft){
+    const box=document.getElementById(id);box.innerHTML="";
+    if(!craft){
+      const h=document.createElement("button");h.className="itemBtn";if(selected==="hand")h.classList.add("selected");h.innerHTML='<span class="dot" style="background:#fff"></span>Hand';h.onclick=()=>{selected="hand";renderInventory("gameInventory")};box.appendChild(h);
+    }
+    inventoryOrder.forEach(item=>{
+      const amount=creativeMode ? "∞" : (inv[item]||0);if(!creativeMode && amount<=0)return;
+      const btn=document.createElement("button");btn.className="itemBtn";if(!craft&&selected===item)btn.classList.add("selected");
+      btn.innerHTML=`<span class="dot" style="background:${defs[item].color}"></span>${defs[item].name} x${amount}`;
+      btn.onclick=()=>{if(!craft){selected=item;msg("Ausgewählt: "+defs[item].name);renderInventory("gameInventory")}};
+      box.appendChild(btn);
+    });
+  }
+
+  const recipes = [
+    {out:"planks",count:4,need:{wood:1},desc:"Holz → 4 Bretter"},
+    {out:"stick",count:4,need:{planks:2},desc:"2 Bretter → 4 Stöcke"},
+    {out:"crafting_table",count:1,need:{planks:4},desc:"4 Bretter → Werkbank"},
+    {out:"furnace",count:1,need:{cobblestone:8},desc:"8 Pflasterstein → Ofen"},
+    {out:"torch",count:4,need:{coal:1,stick:1},desc:"Kohle + Stock → 4 Fackeln"},
+    {out:"stone_pickaxe",count:1,need:{cobblestone:3,stick:2},desc:"Steinspitzhacke"},
+    {out:"iron_pickaxe",count:1,need:{iron_ingot:3,stick:2},desc:"Eisenspitzhacke"},
+    {out:"diamond_pickaxe",count:1,need:{diamond:3,stick:2},desc:"Diamantspitzhacke"},
+    {out:"stone_shovel",count:1,need:{cobblestone:1,stick:2},desc:"Schaufel"},
+    {out:"stone_axe",count:1,need:{cobblestone:3,stick:2},desc:"Axt"},
+    {out:"stone_sword",count:1,need:{cobblestone:2,stick:1},desc:"Schwert"},
+    {out:"pixel_pistol",count:1,need:{iron_ingot:4,coal:2,stick:1},desc:"Fantasy Pixel-Pistole"},
+    {out:"wheel",count:4,need:{coal:2,iron_ingot:1},desc:"4 Räder"},
+    {out:"engine",count:1,need:{iron_ingot:4,coal:2},desc:"Motor"},
+    {out:"battery",count:1,need:{iron_ingot:2,coal:2,gold_ingot:1},desc:"Batterie"},
+    {out:"fuel_cell",count:3,need:{coal:2,iron_ingot:1},desc:"Jetpack-Fuel"},
+    {out:"car_item",count:1,need:{wheel:4,engine:1,iron_ingot:4,glass:2},desc:"Fahrbares Auto"},
+    {out:"jetpack",count:1,need:{engine:1,battery:1,iron_ingot:4,fuel_cell:2},desc:"Jetpack zum Planetenflug"},
+    {out:"planet_portal",count:1,need:{obsidian:4,diamond:1,fuel_cell:1},desc:"Portal zu einem Planeten deiner Wahl"},
+    {out:"kitchen",count:1,need:{iron_ingot:2,planks:2,cobblestone:2},desc:"Küchenblock"},
+    {out:"fridge",count:1,need:{iron_ingot:4,glass:1},desc:"Kühlschrank"},
+    {out:"microwave",count:1,need:{iron_ingot:3,glass:1,battery:1},desc:"Mikrowelle"},
+    {out:"coffee_machine",count:1,need:{iron_ingot:2,glass:1,coal:1},desc:"Kaffeemaschine"},
+    {out:"glass",count:1,need:{sand:1,fire:1},desc:"Sand + Feuer → Glas"},
+    {out:"bread",count:1,need:{wheat:3},desc:"3 Weizen → Brot"}
+  ];
+  function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).every(k=>(inv[k]||0)>=r.need[k])}
+  function renderRecipes(){
+    const book=document.getElementById("recipeBook");book.innerHTML="";
+    recipes.forEach((r,i)=>{
+      const ok=canCraft(r);const row=document.createElement("div");row.className="recipeLine "+(ok?"green":"red");
+      let need=Object.keys(r.need).map(k=>`${defs[k].name} x${r.need[k]} / du hast x${inv[k]||0}`).join(", ");
+      row.innerHTML=`<div><b>${defs[r.out].name} x${r.count}</b><br><small>${r.desc}<br>${need}</small></div>`;
+      const btn=document.createElement("button");btn.textContent=ok?"Craften":"Fehlt";btn.disabled=!ok;btn.onclick=()=>craft(i);
+      row.appendChild(btn);book.appendChild(row);
+    });
+  }
+  function craft(i){let r=recipes[i];if(!canCraft(r))return;if(!creativeMode)Object.keys(r.need).forEach(k=>inv[k]-=r.need[k]);inv[r.out]=(inv[r.out]||0)+r.count;if(r.out==="fuel_cell")player.fuel+=r.count*40;msg("Gecraftet: "+defs[r.out].name+" x"+r.count);saveAccountState();renderAll()}
+
+  function update(){
+    tick++;
+    const moved=Array.from({length:worldRows},()=>Array(worldCols).fill(false));
+    for(let y=worldRows-2;y>=0;y--)for(let x=0;x<worldCols;x++){
+      if(moved[y][x])continue;
+      let b=world[y][x];
+      if(b==="sand")updateSand(x,y,moved);
+      if(b==="water")updateLiquid(x,y,"water",moved);
+      if(b==="lava")updateLiquid(x,y,"lava",moved);
+      if(b==="fire")updateFire(x,y);
+    }
+    updatePlayer();
+    updateHunger();
+    updateMobs();
+    updateVehicles();
+    updateBullets();
+    if(tick%20===0)saveAccountState();
+    if(tick%planets[currentPlanet].mobRate===0&&mobs.length<16)spawnMob(randomMob(),clamp(Math.floor(player.x/cell)+10,2,worldCols-2));
+  }
+
+  function updateSand(x,y,m){if(y+1>=worldRows)return;if(world[y+1][x]==="air"||world[y+1][x]==="water"){swap(x,y,x,y+1);m[y+1][x]=true;return}let d=Math.random()<.5?-1:1;if(inBounds(x+d,y+1)&&(world[y+1][x+d]==="air"||world[y+1][x+d]==="water")){swap(x,y,x+d,y+1);m[y+1][x+d]=true}}
+  function updateLiquid(x,y,type,m){
+    const other=type==="water"?"lava":"water",dirs=[[0,1],[1,0],[-1,0],[0,-1]];
+    for(let d of dirs){let nx=x+d[0],ny=y+d[1];if(inBounds(nx,ny)&&world[ny][nx]===other){setBlock(x,y,"obsidian");setBlock(nx,ny,"air");return}}
+    if(type==="lava")for(let d of dirs){let nx=x+d[0],ny=y+d[1];if(inBounds(nx,ny)&&world[ny][nx]==="sand")setBlock(nx,ny,"glass")}
+    if(y+1<worldRows&&world[y+1][x]==="air"){swap(x,y,x,y+1);m[y+1][x]=true;return}
+    let dir=Math.random()<.5?-1:1;
+    if(inBounds(x+dir,y)&&world[y][x+dir]==="air"){swap(x,y,x+dir,y);m[y][x+dir]=true;return}
+    if(inBounds(x-dir,y)&&world[y][x-dir]==="air"){swap(x,y,x-dir,y);m[y][x-dir]=true}
+  }
+  function updateFire(x,y){fireLife[y][x]--;const dirs=[[1,0],[-1,0],[0,1],[0,-1]];for(let d of dirs){let nx=x+d[0],ny=y+d[1];if(!inBounds(nx,ny))continue;if(world[ny][nx]==="sand"){setBlock(nx,ny,"glass");setBlock(x,y,"air");return}if(world[ny][nx]==="water"){setBlock(x,y,"air");return}if(["wood","leaves","planks"].includes(world[ny][nx])&&Math.random()<.012)setBlock(nx,ny,"fire")}if(fireLife[y][x]<=0)setBlock(x,y,"air")}
+  function swap(x1,y1,x2,y2){let a=world[y1][x1];world[y1][x1]=world[y2][x2];world[y2][x2]=a;let f=fireLife[y1][x1];fireLife[y1][x1]=fireLife[y2][x2];fireLife[y2][x2]=f}
+
+
+  function isFood(item){
+    return ["apple","bread","raw_meat","cooked_meat"].includes(item);
+  }
+
+  function eatSelected(){
+    if(!isFood(selected)){
+      return false;
+    }
+
+    if((inv[selected]||0)<=0 && !creativeMode){
+      msg("Du hast dieses Essen nicht.");
+      return true;
+    }
+
+    let value = 0;
+    if(selected==="apple") value = 2;
+    if(selected==="bread") value = 4;
+    if(selected==="raw_meat") value = 2;
+    if(selected==="cooked_meat") value = 5;
+
+    if(player.hunger >= player.maxHunger){
+      msg("Du bist schon satt.");
+      return true;
+    }
+
+    if(!creativeMode) inv[selected]--;
+    player.hunger = Math.min(player.maxHunger, player.hunger + value);
+    msg(defs[selected].name+" gegessen. Hunger: "+player.hunger+"/"+player.maxHunger);
+    renderAll();
+    return true;
+  }
+
+  function updateHunger(){
+    if(creativeMode) return;
+
+    player.hungerTimer++;
+    if(player.hungerTimer >= 520){
+      player.hungerTimer = 0;
+      if(player.hunger > 0){
+        player.hunger--;
+      } else {
+        hurtPlayer(1, "Hunger");
+      }
+
+      if(player.hunger >= 9 && player.hp < player.maxHp && tick % 1040 === 0){
+        player.hp++;
+      }
+    }
+  }
+
+  function updatePlayer(){
+    if (creativeMode) {
+      player.vx = 0;
+      player.vy = 0;
+      const flySpeed = 4.2;
+      if (keys.left){ player.x -= flySpeed; player.facing=-1; }
+      if (keys.right){ player.x += flySpeed; player.facing=1; }
+      if (keys.jump) player.y -= flySpeed;
+      if (keys.down) player.y += flySpeed;
+      player.x = clamp(player.x, 0, worldW - player.w);
+      player.y = clamp(player.y, -80, worldH - player.h);
+
+      if (player.y < 0) {
+        let idx = planetOrder.indexOf(currentPlanet);
+        switchPlanet(planetOrder[(idx + 1) % planetOrder.length]);
+      }
+      return;
+    }
+
+    const grav=planets[currentPlanet].gravity;
+    if(player.inCar){let c=player.inCar;player.x=c.x+22;player.y=c.y+2;player.vx=0;player.vy=0;return}
+    let speed=2.2;
+    player.vx=0;
+    if(keys.left){player.vx=-speed;player.facing=-1;}
+    if(keys.right){player.vx=speed;player.facing=1;}
+    if(keys.jump&&player.onGround){player.vy=-9.2;player.onGround=false}
+    if(keys.jet&&inv.jetpack>0){
+      if(player.fuel<=0 && (inv.fuel_cell||0)>0){
+        inv.fuel_cell--;
+        player.fuel += 120;
+        msg("Fuel-Cell automatisch geladen.");
+      }
+      if(player.fuel>0 || creativeMode){
+        player.vy-=1.05;
+        if(!creativeMode) player.fuel--;
+        if(player.vy<-10)player.vy=-10;
+      } else {
+        msg("Jetpack braucht Fuel-Cells.");
+      }
+    }
+    player.vy+=grav;if(player.vy>10)player.vy=10;
+    moveEntX(player);moveEntY(player);
+    if(player.hurt>0)player.hurt--;
+    const c=tile(player.x+player.w/2,player.y+player.h/2);
+    if(inBounds(c.x,c.y)){let b=world[c.y][c.x];if((b==="lava"||b==="fire")&&tick%20===0)hurtPlayer(1,"Feuer/Lava");if(b==="water")player.vy*=.75}
+    if(player.y<0&&inv.jetpack>0){let idx=planetOrder.indexOf(currentPlanet);switchPlanet(planetOrder[(idx+1)%planetOrder.length])}
+    if(player.y>worldH-60)hurtPlayer(10,"Void");
+  }
+  function moveEntX(e){e.x+=e.vx;if(rectCollides(e.x,e.y,e.w,e.h)){if(e.vx>0)e.x=Math.floor((e.x+e.w)/cell)*cell-e.w-.01;else if(e.vx<0)e.x=Math.floor(e.x/cell+1)*cell+.01;e.vx=0}e.x=clamp(e.x,0,worldW-e.w)}
+  function moveEntY(e){e.y+=e.vy;e.onGround=false;if(rectCollides(e.x,e.y,e.w,e.h)){if(e.vy>0){e.y=Math.floor((e.y+e.h)/cell)*cell-e.h-.01;e.onGround=true}else if(e.vy<0)e.y=Math.floor(e.y/cell+1)*cell+.01;e.vy=0}e.y=clamp(e.y,-80,worldH-e.h)}
+  function hurtPlayer(n,why){if(creativeMode)return;if(player.hurt>0)return;player.hp-=n;player.hurt=60;if(player.hp<=0){player.hp=0;msg("Du bist gestorben durch "+why+". Respawn...");setTimeout(respawn,600)}else msg("Schaden durch "+why+"! Leben: "+player.hp+"/"+player.maxHp)}
+  function respawn(){player.x=player.spawnX;player.y=player.spawnY;player.vx=0;player.vy=0;player.hp=player.maxHp;player.hunger=player.maxHunger;player.hurt=80;player.inCar=null}
+
+  function updateMobs(){
+    mobs.forEach(m=>{
+      if(m.hurt>0)m.hurt--;
+      const d=mobDefs[m.type];
+
+      if(!d.hostile && tick%120===0 && Math.random()<0.8){
+        m.vx = Math.random()<0.5 ? -1.05 : 1.05;
+      }
+
+      if(d.hostile && Math.abs(player.x-m.x)<300 && Math.abs(player.y-m.y)<150){
+        m.vx = player.x < m.x ? -1.25 : 1.25;
+      }
+
+      if(tick%180===0 && Math.random()<0.25 && isMobOnGround(m)){
+        m.vy=-5.2;
+      }
+
+      m.vy+=planets[currentPlanet].gravity;
+      if(m.vy>8)m.vy=8;
+      moveMobX(m);
+      moveMobY(m);
+      if(d.hostile&&overlap(player,m))hurtPlayer(1,d.name);
+    });
+  }
+
+  function isMobOnGround(m){
+    return rectCollides(m.x,m.y+2,m.w,m.h);
+  }
+
+  function moveMobX(m){
+    m.x+=m.vx;
+    if(rectCollides(m.x,m.y,m.w,m.h)){
+      if(!rectCollides(m.x,m.y-cell,m.w,m.h)){
+        m.y-=cell;
+        return;
+      }
+      if(m.vx>0)m.x=Math.floor((m.x+m.w)/cell)*cell-m.w-.01;
+      else if(m.vx<0)m.x=Math.floor(m.x/cell+1)*cell+.01;
+      m.vx*=-1;
+    }
+    m.x=clamp(m.x,0,worldW-m.w);
+  }
+
+  function moveMobY(m){
+    m.y+=m.vy;
+    if(rectCollides(m.x,m.y,m.w,m.h)){
+      if(m.vy>0)m.y=Math.floor((m.y+m.h)/cell)*cell-m.h-.01;
+      else if(m.vy<0)m.y=Math.floor(m.y/cell+1)*cell+.01;
+      m.vy=0;
+    }
+    m.y=clamp(m.y,0,worldH-m.h);
+  }
+  function vehiclePassable(block){
+    return passable(block) || block==="wood" || block==="leaves";
+  }
+
+  function vehicleCollides(x,y,w,h){
+    const l=Math.floor(x/cell),r=Math.floor((x+w-1)/cell),t=Math.floor(y/cell),b=Math.floor((y+h-1)/cell);
+    for(let yy=t;yy<=b;yy++){
+      for(let xx=l;xx<=r;xx++){
+        if(!inBounds(xx,yy)) return true;
+        if(!vehiclePassable(world[yy][xx])) return true;
+      }
+    }
+    return false;
+  }
+
+  function moveVehicleX(v){
+    v.x += v.vx;
+
+    if(vehicleCollides(v.x,v.y,v.w,v.h)){
+      // Stufen hochfahren: erst 1 Block, dann 2 Blöcke probieren
+      if(!vehicleCollides(v.x,v.y-cell,v.w,v.h)){
+        v.y -= cell;
+        return;
+      }
+
+      if(!vehicleCollides(v.x,v.y-cell*2,v.w,v.h)){
+        v.y -= cell*2;
+        return;
+      }
+
+      if(v.vx>0) v.x=Math.floor((v.x+v.w)/cell)*cell-v.w-.01;
+      else if(v.vx<0) v.x=Math.floor(v.x/cell+1)*cell+.01;
+      v.vx=0;
+    }
+
+    v.x=clamp(v.x,0,worldW-v.w);
+  }
+
+  function moveVehicleY(v){
+    v.y += v.vy;
+
+    if(vehicleCollides(v.x,v.y,v.w,v.h)){
+      if(v.vy>0) v.y=Math.floor((v.y+v.h)/cell)*cell-v.h-.01;
+      else if(v.vy<0) v.y=Math.floor(v.y/cell+1)*cell+.01;
+      v.vy=0;
+    }
+
+    v.y=clamp(v.y,0,worldH-v.h);
+  }
+
+  function updateVehicles(){
+    vehicles.forEach(v=>{
+      if(player.inCar===v){
+        v.vx=0;
+        if(keys.left)v.vx=-4.8;
+        if(keys.right)v.vx=4.8;
+      }
+      v.vy+=planets[currentPlanet].gravity;
+      if(v.vy>8)v.vy=8;
+      moveVehicleX(v);
+      moveVehicleY(v);
+    });
+  }
+  function updateBullets(){
+    bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;const bt=tile(b.x,b.y);if(inBounds(bt.x,bt.y)&&!passable(world[bt.y][bt.x]))b.life=0;mobs.forEach(m=>{if(b.x>m.x&&b.x<m.x+m.w&&b.y>m.y&&b.y<m.y+m.h){m.hp-=3;m.hurt=20;b.life=0;if(m.hp<=0){let drop=mobDefs[m.type].drop;inv[drop]=(inv[drop]||0)+1;mobs=mobs.filter(mm=>mm!==m);msg(mobDefs[m.type].name+" besiegt → "+defs[drop].name)}}})});
+    bullets=bullets.filter(b=>b.life>0);
+  }
+  function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+
+  function pointerCell(e){
+    const r=game.getBoundingClientRect(),sx=game.width/r.width,sy=game.height/r.height;
+    return {x:Math.floor((camX+(e.clientX-r.left)*sx)/cell),y:Math.floor((camY+(e.clientY-r.top)*sy)/cell)};
+  }
+  game.addEventListener("contextmenu",e=>e.preventDefault());
+  function handleCanvasAction(e){
+    if(e.preventDefault) e.preventDefault();
+    const p=pointerCell(e);if(!inBounds(p.x,p.y))return;
+    const pt=tile(player.x+player.w/2,player.y+player.h/2),dist=Math.abs(p.x-pt.x)+Math.abs(p.y-pt.y);
+    const clickX=p.x*cell+cell/2,clickY=p.y*cell+cell/2;
+    let mob=mobs.find(m=>clickX>=m.x-4&&clickX<=m.x+m.w+4&&clickY>=m.y-28&&clickY<=m.y+m.h+4);
+    if(e.button===2){
+      if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
+      breakBlock(p.x,p.y);
+      renderAll();
+      return;
+    }
+
+    if(world[p.y][p.x]==="secret_code"){
+      msg("Geheimer Code gefunden: 2013");
+      renderAll();
+      return;
+    }
+
+    if(eatSelected()) return;
+
+    if(world[p.y][p.x]==="planet_portal"){
+      usePortal();
+      renderAll();
+      return;
+    }
+
+    if(selected==="pixel_pistol"&&(creativeMode||inv.pixel_pistol>0)){
+      shoot(clickX,clickY);
+      return;
+    }
+
+    if(mob){
+      attackMob(mob);
+      renderAll();
+      return;
+    }
+
+    if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
+
+    if(selected==="car_item"&&(creativeMode||inv.car_item>0)){
+      placeCar(p.x,p.y);
+      renderAll();
+      return;
+    }
+
+    // Linksklick = platzieren / benutzen. Abbauen geht mit Rechtsklick.
+    if(defs[selected] && defs[selected].place){
+      placeBlock(p.x,p.y);
+    } else {
+      msg("Linksklick ist Platzieren/Benutzen. Zum Abbauen Rechtsklick benutzen.");
+    }
+    renderAll();
+  }
+  game.addEventListener("mousedown",handleCanvasAction);
+  game.addEventListener("touchstart",function(e){if(e.touches.length>0)handleCanvasAction(e.touches[0]);},{passive:false});
+  function shoot(tx,ty){
+    const sx=player.x+player.w/2;
+    const sy=player.y+16;
+    let dx=tx-sx;
+    let dy=ty-sy;
+    const len=Math.hypot(dx,dy)||1;
+    dx/=len;dy/=len;
+    player.facing=dx>=0?1:-1;
+    bullets.push({x:sx,y:sy,vx:dx*9,vy:dy*9,life:90});
+    msg("Pixel-Pistole schießt in deine Blickrichtung.");
+  }
+  function attackMob(m){let dmg=selected==="stone_sword"?3:1;m.hp-=dmg;m.hurt=20;if(m.hp<=0){let drop=mobDefs[m.type].drop;inv[drop]=(inv[drop]||0)+1;mobs=mobs.filter(x=>x!==m);msg(mobDefs[m.type].name+" besiegt → "+defs[drop].name)}}
+  function placeCar(x,y){if(world[y][x]!=="air"){msg("Hier ist kein Platz fürs Auto.");return}vehicles.push({x:x*cell,y:y*cell-20,w:60,h:34,vx:0,vy:0});if(!creativeMode)inv.car_item--;msg("Auto platziert. Drücke E in der Nähe zum Einsteigen.")}
+  function placeBlock(x,y){
+    if(!defs[selected].place){msg("Dieses Item kann man nicht setzen.");return}
+    if(world[y][x]!=="air"){msg("Da ist schon ein Block.");return}
+    if(!creativeMode && (inv[selected]||0)<=0){msg("Du hast davon nichts mehr.");return}
+    if(overlap({x:x*cell,y:y*cell,w:cell,h:cell},player)){msg("Nicht in deinen Körper setzen.");return}
+    setBlock(x,y,selected);if(!creativeMode)inv[selected]--;addServerBlockEvent('place',selected,x,y);saveAccountState();msg(defs[selected].name+" gesetzt.")
+  }
+  function breakBlock(x,y){
+    let b=world[y][x];if(b==="air")return;
+    if(b==="secret_code"){msg("Geheimer Code gefunden: 2013");return;}
+    let check=creativeMode ? {ok:true} : canBreak(b,selected);if(!check.ok){msg(check.reason);return}
+    let drop=getDrop(b);if(drop)inv[drop]=(inv[drop]||0)+1;addServerBlockEvent('break',b,x,y);setBlock(x,y,"air");saveAccountState();msg(defs[b].name+" abgebaut"+(drop?" → "+defs[drop].name:"")+".")
+  }
+  function canBreak(b,tool){
+    if(b==="bedrock")return{ok:false,reason:"Bedrock kann man nicht abbauen."};
+    let info=defs[tool]||defs.hand,t=info.tool||"hand",tier=info.tier||0;
+    if(["grass","dirt","sand","wheat","fire","torch"].includes(b))return(t==="hand"||t==="shovel")?{ok:true}:{ok:false,reason:"Dafür brauchst du Hand oder Schaufel."};
+    if(["wood","planks","leaves","crafting_table","kitchen","fridge","microwave","coffee_machine"].includes(b))return(t==="axe"||t==="hand")?{ok:true}:{ok:false,reason:"Dafür brauchst du Axt oder Hand."};
+    if(["stone","cobblestone","coal_ore","iron_ore","furnace","glass","planet_portal"].includes(b))return(t==="pickaxe"&&tier>=1)?{ok:true}:{ok:false,reason:"Dafür brauchst du Steinspitzhacke."};
+    if(["gold_ore","diamond_ore"].includes(b))return(t==="pickaxe"&&tier>=2)?{ok:true}:{ok:false,reason:"Gold/Diamant brauchen Eisenspitzhacke."};
+    if(b==="obsidian")return(t==="pickaxe"&&tier>=3)?{ok:true}:{ok:false,reason:"Obsidian braucht Diamantspitzhacke."};
+    if(b==="water"||b==="lava")return{ok:false,reason:"Flüssigkeiten kannst du nicht so abbauen."};
+    return{ok:true};
+  }
+  function getDrop(b){if(b==="grass")return"dirt";if(b==="stone")return"cobblestone";if(b==="coal_ore")return"coal";if(b==="iron_ore")return"iron_ore";if(b==="gold_ore")return"gold_ore";if(b==="diamond_ore")return"diamond";if(b==="fire")return null;return b}
+
+  document.addEventListener("keydown",e=>{
+    let k=e.key.toLowerCase();
+    if(k==="a"||k==="arrowleft")keys.left=true;
+    if(k==="d"||k==="arrowright")keys.right=true;
+    if(k==="w"||k==="arrowup"||e.key===" ")keys.jump=true;
+    if(k==="j")keys.jet=true;
+    if(k==="s"||k==="arrowdown")keys.down=true;
+    if(k==="e")toggleCar();
+  });
+  document.addEventListener("keyup",e=>{
+    let k=e.key.toLowerCase();
+    if(k==="a"||k==="arrowleft")keys.left=false;
+    if(k==="d"||k==="arrowright")keys.right=false;
+    if(k==="w"||k==="arrowup"||e.key===" ")keys.jump=false;
+    if(k==="j")keys.jet=false;
+    if(k==="s"||k==="arrowdown")keys.down=false;
+  });
+
+  function usePortal(){
+    const target = document.getElementById("portalTarget").value;
+    if(target===currentPlanet){
+      msg("Du bist schon auf diesem Planeten.");
+      return;
+    }
+    switchPlanet(target);
+    msg("Portalreise nach: "+planets[target].name);
+  }
+
+  function toggleCar(){
+    if(player.inCar){player.inCar=null;msg("Ausgestiegen.");return}
+    let near=vehicles.find(v=>Math.abs(v.x-player.x)<55&&Math.abs(v.y-player.y)<45);
+    if(near){player.inCar=near;msg("Ins Auto eingestiegen. A/D zum Fahren, E zum Aussteigen.")}
+  }
+
+  function makeDefaultSkin(type){
+    let p=Array.from({length:32},()=>Array(16).fill(null));
+    function fill(x1,y1,x2,y2,c){for(let y=y1;y<=y2;y++)for(let x=x1;x<=x2;x++)if(x>=0&&x<16&&y>=0&&y<32)p[y][x]=c}
+    if(type==="photo"){
+      // detaillierter Standard-Skin nach dem Foto:
+      // dunkle Haare, dunkles Shirt, beige weite Hose, schwarze Schuhe, Uhr am Arm
+      fill(5,2,10,2,"#17110f");fill(4,3,11,4,"#211713");fill(4,5,11,5,"#2a1d19");
+      fill(5,5,10,10,"#b98562");fill(4,6,4,9,"#9b6b4e");fill(11,6,11,9,"#9b6b4e");
+      p[7][6]="#111";p[7][9]="#111";p[9][7]="#7b4638";p[9][8]="#7b4638";
+      fill(3,11,12,20,"#0c0b1d");fill(4,12,11,18,"#111123");
+      p[13][5]="#e6d6a8";p[13][10]="#d9d9d9";p[14][10]="#d9d9d9";
+      fill(2,12,3,23,"#9b6b4e");fill(12,12,13,23,"#9b6b4e");
+      p[21][2]="#111";p[21][3]="#4aa3ff";
+      fill(4,21,7,29,"#b69a72");fill(8,21,11,29,"#b69a72");
+      fill(4,23,7,29,"#c0a47d");fill(8,23,11,29,"#c0a47d");
+      fill(3,30,7,31,"#050505");fill(8,30,12,31,"#050505");
+    } else if(type==="ninja"){fill(4,2,11,9,"#111");fill(6,6,9,7,"#f2c28b");fill(3,10,12,29,"#050505");fill(4,30,11,31,"#111")}
+    else if(type==="knight"){fill(5,3,10,9,"#f2c28b");fill(4,1,11,4,"#999");fill(3,10,12,28,"#aaa");fill(4,29,11,31,"#555");fill(6,12,9,20,"#777")}
+    else if(type==="astronaut"){fill(5,3,10,9,"#f2c28b");fill(4,2,11,10,"#eee");fill(3,10,12,29,"#f5f5f5");fill(5,5,10,8,"#8fd3ff");fill(4,30,11,31,"#999")}
+    else if(type==="robot"){fill(5,3,10,9,"#aaa");fill(3,10,12,29,"#777");fill(6,6,6,6,"#00ff66");fill(9,6,9,6,"#00ff66");fill(4,30,11,31,"#444")}
+    else if(type==="zombie"){fill(5,3,10,9,"#6fbf73");fill(4,2,11,4,"#245c28");fill(3,10,12,20,"#315c9b");fill(4,21,11,29,"#4b2e83");fill(4,30,11,31,"#111")}
+    return p;
+  }
+  function renderSkinCanvas(){
+    sctx.clearRect(0,0,skinCanvas.width,skinCanvas.height);
+    const scale=20;
+    for(let y=0;y<32;y++)for(let x=0;x<16;x++){
+      sctx.fillStyle=skinPixels[y][x]||"#2a2a2a";
+      sctx.fillRect(x*scale,y*scale,scale,scale);
+      sctx.strokeStyle="rgba(255,255,255,.15)";
+      sctx.strokeRect(x*scale,y*scale,scale,scale);
+    }
+  }
+  function paintSkin(e){
+    const r=skinCanvas.getBoundingClientRect(),sx=skinCanvas.width/r.width,sy=skinCanvas.height/r.height;
+    const x=Math.floor((e.clientX-r.left)*sx/20),y=Math.floor((e.clientY-r.top)*sy/20);
+    if(x<0||x>=16||y<0||y>=32)return;
+    skinPixels[y][x]=paintMode==="erase"?null:document.getElementById("paintColor").value;
+    renderSkinCanvas();
+  }
+  let drawing=false;
+  skinCanvas.addEventListener("mousedown",e=>{drawing=true;paintSkin(e)});
+  skinCanvas.addEventListener("mousemove",e=>{if(drawing)paintSkin(e)});
+  window.addEventListener("mouseup",()=>drawing=false);
+
+  document.getElementById("btnPreset").onclick=()=>{skinPixels=makeDefaultSkin(document.getElementById("skinPreset").value);renderSkinCanvas()};
+  document.getElementById("btnEraseSkin").onclick=()=>{paintMode="erase";msg("Radierer aktiv.")};
+  document.getElementById("btnUsePaint").onclick=()=>{paintMode="paint";msg("Pinsel aktiv.")};
+  document.getElementById("btnApplySkin").onclick=()=>{activeSkin=JSON.parse(JSON.stringify(skinPixels));updateAccountSkin();msg("Skin benutzt.")};
+  document.getElementById("btnClearSkin").onclick=()=>{skinPixels=Array.from({length:32},()=>Array(16).fill(null));renderSkinCanvas()};
+
+  function imageToSkinFromUpload(){
+    const input = document.getElementById("skinUpload");
+    const file = input.files && input.files[0];
+    if(!file){msg("Bitte zuerst ein Bild auswählen.");return;}
+    const img = new Image();
+    img.onload = function(){
+      const temp = document.createElement("canvas");
+      temp.width = 16;
+      temp.height = 32;
+      const tctx = temp.getContext("2d");
+
+      // Browser-Automatik: nimmt den mittleren Körperbereich des Bildes
+      // und wandelt ihn in einen 16x32 Pixel-Skin um.
+      const cropW = img.width * 0.38;
+      const cropH = img.height * 0.85;
+      const cropX = (img.width - cropW) / 2;
+      const cropY = img.height * 0.07;
+
+      tctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, 16, 32);
+      const data = tctx.getImageData(0,0,16,32).data;
+
+      skinPixels = Array.from({length:32},()=>Array(16).fill(null));
+      for(let y=0;y<32;y++){
+        for(let x=0;x<16;x++){
+          const i=(y*16+x)*4;
+          const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+          if(a<20) continue;
+          skinPixels[y][x] = "#" + [r,g,b].map(v=>v.toString(16).padStart(2,"0")).join("");
+        }
+      }
+      activeSkin = JSON.parse(JSON.stringify(skinPixels));
+      renderSkinCanvas();
+      updateAccountSkin();msg("Bild wurde automatisch als Skin übernommen.");
+    };
+    img.src = URL.createObjectURL(file);
+  }
+  document.getElementById("btnImageToSkin").onclick=imageToSkinFromUpload;
+
+
+  function switchTab(page,btn){
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    document.querySelectorAll(".topbar button").forEach(b=>{if(b.id.startsWith("tab"))b.classList.remove("active")});
+    document.getElementById(page).classList.add("active");document.getElementById(btn).classList.add("active");renderAll();
+  }
+  document.getElementById("tabWorld").onclick=()=>switchTab("worldPage","tabWorld");
+  document.getElementById("tabCraft").onclick=()=>switchTab("craftPage","tabCraft");
+  document.getElementById("tabSkin").onclick=()=>switchTab("skinPage","tabSkin");
+  document.getElementById("btnMode").onclick=()=>{buildMode=!buildMode;document.getElementById("btnMode").textContent=buildMode?"Modus: Bauen":"Modus: Abbauen";document.getElementById("btnMode").classList.toggle("active",!buildMode)};
+  document.getElementById("btnSpawnMob").onclick=()=>{spawnMob(randomMob(),clamp(Math.floor(player.x/cell)+7,2,worldCols-2));msg("Mob gespawnt.")};
+  document.getElementById("btnSave").onclick=()=>{worlds[currentPlanet]={world,fireLife,mobs,vehicles};localStorage.setItem("minicraft_planet_mod",JSON.stringify({worlds,currentPlanet,inv,player,activeSkin,skinPixels,creativeMode}));saveAccountState();msg("Gespeichert.")};
+  document.getElementById("btnLoad").onclick=()=>{let s=localStorage.getItem("minicraft_planet_mod");if(!s){msg("Kein Speicherstand.");return}let d=JSON.parse(s);worlds=d.worlds;currentPlanet=d.currentPlanet;inv=d.inv;player=d.player;
+    if(player.hunger===undefined){player.hunger=10;player.maxHunger=10;player.hungerTimer=0;}activeSkin=d.activeSkin;skinPixels=d.skinPixels;creativeMode=!!d.creativeMode;updateCreativeStatus();world=worlds[currentPlanet].world;fireLife=worlds[currentPlanet].fireLife;mobs=worlds[currentPlanet].mobs;vehicles=worlds[currentPlanet].vehicles||[];renderAll();msg("Geladen.")};
+  document.getElementById("btnReset").onclick=()=>{if(confirm("Neue Welt?"))init()};
+
+
+  function updateCreativeStatus(){
+    const status = document.getElementById("creativeStatus");
+    if(!status) return;
+    if(creativeMode){
+      status.textContent = "Kreativ Mode ist AKTIV. Crafting ist grün, du hast keinen Schaden und kannst fliegen.";
+    } else {
+      status.textContent = "Kreativ Mode ist gesperrt. Finde den Code auf einem anderen Planeten.";
+    }
+  }
+
+  function setCreativeMode(value){
+    creativeMode = value;
+    if(creativeMode){
+      player.hp = player.maxHp;
+      player.hunger = player.maxHunger;
+      player.fuel = 9999;
+      msg("Kreativ Mode aktiviert.");
+    } else {
+      msg("Kreativ Mode deaktiviert.");
+    }
+    updateCreativeStatus();
+    renderAll();
+  }
+
+  function unlockCreativeWithCode(){
+    const input = document.getElementById("creativeCodeInput").value.trim().toLowerCase();
+    if(input === "2013"){
+      setCreativeMode(true);
+    } else {
+      msg("Falscher Code. Finde den versteckten Code-Block auf einem anderen Planeten.");
+      updateCreativeStatus();
+    }
+  }
+
+  document.getElementById("tabCreative").onclick=()=>switchTab("creativePage","tabCreative");
+  document.getElementById("btnUnlockCreative").onclick=unlockCreativeWithCode;
+  document.getElementById("btnCreativeOff").onclick=()=>setCreativeMode(false);
+
+  function holdButton(id, keyName){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const start = (e)=>{e.preventDefault(); keys[keyName]=true;};
+    const end = (e)=>{e.preventDefault(); keys[keyName]=false;};
+    el.addEventListener("touchstart", start, {passive:false});
+    el.addEventListener("touchend", end, {passive:false});
+    el.addEventListener("mousedown", start);
+    el.addEventListener("mouseup", end);
+    el.addEventListener("mouseleave", end);
+  }
+  holdButton("mobileLeft","left");
+  holdButton("mobileRight","right");
+  holdButton("mobileJump","jump");
+  holdButton("mobileDown","down");
+  holdButton("mobileJet","jet");
+  document.getElementById("mobileUse").onclick=toggleCar;
+
+
+
+  function copyInventory(){
+    const data={};
+    inventoryOrder.forEach(id=>data[id]=inv[id]||0);
+    return data;
+  }
+
+  function restoreInventory(saved){
+    if(!saved) return;
+    inventoryOrder.forEach(id=>inv[id]=saved[id]||0);
+  }
+
+  function saveAccountState(){
+    if(!currentUser) return;
+    const accounts=getAccounts();
+    if(!accounts[currentUser]) return;
+    accounts[currentUser].inv=copyInventory();
+    accounts[currentUser].skin=JSON.parse(JSON.stringify(activeSkin||skinPixels||makeDefaultSkin('photo')));
+    accounts[currentUser].playerSave={
+      hp:player.hp,hunger:player.hunger,fuel:player.fuel,
+      planet:currentPlanet,x:player.x,y:player.y,spawnX:player.spawnX,spawnY:player.spawnY
+    };
+    accounts[currentUser].live={
+      x:player.x,y:player.y,planet:currentPlanet,hp:player.hp,hunger:player.hunger,
+      held:selected,serverId:currentServerId,lastSeen:Date.now()
+    };
+    accounts[currentUser].online=true;
+    saveAccounts(accounts);
+  }
+
+
+  function isRealWebsiteMode(){
+    return location.protocol === "http:" || location.protocol === "https:";
+  }
+
+  function setOnlineStatus(text){
+    const el = document.getElementById("onlineStatus");
+    if(el) el.textContent = text;
+  }
+
+  async function loadServerState(){
+    if(!isRealWebsiteMode()){
+      setOnlineStatus("Offline-Datei: Auf anderen Geräten geht es so nicht. Starte server.js für echten Online-Modus.");
+      return;
+    }
+
+    try{
+      const res = await fetch("/api/state", {cache:"no-store"});
+      if(!res.ok) throw new Error("Server antwortet nicht");
+      const state = await res.json();
+
+      onlineAccountsCache = normalizeAccounts(state.accounts || {});
+      onlineServersCache = state.servers || {};
+      onlineMessagesCache = state.messages || {};
+      onlineMode = true;
+
+      localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
+      localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
+
+      setOnlineStatus("Online-Server verbunden. Andere Geräte können jetzt mitspielen.");
+      connectLiveSocket();
+      renderFriendsPage();
+      renderServerList();
+      renderChat();
+      renderAll();
+    }catch(e){
+      onlineMode = false;
+      setOnlineStatus("Kein Online-Server gefunden. Diese Datei läuft nur lokal auf diesem Gerät.");
+    }
+  }
+
+  function connectLiveSocket(){
+    if(!isRealWebsiteMode()) return;
+
+    try{
+      const proto = location.protocol === "https:" ? "wss://" : "ws://";
+      onlineSocket = new WebSocket(proto + location.host + "/ws");
+
+      onlineSocket.onmessage = (event)=>{
+        try{
+          const msg = JSON.parse(event.data);
+          if(msg.type === "state"){
+            onlineAccountsCache = normalizeAccounts(msg.state.accounts || {});
+            onlineServersCache = msg.state.servers || {};
+            onlineMessagesCache = msg.state.messages || {};
+
+            localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+            localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
+            localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
+
+            renderFriendsPage();
+            renderServerList();
+            renderChat();
+            renderAll();
+          }
+        }catch(e){}
+      };
+
+      onlineSocket.onopen = ()=>setOnlineStatus("Live-Verbindung aktiv.");
+      onlineSocket.onclose = ()=>setOnlineStatus("Live-Verbindung getrennt. Seite neu laden oder Server prüfen.");
+    }catch(e){}
+  }
+
+  async function postServer(path, data){
+    if(!onlineMode) return;
+    try{
+      await fetch(path, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(data)
+      });
+    }catch(e){
+      setOnlineStatus("Server-Speichern fehlgeschlagen.");
+    }
+  }
+
+  function getMessages(key){
+    const all = onlineMessagesCache || JSON.parse(localStorage.getItem("safinicraft_messages") || "{}");
+    return Array.isArray(all[key]) ? all[key] : [];
+  }
+
+  function saveMessages(key, messages){
+    const all = onlineMessagesCache || JSON.parse(localStorage.getItem("safinicraft_messages") || "{}");
+    all[key] = messages;
+    onlineMessagesCache = all;
+    localStorage.setItem("safinicraft_messages", JSON.stringify(all));
+    postServer("/api/messages", {messages: all});
+  }
+
+  function getServers(){
+    try{
+      return onlineServersCache || JSON.parse(localStorage.getItem('safinicraft_servers')||'{}');
+    }
+    catch(e){return {};}
+  }
+
+  function saveServers(servers){
+    onlineServersCache = servers || {};
+    localStorage.setItem('safinicraft_servers', JSON.stringify(onlineServersCache));
+    postServer('/api/servers', {servers: onlineServersCache});
+  }
+
+  function makeServerId(){
+    return 'srv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
+  }
+
+  function getActiveServer(){
+    const servers=getServers();
+    if(currentServerId && servers[currentServerId]) return servers[currentServerId];
+    return null;
+  }
+
+  function normalizeAccounts(accounts){
+    accounts = accounts || {};
+
+    Object.keys(accounts).forEach(name=>{
+      const acc = accounts[name];
+
+      acc.friends = Array.isArray(acc.friends) ? acc.friends : [];
+      acc.friendRequests = Array.isArray(acc.friendRequests) ? acc.friendRequests : [];
+      acc.sentRequests = Array.isArray(acc.sentRequests) ? acc.sentRequests : [];
+      acc.gameInvites = Array.isArray(acc.gameInvites) ? acc.gameInvites : [];
+      acc.unfriended = Array.isArray(acc.unfriended) ? acc.unfriended : [];
+      acc.skin = acc.skin || makeDefaultSkin("photo");
+
+      // alte Versionen hatten teilweise "invites" statt "friendRequests"
+      if(Array.isArray(acc.invites)){
+        acc.invites.forEach(v=>{
+          if(typeof v === "string" && !acc.friendRequests.includes(v)){
+            acc.friendRequests.push(v);
+          }
+        });
+      }
+    });
+
+    // Freundschaften immer beidseitig reparieren
+    Object.keys(accounts).forEach(name=>{
+      const acc = accounts[name];
+      acc.friends.forEach(friend=>{
+        if(accounts[friend]){
+          accounts[friend].friends = Array.isArray(accounts[friend].friends) ? accounts[friend].friends : [];
+          if(!accounts[friend].friends.includes(name)){
+            accounts[friend].friends.push(name);
+          }
+        }
+      });
+    });
+
+    return accounts;
+  }
+
+  function getAccounts(){
+    try{
+      const raw = onlineAccountsCache || JSON.parse(localStorage.getItem("safinicraft_accounts")||"{}");
+      const accounts = normalizeAccounts(raw);
+      onlineAccountsCache = accounts;
+      localStorage.setItem("safinicraft_accounts", JSON.stringify(accounts));
+      return accounts;
+    }
+    catch(e){return {};}
+  }
+
+  function saveAccounts(accounts){
+    accounts = normalizeAccounts(accounts);
+    onlineAccountsCache = accounts;
+    localStorage.setItem("safinicraft_accounts", JSON.stringify(accounts));
+    postServer("/api/accounts", {accounts});
+  }
+
+  function getRoom(){
+    return getActiveServer() || {players:[]};
+  }
+
+  function saveRoom(room){
+    if(!currentServerId) return;
+    const servers=getServers();
+    servers[currentServerId]=room;
+    saveServers(servers);
+  }
+
+  function addServerBlockEvent(action, block, x, y){
+    if(!currentUser || !currentServerId) return;
+    const servers=getServers();
+    const server=servers[currentServerId];
+    if(!server) return;
+    server.blockEvents=server.blockEvents||[];
+    const blockName=(defs[block]&&defs[block].name)||block;
+    const ev={
+      from:currentUser,
+      action:action,
+      block:block,
+      blockName:blockName,
+      x:x,
+      y:y,
+      planet:currentPlanet,
+      serverId:currentServerId,
+      time:Date.now()
+    };
+    server.blockEvents.push(ev);
+    server.blockEvents=server.blockEvents.slice(-120);
+    servers[currentServerId]=server;
+    saveServers(servers);
+
+    // auch im Online-Chat anzeigen
+    const key=getChatKey();
+    const messages=getMessages(key);
+    const verb=action==='break'?'abgebaut':'platziert';
+    messages.push({from:'System',text:currentUser+' hat '+blockName+' '+verb+' bei X:'+x+' Y:'+y,time:Date.now(),serverId:currentServerId,system:true});
+    saveMessages(key, messages.slice(-120));
+    renderChat();
+  }
+
+  function encodePass(pass){
+    return btoa(unescape(encodeURIComponent(pass)));
+  }
+
+  function loginMessage(text){
+    document.getElementById("loginMsg").textContent = text;
+  }
+
+  function skinForAccount(){
+    return JSON.parse(JSON.stringify(activeSkin || skinPixels || makeDefaultSkin("photo")));
+  }
+
+  function createAccount(){
+    const name = document.getElementById("loginName").value.trim();
+    const pass = document.getElementById("loginPass").value;
+
+    if(!name || !pass){
+      loginMessage("Bitte Name und Passwort eingeben.");
+      return;
+    }
+
+    const accounts = getAccounts();
+
+    if(accounts[name]){
+      loginMessage("Dieser Name ist schon vergeben. Wähle einen anderen Namen.");
+      return;
+    }
+
+    accounts[name] = {
+      pass: encodePass(pass),
+      skin: skinForAccount(),
+      friends: [],
+      friendRequests: [],
+      sentRequests: [],
+      gameInvites: [],
+      inv: copyInventory(),
+      created: Date.now(),
+      online: false
+    };
+
+    saveAccounts(accounts);
+    loginMessage("Spieler erstellt. Du kannst dich jetzt einloggen.");
+  }
+
+  function loginAccount(){
+    const name = document.getElementById("loginName").value.trim();
+    const pass = document.getElementById("loginPass").value;
+    const accounts = getAccounts();
+
+    if(!accounts[name]){
+      loginMessage("Diesen Spieler gibt es nicht. Erstelle ihn zuerst.");
+      return;
+    }
+
+    if(accounts[name].pass !== encodePass(pass)){
+      loginMessage("Falsches Passwort.");
+      return;
+    }
+
+    currentUser = name;
+
+    if(accounts[name].inv){
+      restoreInventory(accounts[name].inv);
+    }
+
+    if(accounts[name].skin){
+      activeSkin = JSON.parse(JSON.stringify(accounts[name].skin));
+      skinPixels = JSON.parse(JSON.stringify(accounts[name].skin));
+    } else {
+      accounts[name].skin = skinForAccount();
+    }
+
+    if(accounts[name].playerSave){
+      player.hp = accounts[name].playerSave.hp ?? player.maxHp;
+      player.hunger = accounts[name].playerSave.hunger ?? player.maxHunger;
+      player.fuel = accounts[name].playerSave.fuel ?? player.fuel;
+      if(accounts[name].playerSave.planet && worlds[accounts[name].playerSave.planet]){
+        switchPlanet(accounts[name].playerSave.planet);
+      }
+      player.x = accounts[name].playerSave.x ?? player.x;
+      player.y = accounts[name].playerSave.y ?? player.y;
+      player.spawnX = accounts[name].playerSave.spawnX ?? player.spawnX;
+      player.spawnY = accounts[name].playerSave.spawnY ?? player.spawnY;
+    }
+
+    const servers=getServers();
+    const found=Object.values(servers).find(s=>(s.players||[]).includes(name));
+    currentServerId = found ? found.id : null;
+
+    accounts[name].online = true;
+    accounts[name].lastLogin = Date.now();
+    saveAccounts(accounts);
+    saveAccountState();
+
+    localStorage.setItem("safinicraft_current_user", name);
+    document.body.classList.remove("loggedOut");
+    document.body.classList.add("loggedIn");
+    msg("Willkommen bei Safinicraft.de, " + name + "! Items, Skin und Freunde wurden geladen.");
+    renderFriendsPage();
+    renderAll();
+  }
+
+  function logoutAccount(){
+    if(currentUser){
+      saveAccountState();
+      const accounts = getAccounts();
+      if(accounts[currentUser]){
+        accounts[currentUser].online = false;
+        saveAccounts(accounts);
+      }
+    }
+
+    currentUser = null;
+    selectedChatFriend = null;
+    document.body.classList.remove("loggedIn");
+    document.body.classList.add("loggedOut");
+    localStorage.removeItem("safinicraft_current_user");
+    loginMessage("Du bist ausgeloggt.");
+  }
+
+  function updateAccountSkin(){
+    if(!currentUser) return;
+    const accounts = getAccounts();
+    if(accounts[currentUser]){
+      accounts[currentUser].skin = skinForAccount();
+      saveAccounts(accounts);
+      renderFriendsPage();
+    }
+  }
+
+  function getChatKey(){
+    return currentServerId ? "safinicraft_chat_" + currentServerId : "safinicraft_chat_lobby";
+  }
+
+  function getFriendStatus(otherName){
+    const accounts = getAccounts();
+    const me = accounts[currentUser];
+    const other = accounts[otherName];
+
+    if(!me || !other) return "unknown";
+    if(otherName === currentUser) return "self";
+
+    // Freundschaft gilt auch dann, wenn sie nur auf einer Seite gespeichert wurde.
+    if((me.friends||[]).includes(otherName) || (other.friends||[]).includes(currentUser)) return "friend";
+
+    if((other.friendRequests||[]).includes(currentUser)) return "sent";
+    if((me.friendRequests||[]).includes(otherName)) return "received";
+    return "none";
+  }
+
+  function sendFriendRequest(target){
+    const accounts = getAccounts();
+
+    if(!currentUser || !accounts[currentUser]){
+      msg("Du musst eingeloggt sein.");
+      return;
+    }
+
+    if(!target){
+      target = document.getElementById("friendSearchInput").value.trim();
+    }
+
+    const result = document.getElementById("searchResult");
+
+    if(!target){
+      if(result) result.textContent = "Gib einen Namen ein.";
+      return;
+    }
+
+    if(target === currentUser){
+      if(result) result.textContent = "Du kannst dich nicht selbst hinzufügen.";
+      return;
+    }
+
+    if(!accounts[target]){
+      if(result) result.textContent = "Spieler nicht gefunden.";
+      return;
+    }
+
+    const status = getFriendStatus(target);
+    if(status === "friend"){
+      if(result) result.textContent = target + " ist schon dein Freund.";
+      return;
+    }
+    if(status === "sent"){
+      if(result) result.textContent = "Anfrage wurde schon gesendet.";
+      return;
+    }
+    if(status === "received"){
+      if(result) result.textContent = target + " hat dir schon eine Anfrage geschickt. Nimm sie an.";
+      return;
+    }
+
+    accounts[target].friendRequests = accounts[target].friendRequests || [];
+    accounts[currentUser].sentRequests = accounts[currentUser].sentRequests || [];
+
+    accounts[target].friendRequests.push(currentUser);
+    accounts[currentUser].sentRequests.push(target);
+
+    accounts[currentUser].unfriended = (accounts[currentUser].unfriended || []).filter(x=>x!==target);
+    accounts[target].unfriended = (accounts[target].unfriended || []).filter(x=>x!==currentUser);
+
+    saveAccounts(accounts);
+    if(result) result.textContent = "Freundschaftsanfrage an " + target + " gesendet.";
+    renderFriendsPage();
+  }
+
+  function acceptFriendRequest(from){
+    const accounts = getAccounts();
+    const me = accounts[currentUser];
+    const other = accounts[from];
+
+    if(!me || !other) return;
+
+    me.friendRequests = (me.friendRequests||[]).filter(x=>x!==from);
+    other.sentRequests = (other.sentRequests||[]).filter(x=>x!==currentUser);
+
+    me.friends = me.friends || [];
+    other.friends = other.friends || [];
+
+    if(!me.friends.includes(from)) me.friends.push(from);
+    if(!other.friends.includes(currentUser)) other.friends.push(currentUser);
+
+    me.unfriended = (me.unfriended || []).filter(x=>x!==from);
+    other.unfriended = (other.unfriended || []).filter(x=>x!==currentUser);
+
+    accounts[currentUser] = me;
+    accounts[from] = other;
+    saveAccounts(accounts);
+    renderFriendsPage();
+  }
+
+  function declineFriendRequest(from){
+    const accounts = getAccounts();
+    const me = accounts[currentUser];
+    const other = accounts[from];
+
+    me.friendRequests = (me.friendRequests||[]).filter(x=>x!==from);
+    if(other) other.sentRequests = (other.sentRequests||[]).filter(x=>x!==currentUser);
+
+    accounts[currentUser] = me;
+    if(other) accounts[from] = other;
+
+    saveAccounts(accounts);
+    renderFriendsPage();
+  }
+
+  function createServer(){
+    if(!currentUser){msg("Du musst eingeloggt sein.");return;}
+    const name=(document.getElementById("serverNameInput").value.trim() || (currentUser + "s Server"));
+    let max=parseInt(document.getElementById("serverMaxInput").value || "8",10);
+    max=Math.max(2,Math.min(20,max));
+    const servers=getServers();
+    const id=makeServerId();
+    servers[id]={id,name,owner:currentUser,maxPlayers:max,players:[currentUser],created:Date.now()};
+    currentServerId=id;
+    saveServers(servers);
+    saveAccountState();
+    document.getElementById("serverMsg").textContent="Server erstellt: "+name;
+    renderFriendsPage();
+  }
+
+  function joinServer(id){
+    const servers=getServers();
+    const s=servers[id];
+    if(!s){msg("Server nicht gefunden.");return;}
+    s.players=s.players||[];
+    if(s.players.length >= s.maxPlayers && !s.players.includes(currentUser)){
+      msg("Server ist voll.");
+      return;
+    }
+    if(!s.players.includes(currentUser)) s.players.push(currentUser);
+    servers[id]=s;
+    currentServerId=id;
+    saveServers(servers);
+    saveAccountState();
+    msg("Server beigetreten: "+s.name);
+    renderFriendsPage();
+  }
+
+  function leaveRoom(){
+    if(!currentServerId) return;
+    const servers=getServers();
+    const s=servers[currentServerId];
+    if(s){
+      s.players=(s.players||[]).filter(x=>x!==currentUser);
+      servers[currentServerId]=s;
+      saveServers(servers);
+    }
+    currentServerId=null;
+    saveAccountState();
+    renderFriendsPage();
+  }
+
+  function inviteFriendToRoom(friend){
+    const accounts=getAccounts();
+    const me=accounts[currentUser];
+    if(!me || !(me.friends||[]).includes(friend)){
+      msg("Du kannst nur angenommene Freunde einladen.");
+      return;
+    }
+    if(!currentServerId){
+      document.getElementById("serverNameInput").value=currentUser+"s Server";
+      createServer();
+    }
+    const server=getActiveServer();
+    if(!server){msg("Erstelle zuerst einen Server.");return;}
+    accounts[friend].gameInvites=accounts[friend].gameInvites||[];
+    const invite={from:currentUser,serverId:currentServerId,serverName:server.name,time:Date.now()};
+    const exists=accounts[friend].gameInvites.some(i=>(typeof i==='object'&&i.serverId===currentServerId)||(i===currentUser));
+    if(!exists) accounts[friend].gameInvites.push(invite);
+    saveAccounts(accounts);
+    msg("Server-Einladung an "+friend+" gesendet.");
+    renderFriendsPage();
+  }
+
+  function acceptGameInvite(invite){
+    const accounts=getAccounts();
+    const me=accounts[currentUser];
+    const serverId=typeof invite==='object' ? invite.serverId : currentServerId;
+    const from=typeof invite==='object' ? invite.from : invite;
+    me.gameInvites=(me.gameInvites||[]).filter(i=>{
+      if(typeof i==='object') return i.serverId!==serverId;
+      return i!==from;
+    });
+    accounts[currentUser]=me;
+    saveAccounts(accounts);
+    if(serverId) joinServer(serverId);
+    else msg("Diese alte Einladung hat keinen Server mehr.");
+  }
+
+  function sendChat(source){
+    if(!currentUser){msg("Du musst eingeloggt sein.");return;}
+    if(!currentServerId){msg("Erstelle oder betrete zuerst einen Server.");return;}
+    const input = source==='game' ? document.getElementById("gameChatInput") : document.getElementById("chatInput");
+    const text = input.value.trim();
+    if(!text) return;
+    const server=getActiveServer();
+    if(server && !(server.players||[]).includes(currentUser)){
+      server.players=server.players||[];
+      server.players.push(currentUser);
+      saveRoom(server);
+    }
+    const key=getChatKey();
+    const messages=getMessages(key);
+    messages.push({from:currentUser,text,time:Date.now(),serverId:currentServerId});
+    saveMessages(key, messages);
+    input.value="";
+    renderChat();
+  }
+
+  function renderChat(){
+    const boxes=[document.getElementById("chatBox"), document.getElementById("gameChatBox")].filter(Boolean);
+    const key=getChatKey();
+    const messages=getMessages(key);
+    boxes.forEach(box=>{
+      box.innerHTML="";
+      if(!currentServerId){
+        box.innerHTML="<p class='small'>Kein Server aktiv.</p>";
+        return;
+      }
+      if(messages.length===0){
+        box.innerHTML="<p class='small'>Noch keine Nachrichten.</p>";
+        return;
+      }
+      messages.slice(-80).forEach(m=>{
+        const div=document.createElement("div");
+        div.className="chatMsg "+(m.from===currentUser?"mine":"")+(m.system?" system":"");
+        const time=new Date(m.time).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+        div.innerHTML="<b>"+escapeHtml(m.from)+"</b> <span class='small'>"+time+"</span><br>"+escapeHtml(m.text);
+        box.appendChild(div);
+      });
+      box.scrollTop=box.scrollHeight;
+    });
+  }
+
+  function escapeHtml(text){
+    return String(text).replace(/[&<>"']/g, function(ch){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[ch];
+    });
+  }
+
+  function drawMiniSkinToCanvas(canvas, pixels){
+    const c = canvas.getContext("2d");
+    c.clearRect(0,0,canvas.width,canvas.height);
+    const scaleX = canvas.width / 16;
+    const scaleY = canvas.height / 32;
+
+    if(!pixels) pixels = makeDefaultSkin("photo");
+
+    for(let y=0;y<32;y++){
+      for(let x=0;x<16;x++){
+        const col = pixels[y] && pixels[y][x];
+        if(!col) continue;
+        c.fillStyle = col;
+        c.fillRect(x*scaleX, y*scaleY, scaleX, scaleY);
+      }
+    }
+  }
+
+  function unfriendPlayer(friend){
+    const accounts = getAccounts();
+    const me = accounts[currentUser];
+    const other = accounts[friend];
+
+    if(!me || !other){
+      msg("Spieler nicht gefunden.");
+      return;
+    }
+
+    me.friends = (me.friends || []).filter(x=>x!==friend);
+    other.friends = (other.friends || []).filter(x=>x!==currentUser);
+
+    me.friendRequests = (me.friendRequests || []).filter(x=>x!==friend);
+    other.friendRequests = (other.friendRequests || []).filter(x=>x!==currentUser);
+
+    me.sentRequests = (me.sentRequests || []).filter(x=>x!==friend);
+    other.sentRequests = (other.sentRequests || []).filter(x=>x!==currentUser);
+
+    me.unfriended = me.unfriended || [];
+    other.unfriended = other.unfriended || [];
+
+    if(!me.unfriended.includes(friend)) me.unfriended.push(friend);
+    if(!other.unfriended.includes(currentUser)) other.unfriended.push(currentUser);
+
+    accounts[currentUser] = me;
+    accounts[friend] = other;
+
+    saveAccounts(accounts);
+    msg(friend + " wurde entfernt.");
+    renderFriendsPage();
+  }
+
+  function createPlayerCard(name, data){
+    const status = getFriendStatus(name);
+    const card = document.createElement("div");
+    card.className = "playerCard";
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 40;
+    canvas.height = 80;
+    canvas.className = "miniSkin";
+    card.appendChild(canvas);
+
+    const info = document.createElement("div");
+    info.className = "playerCardInfo";
+
+    let badge = "";
+    if(status === "self") badge = "<span class='badge self'>Du</span>";
+    else if(status === "friend") badge = "<span class='badge friend'>Freund</span>";
+    else if(status === "sent") badge = "<span class='badge pending'>Anfrage gesendet</span>";
+    else if(status === "received") badge = "<span class='badge pending'>Anfrage erhalten</span>";
+    else badge = "<span class='badge'>Kein Freund</span>";
+
+    const online = data.online ? " <span class='onlineTag'>● online</span>" : " <span class='small'>offline</span>";
+    info.innerHTML = "<b>"+escapeHtml(name)+"</b>"+online+"<br>"+badge+"<br>";
+
+    if(status === "none"){
+      const btn = document.createElement("button");
+      btn.textContent = "Freundschaftsanfrage";
+      btn.onclick = ()=>sendFriendRequest(name);
+      info.appendChild(btn);
+    }
+
+    if(status === "received"){
+      const yes = document.createElement("button");
+      yes.textContent = "Annehmen";
+      yes.onclick = ()=>acceptFriendRequest(name);
+      const no = document.createElement("button");
+      no.textContent = "Ablehnen";
+      no.onclick = ()=>declineFriendRequest(name);
+      info.appendChild(yes);
+      info.appendChild(no);
+    }
+
+    if(status === "friend"){
+      const invite = document.createElement("button");
+      invite.textContent = "In Server einladen";
+      invite.onclick = ()=>inviteFriendToRoom(name);
+      info.appendChild(invite);
+
+      const remove = document.createElement("button");
+      remove.textContent = "Entfreunden";
+      remove.onclick = ()=>unfriendPlayer(name);
+      info.appendChild(remove);
+    }
+
+    card.appendChild(info);
+
+    setTimeout(()=>drawMiniSkinToCanvas(canvas, data.skin), 0);
+
+    return card;
+  }
+
+  function renderAllPlayers(){
+    const list = document.getElementById("allPlayersList");
+    if(!list) return;
+
+    const accounts = getAccounts();
+    list.innerHTML = "";
+
+    const names = Object.keys(accounts);
+    if(names.length === 0){
+      list.innerHTML = "<p class='small'>Noch keine Spieler erstellt.</p>";
+      return;
+    }
+
+    names.forEach(name=>{
+      list.appendChild(createPlayerCard(name, accounts[name]));
+    });
+  }
+
+  function renderNotFriendList(){
+    const list = document.getElementById("notFriendList");
+    if(!list || !currentUser) return;
+
+    const accounts = getAccounts();
+    const me = accounts[currentUser] || {};
+    list.innerHTML = "";
+
+    let names = Object.keys(accounts).filter(name=>{
+      if(name === currentUser) return false;
+      const status = getFriendStatus(name);
+      return status === "none" || status === "sent" || status === "received";
+    });
+
+    // Entfreundete zuerst anzeigen
+    names.sort((a,b)=>{
+      const au = (me.unfriended||[]).includes(a) ? 0 : 1;
+      const bu = (me.unfriended||[]).includes(b) ? 0 : 1;
+      if(au !== bu) return au - bu;
+      return a.localeCompare(b);
+    });
+
+    if(names.length === 0){
+      list.innerHTML = "<p class='small'>Keine entfreundeten oder fremden Spieler gefunden.</p>";
+      return;
+    }
+
+    names.forEach(name=>{
+      const card = createPlayerCard(name, accounts[name] || {});
+      if((me.unfriended||[]).includes(name)){
+        const badge = document.createElement("div");
+        badge.className = "badge pending";
+        badge.textContent = "zuletzt entfreundet";
+        card.querySelector(".playerCardInfo").appendChild(badge);
+      }
+      list.appendChild(card);
+    });
+  }
+
+  function renderFriendsPage(){
+    const label = document.getElementById("currentUserLabel");
+    if(label) label.textContent = currentUser || "---";
+
+    if(!currentUser) return;
+
+    const accounts = getAccounts();
+    const me = accounts[currentUser] || {friends:[],friendRequests:[],gameInvites:[]};
+
+    renderAllPlayers();
+    renderServers();
+
+    const inviteList = document.getElementById("inviteList");
+    if(inviteList){
+      inviteList.innerHTML = "";
+
+      const requests = me.friendRequests || [];
+      const gameInvites = me.gameInvites || [];
+
+      if(requests.length===0 && gameInvites.length===0){
+        inviteList.innerHTML = "<p class='small'>Keine Anfragen.</p>";
+      }
+
+      requests.forEach(name=>{
+        const row = document.createElement("div");
+        row.className = "chatMsg";
+        row.innerHTML = "<b>"+escapeHtml(name)+"</b> möchte dein Freund sein.<br>";
+        const yes = document.createElement("button");
+        yes.textContent = "Freundschaft annehmen";
+        yes.onclick = ()=>acceptFriendRequest(name);
+        const no = document.createElement("button");
+        no.textContent = "Ablehnen";
+        no.onclick = ()=>declineFriendRequest(name);
+        row.appendChild(yes);
+        row.appendChild(no);
+        inviteList.appendChild(row);
+      });
+
+      gameInvites.forEach(inv=>{
+        const from = typeof inv === "object" ? inv.from : inv;
+        const serverName = typeof inv === "object" ? inv.serverName : "Server";
+        const row = document.createElement("div");
+        row.className = "chatMsg";
+        row.innerHTML = "<b>"+escapeHtml(from)+"</b> lädt dich in den Server <b>"+escapeHtml(serverName)+"</b> ein.<br>";
+        const yes = document.createElement("button");
+        yes.textContent = "Server beitreten";
+        yes.onclick = ()=>acceptGameInvite(inv);
+        row.appendChild(yes);
+        inviteList.appendChild(row);
+      });
+    }
+
+    const friendList = document.getElementById("friendList");
+    if(friendList){
+      friendList.innerHTML = "";
+
+      // Freunde robuster sammeln:
+      // 1. aus meiner Liste
+      // 2. aus anderen Accounts, falls dort mein Name gespeichert ist
+      const friendSet = new Set(me.friends || []);
+      Object.keys(accounts).forEach(name=>{
+        if(name !== currentUser && (accounts[name].friends || []).includes(currentUser)){
+          friendSet.add(name);
+        }
+      });
+
+      const friends = Array.from(friendSet).filter(name=>accounts[name]);
+
+      if(friends.length===0){
+        friendList.innerHTML = "<p class='small'>Noch keine Freunde.</p>";
+      } else {
+        const count = document.createElement("p");
+        count.className = "small";
+        count.textContent = "Freunde: " + friends.length;
+        friendList.appendChild(count);
+      }
+
+      friends.forEach(name=>{
+        const data = accounts[name] || {};
+        friendList.appendChild(createPlayerCard(name, data));
+      });
+    }
+
+    renderNotFriendList();
+    renderRoomPlayers();
+    renderChat();
+  }
+
+  function renderServers(){
+    const list=document.getElementById("serverList");
+    if(!list) return;
+    const servers=getServers();
+    const values=Object.values(servers).sort((a,b)=>b.created-a.created);
+    list.innerHTML="";
+    if(values.length===0){
+      list.innerHTML="<p class='small'>Noch keine Server. Erstelle den ersten Server.</p>";
+      return;
+    }
+    values.forEach(s=>{
+      const card=document.createElement("div");
+      card.className="serverCard "+(s.id===currentServerId?"activeServer":"");
+      const count=(s.players||[]).length;
+      card.innerHTML="<b>"+escapeHtml(s.name)+"</b><br><span class='small'>Owner: "+escapeHtml(s.owner)+" | Spieler: "+count+"/"+s.maxPlayers+"</span><br>";
+      const join=document.createElement("button");
+      join.textContent=s.id===currentServerId?"Aktiv":"Beitreten";
+      join.disabled=s.id===currentServerId;
+      join.onclick=()=>joinServer(s.id);
+      card.appendChild(join);
+      list.appendChild(card);
+    });
+  }
+
+  function renderRoomPlayers(){
+    const box=document.getElementById("roomPlayers");
+    const label=document.getElementById("activeServerLabel");
+    if(!box) return;
+    const server=getActiveServer();
+    if(label) label.textContent=server ? (server.name+" ("+(server.players||[]).length+"/"+server.maxPlayers+")") : "Kein Server";
+    box.innerHTML="";
+    if(!server){
+      box.innerHTML="<span class='small'>Du bist in keinem Server.</span>";
+      return;
+    }
+    const accounts=getAccounts();
+    (server.players||[]).forEach(name=>{
+      const tag=document.createElement("span");
+      tag.className="badge friend";
+      const live=accounts[name]&&accounts[name].live;
+      tag.textContent=name+(live?" ("+live.planet+")":"");
+      box.appendChild(tag);
+    });
+    if((server.players||[]).includes(currentUser)){
+      const leave=document.createElement("button");
+      leave.textContent="Server verlassen";
+      leave.onclick=leaveRoom;
+      box.appendChild(leave);
+    }
+  }
+
+  async function startVoice(){
+    const status = document.getElementById("voiceStatus");
+
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      status.textContent = "Mikrofon wird in diesem Browser nicht unterstützt.";
+      return;
+    }
+
+    try{
+      voiceStream = await navigator.mediaDevices.getUserMedia({audio:true});
+      status.textContent = "Mikrofon aktiv. Für echte Übertragung zu Freunden braucht Safinicraft.de später einen Server/WebRTC.";
+    }catch(e){
+      status.textContent = "Mikrofon wurde nicht erlaubt.";
+    }
+  }
+
+  function stopVoice(){
+    if(voiceStream){
+      voiceStream.getTracks().forEach(t=>t.stop());
+      voiceStream = null;
+    }
+    document.getElementById("voiceStatus").textContent = "Voice Chat aus.";
+  }
+
+  document.getElementById("btnCreateAccount").onclick = createAccount;
+  document.getElementById("btnLoginAccount").onclick = loginAccount;
+  document.getElementById("btnLogout").onclick = logoutAccount;
+  document.getElementById("tabFriends").onclick=()=>{switchTab("friendsPage","tabFriends");renderFriendsPage();};
+  document.getElementById("btnSearchPlayer").onclick = ()=>sendFriendRequest(null);
+  document.getElementById("btnSendChat").onclick = ()=>sendChat("page");
+  document.getElementById("btnGameChatSend").onclick = ()=>sendChat("game");
+  document.getElementById("gameChatInput").addEventListener("keydown", e=>{if(e.key==="Enter")sendChat("game")});
+  document.getElementById("chatInput").addEventListener("keydown", e=>{if(e.key==="Enter")sendChat("page")});
+  document.getElementById("btnCreateServer").onclick = createServer;
+  document.getElementById("btnVoiceStart").onclick = startVoice;
+  document.getElementById("btnVoiceStop").onclick = stopVoice;
+
+  setInterval(function(){
+    if(document.getElementById("friendsPage").classList.contains("active")){
+      renderFriendsPage();
+    }
+  }, 1200);
+
+  function init(){
+    worlds={};
+    createWorld("earth");
+    currentPlanet="earth";world=worlds.earth.world;fireLife=worlds.earth.fireLife;mobs=worlds.earth.mobs;vehicles=worlds.earth.vehicles;
+    const g=groundAt(10);player.x=10*cell+2;player.y=(g-2)*cell;player.spawnX=player.x;player.spawnY=player.y;player.hp=player.maxHp;player.hunger=player.maxHunger;player.fuel=inv.fuel_cell*40;
+    updateCreativeStatus();updateCreativeStatus();renderAll();msg("Spiel gestartet. Skin vom Foto ist Standard.");
+  }
+  function loop(){update();draw();requestAnimationFrame(loop)}
+  init();
+  loadServerState();loop();
+});
+</script>
+</body>
+</html>
