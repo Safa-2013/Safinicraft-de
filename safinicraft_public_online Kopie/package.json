@@ -1,0 +1,13 @@
+{
+  "name": "safinicraft-de",
+  "version": "1.0.0",
+  "description": "Safinicraft.de Online Multiplayer Demo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
