@@ -790,6 +790,112 @@
     }
   }
 
+
+  .adminItemCard,.playerCard{
+    background:#151515;
+    border:2px solid #444;
+    border-radius:14px;
+    padding:10px;
+    margin:8px 0;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .adminItemInfo,.playerCardInfo{flex:1;min-width:210px}
+  .adminItemActions,.adminPlayerActions{display:flex;gap:6px;flex-wrap:wrap}
+  .statusOnline{color:#00ff99;font-weight:bold}
+  .statusOffline{color:#ffcc00;font-weight:bold}
+  .statusBanned{color:#ff5252;font-weight:bold}
+  .adminTemplateBox{
+    margin:10px 0;
+    padding:10px;
+    border:2px solid #444;
+    border-radius:12px;
+    background:#111;
+  }
+  .adminCreatedNotice{
+    margin-top:8px;
+    color:#00ff99;
+    font-weight:bold;
+  }
+  .dangerBtn{background:#7a1414!important}
+  .ghostBtn{background:#27406f!important}
+  .craftingWorkbenchBox{
+    display:grid;
+    grid-template-columns:minmax(290px,420px) minmax(290px,1fr);
+    gap:14px;
+    max-width:1180px;
+    margin:12px auto;
+    padding:0 12px;
+  }
+  .craftingTablePanel,.craftAllItemsPanel{
+    background:#202020;
+    border:2px solid #444;
+    border-radius:14px;
+    padding:12px;
+    text-align:left;
+  }
+  .craftingGrid3x3{
+    display:grid;
+    grid-template-columns:repeat(3,86px);
+    grid-template-rows:repeat(3,86px);
+    gap:8px;
+    justify-content:center;
+    margin:12px auto;
+  }
+  .craftSlot{
+    background:#101010;
+    border:3px solid #555;
+    border-radius:12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:#ddd;
+    font-size:11px;
+    cursor:pointer;
+    user-select:none;
+    min-width:86px;
+    min-height:86px;
+  }
+  .craftSlot.filled{border-color:#ffd84d;background:#27210e}
+  .craftSearch{
+    width:100%;
+    box-sizing:border-box;
+    padding:10px;
+    border-radius:10px;
+    border:2px solid #555;
+    background:#111;
+    color:#fff;
+    margin-bottom:8px;
+  }
+  .craftAllItemsList{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+    gap:7px;
+    max-height:520px;
+    overflow:auto;
+    padding-right:4px;
+  }
+  .craftAllItemBtn{
+    background:#111;
+    border:2px solid #444;
+    color:#fff;
+    border-radius:10px;
+    padding:8px;
+    text-align:left;
+    cursor:pointer;
+    min-height:58px;
+  }
+  .craftAllItemBtn.selectedCraftItem{border-color:#ffd84d;background:#3b2f08}
+  @media(max-width:820px){
+    .craftingWorkbenchBox{grid-template-columns:1fr}
+    .craftingGrid3x3{grid-template-columns:repeat(3,78px);grid-template-rows:repeat(3,78px)}
+    .craftSlot{min-width:78px;min-height:78px;font-size:10px}
+  }
+
 </style>
 </head>
 <body class="loggedOut">
@@ -800,7 +906,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN-LOGIN FIX VERSION 1.7.1</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">PC/MOBILE CONTROL FIX VERSION 1.8.1</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -901,8 +1007,29 @@
 
 <div id="craftPage" class="page">
   <div class="box">
-    <b>Rezeptbuch:</b> Grün = du kannst es craften. Rot = Material fehlt.
-    Hier sind auch Mods wie Auto, Jetpack, Küche, Kühlschrank und Pixel-Pistole.
+    <h2 class="title">Crafting</h2>
+    <p>
+      Oben ist ein 3×3 Crafting-Tisch. Rechts wählst du Items aus und legst sie links in den Tisch.
+      Unten bleibt das Rezeptbuch zusätzlich sichtbar.
+    </p>
+  </div>
+
+  <div class="craftingWorkbenchBox">
+    <div class="craftingTablePanel">
+      <h3>Crafting Table 3×3</h3>
+      <div id="craftingGrid" class="craftingGrid3x3"></div>
+      <div class="itemToolRow">
+        <button id="btnCraftTableCraft">Craften</button>
+        <button id="btnCraftTableClear">Tisch leeren</button>
+      </div>
+      <div id="craftingResultBox" class="message">Rechts Item auswählen, links in ein Feld legen.</div>
+    </div>
+
+    <div class="craftAllItemsPanel">
+      <h3>Alle Items</h3>
+      <input id="craftItemSearch" class="craftSearch" placeholder="Item suchen...">
+      <div id="craftAllItemsList" class="craftAllItemsList"></div>
+    </div>
   </div>
 
   <div class="box">
@@ -1052,10 +1179,31 @@
       <label>Item-Typ</label>
       <select id="adminItemType">
         <option value="weapon">Fantasy-Waffe</option>
-        <option value="block">Block</option>
         <option value="tool">Werkzeug</option>
+        <option value="block">Block</option>
         <option value="food">Essen</option>
+        <option value="material">Material</option>
+        <option value="fuel">Treibstoff</option>
+        <option value="vehicle">Fahrzeug</option>
       </select>
+
+      <div class="adminTemplateBox">
+        <label>Funktion / Vorlage</label>
+        <select id="adminToolFunction">
+          <option value="rocket">Raketenwerfer: Explosion + Flächenschaden</option>
+          <option value="pistol">Pixel-Pistole: Schuss</option>
+          <option value="strong">Starke Waffe: viel Einzelschaden</option>
+          <option value="pickaxe">Werkzeug: Spitzhacke für Stein/Erz</option>
+          <option value="axe">Werkzeug: Axt für Holz</option>
+          <option value="shovel">Werkzeug: Schaufel für Erde/Sand</option>
+          <option value="sword">Werkzeug: Schwert/Nahkampf</option>
+          <option value="placeable">Block: platzierbar</option>
+          <option value="food5">Essen: +5 Hunger</option>
+          <option value="fuel">Treibstoff/Zutat</option>
+          <option value="material">Material/Zutat</option>
+        </select>
+        <div class="small">Du kannst Items komplett manuell erstellen. KI ist nicht nötig.</div>
+      </div>
 
       <label>Waffen-Effekt</label>
       <select id="adminWeaponEffect">
@@ -1123,7 +1271,8 @@
         </div>
       </div>
 
-      <button id="btnCreatePaintedItem">Gemaltes Item privat erstellen</button>
+      <button id="btnCreatePaintedItem">✅ Item jetzt erstellen + mir geben</button>
+      <div id="adminCreatedItemNotice" class="adminCreatedNotice"></div>
     </div>
 
     <div class="adminPanel">
@@ -1802,7 +1951,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   }
 
-  function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderRecipes();renderSkinCanvas();draw()}
+  function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderCraftingTable();renderAllCraftItems();renderRecipes();renderSkinCanvas();draw()}
   function renderInventory(id,craft){
     const box=document.getElementById(id);box.innerHTML="";
     if(!craft){
@@ -2341,34 +2490,19 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   game.addEventListener("contextmenu",e=>e.preventDefault());
   function handleCanvasAction(e){
     if(e.preventDefault) e.preventDefault();
-    const p=pointerCell(e);if(!inBounds(p.x,p.y))return;
-    const pt=tile(player.x+player.w/2,player.y+player.h/2),dist=Math.abs(p.x-pt.x)+Math.abs(p.y-pt.y);
+
+    const isMobileAction = !!e.mobileAction || (typeof touchMode!=="undefined" && touchMode);
+    const p=pointerCell(e);
+    if(!inBounds(p.x,p.y))return;
+
+    const pt=tile(player.x+player.w/2,player.y+player.h/2);
+    const dist=Math.abs(p.x-pt.x)+Math.abs(p.y-pt.y);
     const clickX=p.x*cell+cell/2,clickY=p.y*cell+cell/2;
     let mob=mobs.find(m=>clickX>=m.x-4&&clickX<=m.x+m.w+4&&clickY>=m.y-28&&clickY<=m.y+m.h+4);
-    if(e.button===2){
-      if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
-      breakBlock(p.x,p.y);
-      renderAll();
-      return;
-    }
 
     if(world[p.y][p.x]==="secret_code"){
       msg("Geheimer Code gefunden: 2013");
       renderAll();
-      return;
-    }
-
-    if(e.mobileAction==="attack"){
-      if(defs[selected]&&defs[selected].tool==="pistol"&&(creativeMode||(inv[selected]||0)>0)){
-        shoot(clickX,clickY);
-        return;
-      }
-      if(mob){
-        attackMob(mob);
-        renderAll();
-        return;
-      }
-      msg("Kein Monster getroffen.");
       return;
     }
 
@@ -2380,32 +2514,80 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       return;
     }
 
-    if(defs[selected]&&defs[selected].tool==="pistol"&&(creativeMode||(inv[selected]||0)>0)){
-      shoot(clickX,clickY);
+    // HANDY:
+    // kurzer Tap mit Block = platzieren
+    // Halten mit Hand/Werkzeug = abbauen
+    if(isMobileAction){
+      if(e.mobileAction==="attack"){
+        if(defs[selected]&&defs[selected].tool==="pistol"&&(creativeMode||(inv[selected]||0)>0)){
+          shoot(clickX,clickY);
+          return;
+        }
+        if(mob){
+          attackMob(mob);
+          renderAll();
+          return;
+        }
+        msg("Kein Monster getroffen.");
+        return;
+      }
+
+      if(defs[selected] && defs[selected].place){
+        if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
+        placeBlock(p.x,p.y);
+        renderAll();
+        return;
+      }
+
+      if(mob){
+        attackMob(mob);
+        renderAll();
+        return;
+      }
+
+      msg("Handy: kurz mit Block tippen = platzieren. Gedrückt halten mit Hand/Werkzeug = abbauen.");
       return;
     }
 
-    if(mob){
-      attackMob(mob);
+    // PC:
+    // Linksklick = abbauen / angreifen / schießen
+    // Rechtsklick = platzieren
+    if(e.button===2){
+      if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
+
+      if(selected==="car_item"&&(creativeMode||inv.car_item>0)){
+        placeCar(p.x,p.y);
+        renderAll();
+        return;
+      }
+
+      if(defs[selected] && defs[selected].place){
+        placeBlock(p.x,p.y);
+        renderAll();
+        return;
+      }
+
+      msg("PC: Rechtsklick mit Block = platzieren. Linksklick = abbauen/angreifen.");
+      return;
+    }
+
+    if(e.button===0 || e.button===undefined){
+      if(mob){
+        if(defs[selected]&&defs[selected].tool==="pistol"&&(creativeMode||(inv[selected]||0)>0)){
+          shoot(clickX,clickY);
+        }else{
+          attackMob(mob);
+        }
+        renderAll();
+        return;
+      }
+
+      if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
+
+      breakBlock(p.x,p.y);
       renderAll();
       return;
     }
-
-    if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
-
-    if(selected==="car_item"&&(creativeMode||inv.car_item>0)){
-      placeCar(p.x,p.y);
-      renderAll();
-      return;
-    }
-
-    // Linksklick = platzieren / benutzen. Abbauen geht mit Rechtsklick.
-    if(defs[selected] && defs[selected].place){
-      placeBlock(p.x,p.y);
-    } else {
-      msg("Kurz tippen mit Block = platzieren. Gedrückt halten mit Hand/Werkzeug = abbauen.");
-    }
-    renderAll();
   }
   function normalizedCanvasEvent(e, touchMode=false){
     const t = e.touches && e.touches.length ? e.touches[0] :
@@ -2414,8 +2596,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     return {
       clientX:t.clientX,
       clientY:t.clientY,
-      button:touchMode ? (mobileActionMode==="break"?2:0) : (e.button || 0),
+      button:touchMode ? 0 : (e.button ?? 0),
       mobileAction:touchMode ? mobileActionMode : undefined,
+      isTouch:touchMode,
       preventDefault:()=>{ if(e.preventDefault) e.preventDefault(); }
     };
   }
@@ -2445,6 +2628,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       return;
     }
 
+    if(defs[selected] && defs[selected].place && !creativeMode){
+      msg("Zum Abbauen Hand oder Werkzeug auswählen. Mit Block in der Hand wird kurzer Klick platziert.");
+      endCanvasHold(null,true);
+      return;
+    }
+
     canvasHold.broke = true;
     breakBlock(p.x,p.y);
     renderAll();
@@ -2454,7 +2643,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const ev = normalizedCanvasEvent(e,touchMode);
     ev.preventDefault();
 
-    if(!touchMode && ev.button!==0 && ev.button!==2) return;
+    // Halten zum Abbauen NUR auf Handy.
+    // Auf PC sofort normal klicken: Linksklick abbauen, Rechtsklick platzieren.
+    if(!touchMode){
+      handleCanvasAction(ev);
+      return;
+    }
 
     const p = pointerCell(ev);
     if(!inBounds(p.x,p.y)) return;
@@ -2467,7 +2661,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     clearTimeout(canvasHold.timer);
     clearInterval(canvasHold.interval);
 
-    const delay = (ev.button===2 || ev.mobileAction==="break") ? 220 : 650;
+    const delay = (ev.mobileAction==="break" || !(defs[selected] && defs[selected].place)) ? 260 : 520;
 
     canvasHold.timer = setTimeout(()=>{
       canvasHoldBreak();
@@ -2802,10 +2996,20 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
   }
 
+  function adminItemToolFromFunction(fn,type){
+    if(fn==="pickaxe") return "pickaxe";
+    if(fn==="axe") return "axe";
+    if(fn==="shovel") return "shovel";
+    if(fn==="sword") return "sword";
+    if(fn==="pistol" || fn==="rocket" || fn==="strong") return "pistol";
+    if(type==="weapon") return "pistol";
+    if(type==="tool") return "pickaxe";
+    return undefined;
+  }
+
   function loadAdminItemsIntoGame(){
     const items = getAdminItems();
 
-    // alte Admin-Items aus der aktuellen Anzeige entfernen
     inventoryOrder = inventoryOrder.filter(id=>!(defs[id] && defs[id].adminItem));
     Object.keys(defs).forEach(id=>{ if(defs[id] && defs[id].adminItem) delete defs[id]; });
     for(let i=recipes.length-1;i>=0;i--){
@@ -2815,22 +3019,25 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     Object.keys(items).forEach(id=>{
       const item = items[id];
 
-      // Nicht veröffentlichte Items sieht nur der Admin zum Testen.
       if(!item.published && !isAdmin()) return;
+
+      const fn = item.function || item.toolFunction || "material";
+      const type = item.type || "material";
 
       defs[id] = {
         name:item.name,
         color:item.color || "#ffcc00",
-        place:item.type==="block",
-        tool:item.type==="weapon" ? "pistol" : item.type==="tool" ? "pickaxe" : undefined,
-        tier:item.type==="weapon" ? 2 : 1,
-        foodValue:item.type==="food" ? 5 : undefined,
+        place:type==="block" || fn==="placeable",
+        tool:adminItemToolFromFunction(fn,type),
+        tier:(fn==="rocket" || item.effect==="explosive") ? 4 : (fn==="strong" ? 3 : type==="weapon" ? 2 : 1),
+        foodValue:(type==="food" || fn==="food5") ? 5 : undefined,
         adminItem:true,
         icon:item.icon || null,
-        effect:item.effect || "normal",
-        damage:item.damage || (item.effect==="explosive"?7:3),
-        radius:item.radius || (item.effect==="explosive"?70:0),
-        published:!!item.published
+        effect:(fn==="rocket" || item.effect==="explosive") ? "explosive" : (item.effect || (fn==="strong"?"strong":"normal")),
+        damage:item.damage || (fn==="rocket"?9:fn==="strong"?6:item.effect==="explosive"?8:3),
+        radius:item.radius || (fn==="rocket"?95:item.effect==="explosive"?85:0),
+        published:!!item.published,
+        itemFunction:fn
       };
 
       if(!inventoryOrder.includes(id)) inventoryOrder.push(id);
@@ -2978,10 +3185,24 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function createAdminItem(name,type,color,icon,options={}){
     if(!isAdmin()){msg("Nur Admin darf Items erstellen.");return null;}
     if(!name || !name.trim()){msg("Item braucht einen Namen.");return null;}
+
     const items = getAdminItems();
-    const effect = options.effect || document.getElementById("adminWeaponEffect")?.value || "normal";
-    const id = makeSafeId(name, type==="weapon"?"weapon":type==="block"?"block":"item");
+    const fn = options.function || document.getElementById("adminToolFunction")?.value || "material";
+    let effect = options.effect || document.getElementById("adminWeaponEffect")?.value || "normal";
+
+    if(fn==="rocket") effect="explosive";
+    if(fn==="strong") effect="strong";
+    if(fn==="food5") type="food";
+    if(fn==="placeable") type="block";
+
+    const id = makeSafeId(name, type==="weapon"?"weapon":type==="block"?"block":type==="tool"?"tool":"item");
     const recipe = options.recipe || getAdminRecipeFromGrid();
+
+    const damage = type==="weapon" || fn==="rocket" || fn==="pistol" || fn==="strong"
+      ? (effect==="explosive"?9:effect==="strong"?6:3)
+      : 1;
+
+    const radius = effect==="explosive" ? 95 : 0;
 
     items[id] = {
       id,
@@ -2993,22 +3214,27 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       created:Date.now(),
       updated:Date.now(),
       published:false,
-      effect: type==="weapon" ? effect : "normal",
-      damage: type==="weapon" ? (effect==="explosive"?8:effect==="strong"?6:3) : 1,
-      radius: type==="weapon" && effect==="explosive" ? 85 : 0,
+      effect,
+      function:fn,
+      toolFunction:fn,
+      damage,
+      radius,
       recipe
     };
 
     saveAdminItems(items);
     loadAdminItemsIntoGame();
 
-    // Admin darf private Items testen.
     inv[id] = Math.max(inv[id]||0, 20);
     selected = id;
     saveAccountState();
+
     renderAll();
     renderAdminItemsList();
-    msg("Privates Admin Item erstellt: "+name+". Erst online stellen, dann sehen es alle.");
+
+    const notice=document.getElementById("adminCreatedItemNotice");
+    if(notice) notice.textContent="Erstellt: "+name+" | Status: OFFLINE/PRIVAT | 20x im Inventar";
+    msg("Item erstellt und ins Inventar gelegt: "+name+" | Status: offline/privat.");
     return id;
   }
 
@@ -3117,26 +3343,32 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     loadAdminItemsIntoGame();
     renderAdminItemsList();
     renderRecipes();
-    msg(items[id].published?items[id].name+" ist jetzt online.":items[id].name+" ist jetzt privat/offline.");
+    renderCraftingTable();
+    renderAllCraftItems();
+    msg(items[id].published?items[id].name+" ist jetzt ONLINE.":items[id].name+" ist jetzt OFFLINE/PRIVAT.");
   }
 
   function deleteAdminItem(id){
     const items=getAdminItems();
     if(!items[id]) return;
     const name=items[id].name;
-    if(!confirm("Item wirklich löschen? "+name)) return;
     delete items[id];
     saveAdminItems(items);
+
     if(defs[id]) delete defs[id];
     inventoryOrder = inventoryOrder.filter(x=>x!==id);
     delete inv[id];
+
     for(let i=recipes.length-1;i>=0;i--){
-      if(recipes[i].out===id) recipes.splice(i,1);
+      if(recipes[i].out===id || (recipes[i].need && recipes[i].need[id])) recipes.splice(i,1);
     }
+
     saveAccountState();
     loadAdminItemsIntoGame();
     renderAdminItemsList();
     renderRecipes();
+    renderCraftingTable();
+    renderAllCraftItems();
     renderAll();
     msg("Item gelöscht: "+name);
   }
@@ -3148,34 +3380,91 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     box.innerHTML="";
     const ids=Object.keys(items).sort((a,b)=>(items[b].created||0)-(items[a].created||0));
     if(ids.length===0){box.innerHTML="<p class='small'>Noch keine Admin Items.</p>";return;}
+
     ids.forEach(id=>{
       const item=items[id];
-      const div=document.createElement("div");
-      div.className="adminItemCard";
-      div.innerHTML="<b>"+escapeHtml(item.name)+"</b><br><span class='small'>Typ: "+escapeHtml(item.type)+" | Effekt: "+escapeHtml(item.effect||"normal")+" | Status: "+(item.published?"Online":"Privat")+"</span><br><span class='small'>Rezept: "+recipeToText(item.recipe)+"</span><br>";
+      const card=document.createElement("div");
+      card.className="adminItemCard";
+
       const iconCanvas=document.createElement("canvas");
       iconCanvas.width=16;iconCanvas.height=16;
-      iconCanvas.style.width="48px";iconCanvas.style.height="48px";iconCanvas.style.imageRendering="pixelated";
-      iconCanvas.style.border="2px solid #555";iconCanvas.style.background="#111";iconCanvas.style.margin="6px 0";
-      div.appendChild(iconCanvas);
+      iconCanvas.style.width="58px";iconCanvas.style.height="58px";
+      iconCanvas.style.imageRendering="pixelated";
+      iconCanvas.style.border="2px solid #555";
+      iconCanvas.style.background="#111";
+      card.appendChild(iconCanvas);
       setTimeout(()=>drawPixelIcon(iconCanvas,item.icon,item.color),0);
+
+      const info=document.createElement("div");
+      info.className="adminItemInfo";
+      const status=item.published?"ONLINE":"OFFLINE/PRIVAT";
+      const statusClass=item.published?"statusOnline":"statusOffline";
+      info.innerHTML =
+        "<b>"+escapeHtml(item.name)+"</b> <span class='"+statusClass+"'>"+status+"</span><br>"+
+        "<span class='small'>Typ: "+escapeHtml(item.type||"item")+" | Funktion: "+escapeHtml(item.function||item.toolFunction||item.effect||"normal")+"</span><br>"+
+        "<span class='small'>Rezept: "+recipeToText(item.recipe)+"</span><br>"+
+        "<span class='small'>ID: "+escapeHtml(id)+"</span>";
+      card.appendChild(info);
+
+      const actions=document.createElement("div");
+      actions.className="adminItemActions";
+
       const give=document.createElement("button");
       give.textContent="Mir geben";
-      give.onclick=()=>{loadAdminItemsIntoGame();inv[id]=(inv[id]||0)+20;selected=id;saveAccountState();renderAll();msg(item.name+" erhalten.");};
-      div.appendChild(give);
+      give.onclick=()=>{
+        loadAdminItemsIntoGame();
+        inv[id]=(inv[id]||0)+20;
+        selected=id;
+        saveAccountState();
+        renderAll();
+        msg(item.name+" 20x ins Inventar gelegt.");
+      };
+      actions.appendChild(give);
 
       const pub=document.createElement("button");
-      pub.textContent=item.published?"Offline nehmen":"Online stellen";
+      pub.textContent=item.published?"Offline stellen":"Online stellen";
       pub.onclick=()=>toggleAdminItemPublished(id);
-      div.appendChild(pub);
+      actions.appendChild(pub);
 
       const del=document.createElement("button");
       del.textContent="Löschen";
+      del.className="dangerBtn";
       del.onclick=()=>deleteAdminItem(id);
-      div.appendChild(del);
+      actions.appendChild(del);
 
-      box.appendChild(div);
+      card.appendChild(actions);
+      box.appendChild(card);
     });
+  }
+
+  function adminToggleBan(name){
+    if(!isAdmin()) return;
+    if(name===currentUser){msg("Du kannst dich nicht selbst bannen.");return;}
+    const accounts=getAccounts();
+    if(!accounts[name]) return;
+    accounts[name].banned=!accounts[name].banned;
+    accounts[name].online=false;
+    saveAccounts(accounts);
+    renderAdminPlayersList();
+    msg(accounts[name].banned ? name+" wurde gebannt." : name+" wurde entbannt.");
+  }
+
+  function adminGhostVisit(name){
+    if(!isAdmin()) return;
+    const accounts=getAccounts();
+    const acc=accounts[name];
+    if(!acc || !acc.live){
+      msg("Keine Live-Welt von "+name+" gefunden.");
+      return;
+    }
+    if(acc.live.planet && worlds[acc.live.planet]) switchPlanet(acc.live.planet);
+    player.x=(acc.live.x||player.x)+80;
+    player.y=acc.live.y||player.y;
+    creativeMode=true;
+    updateCreativeStatus();
+    msg("Geist-Modus: Du bist unsichtbar/als Admin bei "+name+" in der Nähe. Kreativ ist aktiv.");
+    switchTab("worldPage","tabWorld");
+    renderAll();
   }
 
   function renderAdminPlayersList(){
@@ -3204,12 +3493,32 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       info.className="playerCardInfo";
       const invCount=acc.inv ? Object.values(acc.inv).reduce((a,b)=>a+(Number(b)||0),0) : 0;
       const role=acc.role==="admin" ? "Admin" : "Spieler";
+      const status = acc.banned ? "<span class='statusBanned'>● GEBANNT</span>" : (acc.online ? "<span class='onlineTag'>● online</span>" : "<span class='small'>offline</span>");
       info.innerHTML =
         "<b>"+escapeHtml(name)+"</b> <span class='badge "+(acc.role==="admin"?"pending":"")+"'>"+role+"</span><br>"+
-        (acc.online ? "<span class='onlineTag'>● online</span>" : "<span class='small'>offline</span>")+"<br>"+
+        status+"<br>"+
         "<span class='small'>Freunde: "+((acc.friends||[]).length)+" | Items: "+invCount+"</span><br>"+
         "<span class='small'>Erstellt: "+(acc.created?new Date(acc.created).toLocaleDateString():"unbekannt")+"</span>";
       card.appendChild(info);
+
+      const actions=document.createElement("div");
+      actions.className="adminPlayerActions";
+
+      const ghost=document.createElement("button");
+      ghost.textContent="Als Geist rein";
+      ghost.className="ghostBtn";
+      ghost.onclick=()=>adminGhostVisit(name);
+      actions.appendChild(ghost);
+
+      if(acc.role!=="admin"){
+        const ban=document.createElement("button");
+        ban.textContent=acc.banned?"Entbannen":"Bannen";
+        ban.className=acc.banned?"":"dangerBtn";
+        ban.onclick=()=>adminToggleBan(name);
+        actions.appendChild(ban);
+      }
+
+      card.appendChild(actions);
       box.appendChild(card);
       setTimeout(()=>drawMiniSkinToCanvas(canvas, acc.skin || makeDefaultSkin("photo")),0);
     });
@@ -4014,6 +4323,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
   document.getElementById("tabWorld").onclick=()=>switchTab("worldPage","tabWorld");
   document.getElementById("tabCraft").onclick=()=>switchTab("craftPage","tabCraft");
+  document.getElementById("btnCraftTableCraft")?.addEventListener("click",craftFromTable);
+  document.getElementById("btnCraftTableClear")?.addEventListener("click",clearCraftingTable);
+  document.getElementById("craftItemSearch")?.addEventListener("input",renderAllCraftItems);
   document.getElementById("tabMods").onclick=openModsPage;
   document.getElementById("tabAI").onclick=()=>switchTab("aiPage","tabAI");
   document.getElementById("tabOven").onclick=()=>{switchTab("ovenPage","tabOven");renderOvenPage();};
@@ -4078,12 +4390,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("mainAiInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendMainAI();});
   document.getElementById("btnAdminAiRun").onclick=runAdminAI;
   document.getElementById("adminItemType").addEventListener("change",()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value));
+  document.getElementById("adminToolFunction")?.addEventListener("change",()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value));
   document.getElementById("adminWeaponEffect").addEventListener("change",()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value));
   document.getElementById("btnClearAdminRecipe").onclick=clearAdminRecipeGrid;
   document.getElementById("btnAutoAdminRecipe").onclick=()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value);
   document.getElementById("adminRecipeSearch").addEventListener("input",renderAdminRecipeItemsList);
   document.getElementById("btnClearItemPaint").onclick=()=>{itemPaintPixels=Array.from({length:16},()=>Array(16).fill(null));drawItemPaintCanvas();};
-  document.getElementById("btnCreatePaintedItem").onclick=()=>{createAdminItem(document.getElementById("adminItemName").value,document.getElementById("adminItemType").value,document.getElementById("adminPaintColor").value,itemPaintPixels,{effect:document.getElementById("adminWeaponEffect").value});};
+  document.getElementById("btnCreatePaintedItem").onclick=()=>{createAdminItem(document.getElementById("adminItemName").value,document.getElementById("adminItemType").value,document.getElementById("adminPaintColor").value,itemPaintPixels,{effect:document.getElementById("adminWeaponEffect").value,function:document.getElementById("adminToolFunction").value});};
   document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));
 
   function holdButton(id, keyName){
@@ -4372,6 +4685,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       acc.gameInvites = Array.isArray(acc.gameInvites) ? acc.gameInvites : [];
       acc.unfriended = Array.isArray(acc.unfriended) ? acc.unfriended : [];
       acc.skin = acc.skin || makeDefaultSkin("photo");
+      acc.banned = !!acc.banned;
 
       // alte Versionen hatten teilweise "invites" statt "friendRequests"
       if(Array.isArray(acc.invites)){

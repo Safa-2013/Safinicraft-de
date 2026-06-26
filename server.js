@@ -222,6 +222,11 @@ const server = http.createServer(async (req,res)=>{
       return;
     }
 
+    if(acc.banned){
+      sendJson(res, {ok:false, error:"Dieser Spieler wurde gebannt."});
+      return;
+    }
+
     acc.online = true;
     acc.lastLogin = Date.now();
     state.accounts[name] = acc;
@@ -404,6 +409,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN-LOGIN FIX 1.7.1 läuft auf Port " + PORT);
+  console.log("Safinicraft.de PC/MOBILE CONTROL FIX 1.8.1 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
