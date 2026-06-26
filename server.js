@@ -432,6 +432,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de MOVE + SKIN ERROR FIX 2.0.2 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN CHAT + PLAYER LIST FIX 2.1.0 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

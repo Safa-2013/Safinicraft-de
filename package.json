@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.0.2",
-  "description": "Safinicraft Movement and Skin Error Fix",
+  "version": "2.1.0",
+  "description": "Safinicraft Admin Chat and Player List Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

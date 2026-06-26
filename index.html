@@ -176,6 +176,7 @@
   body.loggedOut #friendsPage,
   body.loggedOut #modsPage,
   body.loggedOut #aiPage,
+  body.loggedOut #adminChatPage,
   body.loggedOut #ovenPage,
   body.loggedOut #adminPage{
     display:none !important;
@@ -1003,6 +1004,69 @@
     font-weight:bold;
   }
 
+
+  .adminChatPageGrid{
+    display:grid;
+    grid-template-columns:minmax(300px,1fr) minmax(260px,360px);
+    gap:14px;
+    max-width:1100px;
+    margin:12px auto;
+    padding:0 12px;
+  }
+  .adminChatBox{
+    background:#161616;
+    border:2px solid #444;
+    border-radius:14px;
+    padding:10px;
+  }
+  .adminChatLog{
+    height:430px;
+    overflow:auto;
+    background:#0d0d0d;
+    border:2px solid #333;
+    border-radius:12px;
+    padding:10px;
+    text-align:left;
+  }
+  .adminChatMsg{
+    background:#222;
+    border:2px solid #3b3b3b;
+    border-radius:12px;
+    padding:9px;
+    margin:8px 0;
+    word-break:break-word;
+  }
+  .adminChatMsg.mine{border-color:#ffd84d}
+  .adminChatMsg.admin{border-color:#00ff99}
+  .adminChatMsg.wish{border-color:#8ab4ff;background:#142033}
+  .adminChatMeta{font-size:12px;color:#aaa;margin-bottom:4px}
+  .adminChatInputRow{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+  .adminChatInputRow input,.adminChatInputRow textarea{
+    flex:1;
+    min-width:240px;
+    background:#111;
+    color:#fff;
+    border:2px solid #444;
+    border-radius:10px;
+    padding:10px;
+  }
+  .adminChatHint{
+    background:#151515;
+    border:2px solid #444;
+    border-radius:12px;
+    padding:10px;
+    text-align:left;
+  }
+  @media(max-width:850px){
+    .adminChatPageGrid{grid-template-columns:1fr}
+    .adminChatLog{height:320px}
+  }
+
 </style>
 </head>
 <body class="loggedOut">
@@ -1013,7 +1077,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">MOVE + SKIN ERROR FIX VERSION 2.0.2</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN CHAT + PLAYER LIST FIX VERSION 2.1.0</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1036,6 +1100,7 @@
   <button id="tabCraft">Crafting</button>
   <button id="tabMods">Mods erstellen</button>
   <button id="tabAI">KI Chat</button>
+  <button id="tabAdminChat">Admin Chat</button>
   <button id="tabOven">Ofen</button>
   <button id="tabAdmin">Admin</button>
   <button id="tabSkin">Skin malen</button>
@@ -1238,6 +1303,50 @@
   </div>
 </div>
 
+<div id="adminChatPage" class="page">
+  <div class="box">
+    <h2 class="title">Admin Chat / Wunschbox</h2>
+    <p>
+      Hier können alle Spieler dem Admin schreiben, welche Items, Waffen, Häuser, Mobs oder Funktionen sie sich wünschen.
+      Nur der Admin kann den Chat löschen.
+    </p>
+    <div id="adminChatStatus" class="message">Admin Chat wird geladen...</div>
+  </div>
+
+  <div class="adminChatPageGrid">
+    <div class="adminChatBox">
+      <h3>Nachrichten</h3>
+      <div id="adminChatLog" class="adminChatLog"></div>
+      <div class="adminChatInputRow">
+        <input id="adminChatInput" placeholder="Nachricht an den Admin schreiben...">
+        <button id="btnAdminChatSend">Senden</button>
+      </div>
+      <div class="adminChatInputRow">
+        <input id="adminWishInput" placeholder="Item-Wunsch, z.B. Raketenwerfer der explodiert">
+        <button id="btnAdminWishSend">Item-Wunsch senden</button>
+      </div>
+    </div>
+
+    <div class="adminChatHint">
+      <h3>Was kann man schreiben?</h3>
+      <p class="small">
+        Beispiele:
+      </p>
+      <ul>
+        <li>„Ich will ein neues Schwert mit Feuer.“</li>
+        <li>„Bitte Raketenwerfer, der explodiert und Schaden macht.“</li>
+        <li>„Mache ein Auto schneller.“</li>
+        <li>„Ich wünsche mir ein Haus-Mod.“</li>
+      </ul>
+      <button id="btnAdminChatRefresh">Chat aktualisieren</button>
+      <button id="btnAdminChatClear" class="dangerBtn">Chat löschen (nur Admin)</button>
+      <p class="small">
+        Normale Spieler sehen den Chat und können schreiben. Löschen kann nur der Admin.
+      </p>
+    </div>
+  </div>
+</div>
+
 <div id="ovenPage" class="page">
   <div class="box">
     <h2 class="title">Ofen</h2>
@@ -1398,6 +1507,8 @@
     <div class="adminPanel">
       <h3>Alle Spieler</h3>
       <p class="small">Hier sieht der Admin alle Accounts, Skins, Online-Status und Item-Anzahl.</p>
+      <button id="btnRefreshAdminPlayers">Spielerliste vom Server laden</button>
+      <div id="adminPlayerRefreshStatus" class="message"></div>
       <div id="adminPlayersList"></div>
     </div>
   </div>
@@ -4038,6 +4149,8 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       tools.style.display="grid";
       renderAdminItemsList();
       renderAdminPlayersList();
+      const refreshBtn=document.getElementById("btnRefreshAdminPlayers");
+      if(refreshBtn) refreshBtn.onclick=()=>refreshServerStateOnly(false);
       renderAdminRecipeGrid();
       setupItemPainter();
       drawItemPaintCanvas();
@@ -4831,8 +4944,15 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("craftItemSearch")?.addEventListener("input",renderAllCraftItems);
   document.getElementById("tabMods").onclick=openModsPage;
   document.getElementById("tabAI").onclick=()=>switchTab("aiPage","tabAI");
+  document.getElementById("tabAdminChat").onclick=()=>{switchTab("adminChatPage","tabAdminChat");renderAdminChat();};
   document.getElementById("tabOven").onclick=()=>{switchTab("ovenPage","tabOven");renderOvenPage();};
-  document.getElementById("tabAdmin").onclick=()=>{switchTab("adminPage","tabAdmin");renderAdminPage();setupItemPainter();drawItemPaintCanvas();};
+  document.getElementById("tabAdmin").onclick=()=>{switchTab("adminPage","tabAdmin");renderAdminPage();refreshServerStateOnly(true);setupItemPainter();drawItemPaintCanvas();};
+  document.getElementById("btnAdminChatSend")?.addEventListener("click",()=>sendAdminChat("message"));
+  document.getElementById("btnAdminWishSend")?.addEventListener("click",()=>sendAdminChat("wish"));
+  document.getElementById("btnAdminChatRefresh")?.addEventListener("click",()=>{refreshServerStateOnly(false);renderAdminChat();});
+  document.getElementById("btnAdminChatClear")?.addEventListener("click",clearAdminChat);
+  document.getElementById("adminChatInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();sendAdminChat("message");}});
+  document.getElementById("adminWishInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();sendAdminChat("wish");}});
   document.getElementById("tabSkin").onclick=()=>switchTab("skinPage","tabSkin");
   document.getElementById("btnMode").onclick=()=>{buildMode=!buildMode;document.getElementById("btnMode").textContent=buildMode?"Modus: Bauen":"Modus: Abbauen";document.getElementById("btnMode").classList.toggle("active",!buildMode)};
   document.getElementById("btnSpawnMob").onclick=()=>{spawnMob(randomMob(),clamp(Math.floor(player.x/cell)+7,2,worldCols-2));msg("Mob gespawnt.")};
@@ -5083,10 +5203,54 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       renderAdminPage();
       renderOvenPage();
       renderChat();
+      renderAdminChat();
       renderAll();
     }catch(e){
       onlineMode = false;
       setOnlineStatus("Kein Online-Server gefunden. Diese Datei läuft nur lokal auf diesem Gerät.");
+    }
+  }
+
+  async function refreshServerStateOnly(quiet=false){
+    if(!isRealWebsiteMode()){
+      if(!quiet) msg("Online-Spielerliste braucht Render/server.js.");
+      return false;
+    }
+
+    try{
+      const res = await fetch("/api/state", {cache:"no-store"});
+      if(!res.ok) throw new Error("Server antwortet nicht");
+      const state = await res.json();
+
+      onlineAccountsCache = normalizeAccounts(state.accounts || {});
+      onlineServersCache = state.servers || {};
+      onlineMessagesCache = state.messages || {};
+      onlineModsCache = state.mods || defaultMods();
+      onlineAdminItemsCache = state.adminItems || {};
+      onlineWorldSettingsCache = state.worldSettings || {};
+      onlineMode = true;
+
+      localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
+      localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
+      localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
+      localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
+      localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
+
+      renderAdminPlayersList();
+      renderFriendsPage();
+      renderAdminChat();
+      renderAdminItemsList();
+
+      const status=document.getElementById("adminPlayerRefreshStatus");
+      if(status) status.textContent = "Spielerliste geladen: " + Object.keys(onlineAccountsCache).length + " Accounts.";
+      if(!quiet) msg("Spielerliste vom Server geladen.");
+      return true;
+    }catch(e){
+      const status=document.getElementById("adminPlayerRefreshStatus");
+      if(status) status.textContent = "Konnte Server-Spielerliste nicht laden.";
+      if(!quiet) msg("Server-Spielerliste konnte nicht geladen werden.");
+      return false;
     }
   }
 
@@ -5121,6 +5285,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
             renderAdminPage();
             renderOvenPage();
             renderChat();
+            renderAdminChat();
             renderAll();
           }
         }catch(e){}
@@ -5733,6 +5898,93 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     saveMessages(key, messages);
     input.value="";
     renderChat();
+  }
+
+  const ADMIN_CHAT_KEY = "__admin_global_chat__";
+
+  function getAdminChatMessages(){
+    return getMessages(ADMIN_CHAT_KEY);
+  }
+
+  function saveAdminChatMessages(messages){
+    saveMessages(ADMIN_CHAT_KEY, messages.slice(-300));
+  }
+
+  function renderAdminChat(){
+    const log=document.getElementById("adminChatLog");
+    const status=document.getElementById("adminChatStatus");
+    const clearBtn=document.getElementById("btnAdminChatClear");
+    if(!log) return;
+
+    const messages=getAdminChatMessages();
+
+    if(status){
+      status.textContent = onlineMode
+        ? "Online-Admin-Chat aktiv. Nachrichten werden für alle gespeichert."
+        : "Kein Online-Server verbunden. Nachrichten bleiben nur lokal.";
+    }
+
+    if(clearBtn){
+      clearBtn.style.display = isAdmin() ? "inline-block" : "none";
+    }
+
+    log.innerHTML="";
+    if(messages.length===0){
+      log.innerHTML="<p class='small'>Noch keine Nachrichten. Schreibe dem Admin deinen Wunsch.</p>";
+      return;
+    }
+
+    messages.slice(-120).forEach(m=>{
+      const div=document.createElement("div");
+      div.className="adminChatMsg "+(m.from===currentUser?"mine ":"")+(m.from==="admin"?"admin ":"")+(m.kind==="wish"?"wish ":"");
+      const time=new Date(m.time||Date.now()).toLocaleString("de-DE",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});
+      const label=m.kind==="wish" ? "ITEM-WUNSCH" : "NACHRICHT";
+      div.innerHTML =
+        "<div class='adminChatMeta'><b>"+escapeHtml(m.from||"Spieler")+"</b> · "+time+" · "+label+"</div>"+
+        "<div>"+escapeHtml(m.text||"")+"</div>";
+      log.appendChild(div);
+    });
+
+    log.scrollTop=log.scrollHeight;
+  }
+
+  function sendAdminChat(kind="message"){
+    if(!currentUser){
+      loginMessage("Bitte zuerst einloggen.");
+      return;
+    }
+
+    const input = kind==="wish" ? document.getElementById("adminWishInput") : document.getElementById("adminChatInput");
+    if(!input) return;
+
+    const text=input.value.trim();
+    if(!text){
+      msg("Schreibe zuerst etwas in den Admin Chat.");
+      return;
+    }
+
+    const messages=getAdminChatMessages();
+    messages.push({
+      from:currentUser,
+      text,
+      kind,
+      time:Date.now()
+    });
+
+    saveAdminChatMessages(messages);
+    input.value="";
+    renderAdminChat();
+    msg(kind==="wish" ? "Item-Wunsch an Admin gesendet." : "Nachricht an Admin gesendet.");
+  }
+
+  function clearAdminChat(){
+    if(!isAdmin()){
+      msg("Nur der Admin kann den Admin Chat löschen.");
+      return;
+    }
+    saveAdminChatMessages([]);
+    renderAdminChat();
+    msg("Admin Chat wurde gelöscht.");
   }
 
   function renderChat(){
