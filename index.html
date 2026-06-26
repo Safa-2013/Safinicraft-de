@@ -1201,6 +1201,57 @@
     margin-top:6px;
   }
 
+
+  .adminItemGiveMenu{
+    margin-top:8px;
+    border:2px solid #444;
+    border-radius:10px;
+    padding:8px;
+    background:#111;
+  }
+  .adminItemGiveMenu summary{
+    cursor:pointer;
+    font-weight:bold;
+    color:#ffdd55;
+    user-select:none;
+  }
+  .adminItemGiveSearch{
+    width:100%;
+    box-sizing:border-box;
+    padding:9px;
+    margin:7px 0;
+    border-radius:8px;
+    border:2px solid #444;
+    background:#0b0b0b;
+    color:#fff;
+  }
+  .adminItemGiveList{
+    max-height:230px;
+    overflow:auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:6px;
+    margin-top:6px;
+  }
+  .adminItemGiveBtn{
+    text-align:left;
+    background:#191919;
+    border:2px solid #333;
+    border-radius:9px;
+    padding:7px;
+    color:#fff;
+    cursor:pointer;
+    font-size:12px;
+  }
+  .adminItemGiveBtn:hover{
+    border-color:#ffdd55;
+  }
+  .adminSelectedItemText{
+    color:#00ff99;
+    font-weight:bold;
+    margin:5px 0;
+  }
+
 </style>
 </head>
 <body class="loggedOut">
@@ -1211,7 +1262,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN PLAYER LOCAL+SERVER FIX VERSION 2.1.5</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN GIVE ITEM MENU FIX VERSION 2.1.6</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -4081,8 +4132,37 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     });
   }
 
-  function adminSaveAccountsAndRefresh(accounts, message){
-    saveAccounts(accounts);
+  async function adminSyncInventoryChangeToServer(name,itemId,amount,mode){
+    if(!isAdmin() || !isRealWebsiteMode()) return false;
+
+    try{
+      const res=await fetch("/api/admin/giveItem",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({target:name,itemId,amount,mode})
+      });
+      const data=await res.json();
+
+      if(data && data.ok && data.accounts){
+        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), data.accounts || {});
+        adminDirectAccountsCache = onlineAccountsCache;
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+        backupAccountsLocally(onlineAccountsCache);
+        renderAdminPlayersList();
+        renderFriendsPage();
+      }
+
+      return !!(data && data.ok);
+    }catch(e){
+      msg("Item wurde lokal geändert, aber Server-Sync ist fehlgeschlagen.");
+      return false;
+    }
+  }  function adminSaveAccountsAndRefresh(accounts, message){
+    const merged = mergeAccountObjects(getAllKnownAccounts(), accounts || {});
+    onlineAccountsCache = merged;
+    adminDirectAccountsCache = merged;
+    saveAccounts(merged);
+    backupAccountsLocally(merged);
     renderAdminPlayersList();
     renderFriendsPage();
     if(message) msg(message);
@@ -4148,26 +4228,48 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     accounts[name].bannedUntil = 0;
     accounts[name].bannedReason = "";
     adminSaveAccountsAndRefresh(accounts, name+" wurde entbannt.");
-  }
-
-  function adminGiveItemToPlayer(name, itemId, amount){
+  }  function adminGiveItemToPlayer(name, itemValue, amount){
     if(!isAdmin()) return;
-    const accounts=getAccounts();
-    if(!accounts[name] || !defs[itemId]) return;
+
+    const itemId=adminResolveItemInput(itemValue);
+    if(!itemId || !defs[itemId]){
+      msg("Item nicht gefunden. Schreibe die Item-ID oder wähle es aus dem Menü.");
+      return;
+    }
+
+    const accounts=getAdminVisibleAccounts();
+    if(!accounts[name]){
+      msg("Spieler nicht gefunden: "+name);
+      return;
+    }
+
     amount = Math.max(1, Math.floor(Number(amount||1)));
     accounts[name].inv = accounts[name].inv || {};
-    accounts[name].inv[itemId] = (accounts[name].inv[itemId]||0) + amount;
+    accounts[name].inv[itemId] = (Number(accounts[name].inv[itemId]||0)) + amount;
+
     adminSaveAccountsAndRefresh(accounts, name+" bekommt "+defs[itemId].name+" x"+amount+".");
-  }
-
-  function adminRemoveItemFromPlayer(name, itemId, amount){
+    adminSyncInventoryChangeToServer(name,itemId,amount,"give");
+  }  function adminRemoveItemFromPlayer(name, itemValue, amount){
     if(!isAdmin()) return;
-    const accounts=getAccounts();
-    if(!accounts[name] || !defs[itemId]) return;
+
+    const itemId=adminResolveItemInput(itemValue);
+    if(!itemId || !defs[itemId]){
+      msg("Item nicht gefunden. Schreibe die Item-ID oder wähle es aus dem Menü.");
+      return;
+    }
+
+    const accounts=getAdminVisibleAccounts();
+    if(!accounts[name]){
+      msg("Spieler nicht gefunden: "+name);
+      return;
+    }
+
     amount = Math.max(1, Math.floor(Number(amount||1)));
     accounts[name].inv = accounts[name].inv || {};
-    accounts[name].inv[itemId] = Math.max(0,(accounts[name].inv[itemId]||0) - amount);
+    accounts[name].inv[itemId] = Math.max(0, Number(accounts[name].inv[itemId]||0) - amount);
+
     adminSaveAccountsAndRefresh(accounts, name+" verliert "+defs[itemId].name+" x"+amount+".");
+    adminSyncInventoryChangeToServer(name,itemId,amount,"remove");
   }
 
   function adminGhostVisit(name){
@@ -4187,6 +4289,67 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     msg("Geist-Modus: Du bist als Admin bei "+name+" in der Nähe. Kreativ ist aktiv.");
     switchTab("worldPage","tabWorld");
     renderAll();
+  }
+
+  function adminResolveItemInput(value){
+    loadAdminItemsIntoGame();
+
+    const raw=String(value||"").trim();
+    if(!raw) return "";
+
+    if(defs[raw]) return raw;
+
+    const lower=raw.toLowerCase();
+    const ids=getAllExistingItemIds ? getAllExistingItemIds() : Object.keys(defs);
+
+    let found=ids.find(id=>id.toLowerCase()===lower);
+    if(found) return found;
+
+    found=ids.find(id=>defs[id] && String(defs[id].name||"").toLowerCase()===lower);
+    if(found) return found;
+
+    found=ids.find(id=>defs[id] && (id.toLowerCase().includes(lower) || String(defs[id].name||"").toLowerCase().includes(lower)));
+    if(found) return found;
+
+    return "";
+  }
+
+  function adminItemDatalistHtml(){
+    loadAdminItemsIntoGame();
+    const ids=getAllExistingItemIds ? getAllExistingItemIds() : Object.keys(defs);
+    return ids.filter(id=>defs[id] && id!=="air").map(id=>{
+      return '<option value="'+escapeHtml(id)+'">'+escapeHtml(defs[id].name)+' / '+escapeHtml(id)+'</option>';
+    }).join("");
+  }
+
+  function adminItemButtonsHtml(idx){
+    loadAdminItemsIntoGame();
+    const ids=getAllExistingItemIds ? getAllExistingItemIds() : Object.keys(defs);
+    return ids.filter(id=>defs[id] && id!=="air").map(id=>{
+      const name=defs[id].name || id;
+      const color=defs[id].color || "#fff";
+      return '<button type="button" class="adminItemGiveBtn" data-admin-item-target="'+idx+'" data-admin-item-id="'+escapeHtml(id)+'"><span class="dot" style="background:'+escapeHtml(color)+'"></span> '+escapeHtml(name)+'<br><span class="small">ID: '+escapeHtml(id)+'</span></button>';
+    }).join("");
+  }
+
+  function setAdminGiveItemInput(idx,itemId){
+    const input=document.getElementById("itemSearch_"+idx);
+    const label=document.getElementById("selectedItemLabel_"+idx);
+    if(input) input.value=itemId;
+    if(label){
+      const def=defs[itemId];
+      label.textContent=def ? ("Ausgewählt: "+def.name+" ("+itemId+")") : ("Ausgewählt: "+itemId);
+    }
+  }
+
+  function filterAdminItemButtons(idx){
+    const input=document.getElementById("itemSearch_"+idx);
+    const q=(input?.value||"").trim().toLowerCase();
+    document.querySelectorAll('[data-admin-item-target="'+idx+'"]').forEach(btn=>{
+      const id=(btn.getAttribute("data-admin-item-id")||"").toLowerCase();
+      const name=(defs[btn.getAttribute("data-admin-item-id")]?.name||"").toLowerCase();
+      btn.style.display = (!q || id.includes(q) || name.includes(q)) ? "" : "none";
+    });
   }
 
   function adminItemOptionsHtml(){
@@ -4306,7 +4469,11 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       itemBox.className="adminControlBox";
       itemBox.innerHTML =
         "<b>Inventar ändern</b>"+
-        "<label>Item</label><select id='itemSelect_"+idx+"'>"+itemOptions+"</select>"+
+        "<label>Item schreiben oder auswählen</label>"+
+        "<input id='itemSearch_"+idx+"' class='adminItemGiveSearch' list='itemDatalist_"+idx+"' placeholder='z.B. diamond, Apfel, Schwert'>"+
+        "<datalist id='itemDatalist_"+idx+"'>"+adminItemDatalistHtml()+"</datalist>"+
+        "<div id='selectedItemLabel_"+idx+"' class='adminSelectedItemText'>Noch kein Item ausgewählt</div>"+
+        "<details class='adminItemGiveMenu'><summary>⬇ Alle Items öffnen</summary><div class='adminItemGiveList' id='adminItemGiveList_"+idx+"'>"+adminItemButtonsHtml(idx)+"</div></details>"+
         "<label>Anzahl</label><input id='itemAmount_"+idx+"' type='number' min='1' value='10'>"+
         "<div class='adminControlBtns'><button class='adminMiniBtn' id='giveItem_"+idx+"'>Item geben</button><button class='dangerBtn adminMiniBtn' id='removeItem_"+idx+"'>Item entfernen</button></div>";
       controls.appendChild(itemBox);
@@ -4318,13 +4485,20 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       setTimeout(()=>{
         const banAmount=document.getElementById("banAmount_"+idx);
         const banUnit=document.getElementById("banUnit_"+idx);
-        const itemSelect=document.getElementById("itemSelect_"+idx);
+        const itemSearch=document.getElementById("itemSearch_"+idx);
         const itemAmount=document.getElementById("itemAmount_"+idx);
 
         document.getElementById("banBtn_"+idx).onclick=()=>adminBanFor(name,banAmount.value,banUnit.value);
         document.getElementById("unbanBtn_"+idx).onclick=()=>adminUnban(name);
-        document.getElementById("giveItem_"+idx).onclick=()=>adminGiveItemToPlayer(name,itemSelect.value,itemAmount.value);
-        document.getElementById("removeItem_"+idx).onclick=()=>adminRemoveItemFromPlayer(name,itemSelect.value,itemAmount.value);
+        if(itemSearch){
+          itemSearch.oninput=()=>filterAdminItemButtons(idx);
+          itemSearch.onchange=()=>setAdminGiveItemInput(idx, adminResolveItemInput(itemSearch.value) || itemSearch.value);
+        }
+        document.querySelectorAll('[data-admin-item-target="'+idx+'"]').forEach(btn=>{
+          btn.onclick=()=>setAdminGiveItemInput(idx, btn.getAttribute("data-admin-item-id"));
+        });
+        document.getElementById("giveItem_"+idx).onclick=()=>adminGiveItemToPlayer(name,itemSearch.value,itemAmount.value);
+        document.getElementById("removeItem_"+idx).onclick=()=>adminRemoveItemFromPlayer(name,itemSearch.value,itemAmount.value);
       },0);
     });
   }
@@ -5464,19 +5638,46 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   holdButton("mobileJumpBtn","jump");
-  setupJoystick("moveJoystick","moveKnob");
-
-
-
-  function copyInventory(){
+  setupJoystick("moveJoystick","moveKnob");  function copyInventory(){
     const data={};
-    inventoryOrder.forEach(id=>data[id]=inv[id]||0);
+    Object.keys(inv || {}).forEach(id=>{
+      if((inv[id]||0)>0) data[id]=inv[id]||0;
+    });
+    inventoryOrder.forEach(id=>{
+      if((inv[id]||0)>0) data[id]=inv[id]||0;
+    });
     return data;
+  }  function restoreInventory(saved){
+    if(!saved) return;
+    loadAdminItemsIntoGame();
+
+    Object.keys(saved || {}).forEach(id=>{
+      if(!inventoryOrder.includes(id)) inventoryOrder.push(id);
+      if(inv[id]===undefined) inv[id]=0;
+    });
+
+    inventoryOrder.forEach(id=>inv[id]=Number(saved[id]||0));
+    renderInventory("gameInventory");
   }
 
-  function restoreInventory(saved){
-    if(!saved) return;
-    inventoryOrder.forEach(id=>inv[id]=saved[id]||0);
+  function mergeInventoryMax(localInv, serverInv){
+    const out = {...(localInv||{})};
+    Object.keys(serverInv || {}).forEach(id=>{
+      const a = Number(out[id] || 0);
+      const b = Number(serverInv[id] || 0);
+      out[id] = Math.max(a,b);
+    });
+    return out;
+  }
+
+  function applyServerInventoryForCurrentUser(){
+    if(!currentUser) return;
+    const accounts = getAccounts();
+    const acc = accounts[currentUser];
+    if(!acc || !acc.inv) return;
+
+    const merged = mergeInventoryMax(copyInventory(), acc.inv);
+    restoreInventory(merged);
   }
 
   function saveAccountState(){
@@ -5628,6 +5829,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         adminDirectAccountsCache = isAdmin() ? onlineAccountsCache : adminDirectAccountsCache;
         localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
       backupAccountsLocally(onlineAccountsCache);
+        if(data.accounts && data.accounts[currentUser] && data.accounts[currentUser].inv){
+          const accountsNow=getAccounts();
+          accountsNow[currentUser]=mergeAccountObjects({[currentUser]:accountsNow[currentUser]||{}},{[currentUser]:data.accounts[currentUser]})[currentUser];
+          saveAccounts(accountsNow);
+          applyServerInventoryForCurrentUser();
+        }
         if(isAdmin()) renderAdminPlayersList();
         renderFriendsPage();
       }

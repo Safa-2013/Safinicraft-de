@@ -21,6 +21,14 @@ function encodePass(pass){
   return Buffer.from(String(pass || ""), "utf8").toString("base64");
 }
 
+function mergeInventoryMax(a,b){
+  const out = {...(a||{})};
+  Object.keys(b||{}).forEach(id=>{
+    out[id] = Math.max(Number(out[id]||0), Number(b[id]||0));
+  });
+  return out;
+}
+
 function defaultSkin(){
   return {
     width:8,
@@ -208,7 +216,7 @@ function mergeAccounts(incoming){
       pass: oldPass,
       role: cur.role === "admin" ? "admin" : (inc.role || cur.role || "player"),
       skin: inc.skin || cur.skin || defaultSkin(),
-      inv: inc.inv || cur.inv || {},
+      inv: mergeInventoryMax(cur.inv || {}, inc.inv || {}),
       friends: Array.isArray(inc.friends) ? inc.friends : (cur.friends || []),
       friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : (cur.friendRequests || []),
       sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : (cur.sentRequests || []),
@@ -248,6 +256,41 @@ const server = http.createServer(async (req,res)=>{
   if(req.url === "/api/accounts" && req.method === "GET"){
     const clean = sanitizeState();
     sendJson(res, {ok:true, accounts:clean.accounts || {}, count:Object.keys(clean.accounts || {}).length});
+    return;
+  }
+
+  if(req.url === "/api/admin/giveItem" && req.method === "POST"){
+    const data = await readBody(req);
+    const target = String(data.target || "").trim();
+    const itemId = String(data.itemId || "").trim();
+    const amount = Math.max(1, Math.floor(Number(data.amount || 1)));
+    const mode = data.mode === "remove" ? "remove" : "give";
+
+    ensureAdmin();
+
+    if(!target || !itemId || !state.accounts[target]){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Spieler oder Item fehlt", accounts:clean.accounts || {}});
+      return;
+    }
+
+    const acc = state.accounts[target];
+    acc.inv = acc.inv || {};
+
+    if(mode === "remove"){
+      acc.inv[itemId] = Math.max(0, Number(acc.inv[itemId] || 0) - amount);
+    }else{
+      acc.inv[itemId] = Number(acc.inv[itemId] || 0) + amount;
+    }
+
+    acc.lastAdminItemChange = Date.now();
+    state.accounts[target] = acc;
+
+    saveState();
+    broadcastState();
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, accounts:clean.accounts || {}, target, itemId, amount, mode});
     return;
   }
 
@@ -533,6 +576,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN PLAYER LOCAL+SERVER FIX 2.1.5 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN GIVE ITEM MENU FIX 2.1.6 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
