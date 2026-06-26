@@ -52,19 +52,23 @@ function defaultSkin(){
 }
 
 function adminName(){
-  return (process.env.ADMIN_NAME || "admin").trim() || "admin";
+  return "admin";
 }
 
 function adminPassword(){
-  return (process.env.ADMIN_PASSWORD || "2013").trim() || "2013";
+  return "2013";
 }
 
-const RESET_ACCOUNTS_VERSION = "2.1.7";
+const RESET_ACCOUNTS_VERSION = "2.1.8";
 
 function resetAccountsForVersion(){
-  if(state.resetVersion === RESET_ACCOUNTS_VERSION) return;
+  if(state.resetVersion === RESET_ACCOUNTS_VERSION && state.accounts && state.accounts[adminName()]){
+    // Auch wenn Version gleich ist: sicherstellen, dass der Admin nie kaputt ist.
+    ensureAdmin();
+    return;
+  }
 
-  // Komplett neuer Account-Start: alte kaputte Accounts/Passwörter raus.
+  // HARD RESET: Alle Accounts löschen, nur Admin neu erstellen.
   state.accounts = {};
   state.servers = {};
   state.messages = {};
@@ -89,8 +93,9 @@ function clearExpiredBans(){
 function ensureAdmin(){
   state.accounts = state.accounts || {};
   clearExpiredBans();
-  const name = adminName();
-  const pass = adminPassword();
+
+  const name = "admin";
+  const pass = "2013";
 
   if(!state.accounts[name]){
     state.accounts[name] = {
@@ -98,6 +103,7 @@ function ensureAdmin(){
       role: "admin",
       adminModeGranted: true,
       creativeGrant: true,
+      creativeUntil: 0,
       skin: defaultSkin(),
       friends: [],
       friendRequests: [],
@@ -106,12 +112,21 @@ function ensureAdmin(){
       unfriended: [],
       inv: {},
       created: Date.now(),
-      online: false
+      online: false,
+      banned: false,
+      bannedUntil: 0,
+      bannedReason: ""
     };
   }
 
   state.accounts[name].pass = encodePass(pass);
   state.accounts[name].role = "admin";
+  state.accounts[name].adminModeGranted = true;
+  state.accounts[name].creativeGrant = true;
+  state.accounts[name].creativeUntil = 0;
+  state.accounts[name].banned = false;
+  state.accounts[name].bannedUntil = 0;
+  state.accounts[name].bannedReason = "";
   if(!state.accounts[name].skin) state.accounts[name].skin = defaultSkin();
 }
 
@@ -282,6 +297,19 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/hardResetAdminOnly" && req.method === "POST"){
+    state.accounts = {};
+    state.servers = {};
+    state.messages = {};
+    state.adminChat = [];
+    state.resetVersion = RESET_ACCOUNTS_VERSION;
+    ensureAdmin();
+    saveState();
+    broadcastState();
+    sendJson(res, {ok:true, message:"Alle Accounts gelöscht außer admin.", state:sanitizeState()});
+    return;
+  }
+
   if(req.url === "/api/state" && req.method === "GET"){
     sendJson(res, sanitizeState());
     return;
@@ -378,32 +406,40 @@ const server = http.createServer(async (req,res)=>{
 
   if(req.url === "/api/login" && req.method === "POST"){
     const data = await readBody(req);
-    const name = String(data.name || "").trim();
+    const rawName = String(data.name || "").trim();
+    const name = rawName.toLowerCase() === "admin" ? "admin" : rawName;
     const pass = String(data.pass || "");
 
+    // Bei dieser Version einmal hart resetten, falls Render noch alte Daten hat.
+    resetAccountsForVersion();
     ensureAdmin();
 
-    const adminLoginName = adminName();
-    const adminPass = adminPassword();
-    const isAdminFallbackLogin = name === adminLoginName && (pass === adminPass || pass === "2013" || pass === "admin");
+    const isAdminFallbackLogin = name === "admin" && (pass === "2013" || pass === "admin" || pass === adminPassword());
 
     if(isAdminFallbackLogin){
-      if(!state.accounts[adminLoginName]){
-        ensureAdmin();
-      }
-      state.accounts[adminLoginName].pass = encodePass(adminPass);
-      state.accounts[adminLoginName].role = "admin";
-      state.accounts[adminLoginName].adminModeGranted = true;
-      state.accounts[adminLoginName].creativeGrant = true;
-      state.accounts[adminLoginName].banned = false;
-      state.accounts[adminLoginName].bannedUntil = 0;
-      state.accounts[adminLoginName].bannedReason = "";
+      state.accounts.admin.pass = encodePass("2013");
+      state.accounts.admin.role = "admin";
+      state.accounts.admin.adminModeGranted = true;
+      state.accounts.admin.creativeGrant = true;
+      state.accounts.admin.creativeUntil = 0;
+      state.accounts.admin.banned = false;
+      state.accounts.admin.bannedUntil = 0;
+      state.accounts.admin.bannedReason = "";
+      state.accounts.admin.online = true;
+      state.accounts.admin.lastLogin = Date.now();
+      saveState();
+      broadcastState();
+
+      const publicAcc = JSON.parse(JSON.stringify(state.accounts.admin));
+      delete publicAcc.pass;
+      sendJson(res, {ok:true, account:publicAcc, state:sanitizeState()});
+      return;
     }
 
     const acc = state.accounts[name];
 
-    if(!acc || (acc.pass !== encodePass(pass) && !isAdminFallbackLogin)){
-      sendJson(res, {ok:false, error:"Name oder Passwort ist falsch. Alte Accounts wurden zurückgesetzt. Erstelle Spieler neu. Admin: admin / 2013."});
+    if(!acc || acc.pass !== encodePass(pass)){
+      sendJson(res, {ok:false, error:"Name oder Passwort falsch. Alle alten Accounts wurden gelöscht. Admin: Name admin, Passwort 2013."});
       return;
     }
 
@@ -445,7 +481,7 @@ const server = http.createServer(async (req,res)=>{
       return;
     }
 
-    if(name === adminName()){
+    if(name.toLowerCase() === "admin"){
       sendJson(res, {ok:false, error:"Der Name admin ist reserviert."});
       return;
     }
@@ -643,6 +679,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ACCOUNT RESET + ADMIN LOGIN FIX 2.1.7 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN ONLY HARD RESET 2.1.8 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

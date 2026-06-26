@@ -1262,7 +1262,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ACCOUNT RESET + ADMIN LOGIN FIX VERSION 2.1.7</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN ONLY HARD RESET VERSION 2.1.8</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -6288,7 +6288,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
         localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
       }else if(onlineMode){
-        loginMessage((result && result.error) || "Name oder Passwort ist falsch. Nach Reset bitte neue Spieler erstellen. Admin: admin / 2013 testen.");
+        loginMessage((result && result.error) || "Name oder Passwort ist falsch. Nach Reset bitte neue Spieler erstellen. Admin-Login: Name admin, Passwort 2013 oder admin.");
         return;
       }
     }catch(e){
@@ -7182,17 +7182,23 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }, 1200);
 
 
-  const CLIENT_ACCOUNT_RESET_VERSION = "2.1.7";
+  const CLIENT_ACCOUNT_RESET_VERSION = "2.1.8";
 
   function resetOldLocalAccountsOnce(){
     try{
       if(localStorage.getItem("safinicraft_client_account_reset_version") !== CLIENT_ACCOUNT_RESET_VERSION){
-        localStorage.removeItem("safinicraft_current_user");
-        localStorage.removeItem("safinicraft_accounts");
-        localStorage.removeItem("safinicraft_accounts_backup");
-        localStorage.removeItem("safinicraft_servers");
-        localStorage.removeItem("safinicraft_messages");
-        localStorage.removeItem("safinicraft_admin_chat");
+        [
+          "safinicraft_current_user",
+          "safinicraft_accounts",
+          "safinicraft_accounts_backup",
+          "safinicraft_servers",
+          "safinicraft_messages",
+          "safinicraft_admin_chat",
+          "safinicraft_selected_server",
+          "safinicraft_current_server",
+          "minicraft_current_user"
+        ].forEach(k=>localStorage.removeItem(k));
+
         localStorage.setItem("safinicraft_client_account_reset_version", CLIENT_ACCOUNT_RESET_VERSION);
       }
     }catch(e){}
