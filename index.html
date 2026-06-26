@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Safinicraft.de - Latest</title>
+<title>Safinicraft.de</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;background:#0e0e0e;color:white;font-family:Arial,sans-serif;text-align:center}
@@ -800,6 +800,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN-FIX VERSION 1.7.0</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -4560,6 +4561,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         onlineModsCache = result.state.mods || defaultMods();
         onlineAdminItemsCache = result.state.adminItems || {};
         onlineWorldSettingsCache = result.state.worldSettings || {};
+        window.__lastLoginAccount = result.account || (result.state.accounts ? result.state.accounts[name] : null);
         localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
         localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
         localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
@@ -4574,8 +4576,15 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     const accounts = getAccounts();
 
+    // Wichtig: Bei Online-Login kommt der Account vom Server.
+    // Falls der lokale Browser ihn noch nicht kennt, wird er jetzt eingesetzt.
+    if(!accounts[name] && onlineMode && window.__lastLoginAccount){
+      accounts[name] = window.__lastLoginAccount;
+      saveAccounts(accounts);
+    }
+
     if(!accounts[name]){
-      loginMessage("Diesen Spieler gibt es nicht. Erstelle ihn zuerst.");
+      loginMessage("Diesen Spieler gibt es nicht. Server hat den Account nicht geschickt. Prüfe server.js.");
       return;
     }
 
