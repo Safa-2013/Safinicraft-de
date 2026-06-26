@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.1.3",
-  "description": "Safinicraft Admin Player Visibility and Upload Fix",
+  "version": "2.1.4",
+  "description": "Safinicraft Admin Player Sync Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

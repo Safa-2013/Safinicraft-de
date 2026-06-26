@@ -198,8 +198,10 @@ function mergeAccounts(incoming){
   Object.keys(incoming || {}).forEach(name=>{
     const inc = incoming[name] || {};
     const cur = state.accounts[name] || {};
-    const oldPass = cur.pass || inc.pass;
+    const oldPass = cur.pass || inc.pass || "";
 
+    // Wenn ein Account keinen Pass hat und es ihn noch nicht gibt, wird er trotzdem sichtbar,
+    // aber Login geht nur, wenn er über /api/createAccount erstellt wurde.
     state.accounts[name] = {
       ...cur,
       ...inc,
@@ -211,8 +213,10 @@ function mergeAccounts(incoming){
       friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : (cur.friendRequests || []),
       sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : (cur.sentRequests || []),
       gameInvites: Array.isArray(inc.gameInvites) ? inc.gameInvites : (cur.gameInvites || []),
-      unfriended: Array.isArray(inc.unfriended) ? inc.unfriended : (cur.unfriended || [])
+      unfriended: Array.isArray(inc.unfriended) ? inc.unfriended : (cur.unfriended || []),
+      lastSeen: Date.now()
     };
+    if(!state.accounts[name].created) state.accounts[name].created = Date.now();
   });
   ensureAdmin();
 }
@@ -236,6 +240,43 @@ const server = http.createServer(async (req,res)=>{
   }
 
   if(req.url === "/api/admin/accounts" && req.method === "GET"){
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, accounts:clean.accounts || {}, count:Object.keys(clean.accounts || {}).length});
+    return;
+  }
+
+  if(req.url === "/api/accountPing" && req.method === "POST"){
+    const data = await readBody(req);
+    const name = String(data.name || "").trim();
+    const inc = data.account && typeof data.account === "object" ? data.account : {};
+
+    if(name){
+      ensureAdmin();
+      const cur = state.accounts[name] || {};
+      const oldPass = cur.pass || inc.pass || "";
+
+      state.accounts[name] = {
+        ...cur,
+        ...inc,
+        pass: oldPass,
+        role: cur.role === "admin" ? "admin" : (inc.role || cur.role || "player"),
+        skin: inc.skin || cur.skin || defaultSkin(),
+        inv: inc.inv || cur.inv || {},
+        friends: Array.isArray(inc.friends) ? inc.friends : (cur.friends || []),
+        friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : (cur.friendRequests || []),
+        sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : (cur.sentRequests || []),
+        gameInvites: Array.isArray(inc.gameInvites) ? inc.gameInvites : (cur.gameInvites || []),
+        unfriended: Array.isArray(inc.unfriended) ? inc.unfriended : (cur.unfriended || []),
+        online: true,
+        lastSeen: Date.now()
+      };
+
+      if(!state.accounts[name].created) state.accounts[name].created = Date.now();
+
+      saveState();
+      broadcastState();
+    }
+
     const clean = sanitizeState();
     sendJson(res, {ok:true, accounts:clean.accounts || {}, count:Object.keys(clean.accounts || {}).length});
     return;
@@ -486,6 +527,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN PLAYER + UPLOAD FIX 2.1.3 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN PLAYER SYNC FIX 2.1.4 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
