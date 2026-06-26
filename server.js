@@ -14,7 +14,8 @@ let state = {
   mods: {},
   adminItems: {},
   worldSettings: {},
-  adminChat: []
+  adminChat: [],
+  resetVersion: ""
 };
 
 function encodePass(pass){
@@ -55,7 +56,22 @@ function adminName(){
 }
 
 function adminPassword(){
-  return (process.env.ADMIN_PASSWORD || "admin").trim() || "admin";
+  return (process.env.ADMIN_PASSWORD || "2013").trim() || "2013";
+}
+
+const RESET_ACCOUNTS_VERSION = "2.1.7";
+
+function resetAccountsForVersion(){
+  if(state.resetVersion === RESET_ACCOUNTS_VERSION) return;
+
+  // Komplett neuer Account-Start: alte kaputte Accounts/Passwörter raus.
+  state.accounts = {};
+  state.servers = {};
+  state.messages = {};
+  state.adminChat = [];
+  state.resetVersion = RESET_ACCOUNTS_VERSION;
+
+  ensureAdmin();
 }
 
 function clearExpiredBans(){
@@ -120,10 +136,12 @@ function loadState(){
       state.adminItems = saved.adminItems || {};
       state.worldSettings = saved.worldSettings || {};
       state.adminChat = Array.isArray(saved.adminChat) ? saved.adminChat : [];
+      state.resetVersion = saved.resetVersion || "";
     }
   }catch(e){
     console.error("Konnte server_data.json nicht lesen:", e.message);
   }
+  resetAccountsForVersion();
   ensureAdmin();
   saveState();
 }
@@ -242,6 +260,28 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/resetAccounts" && req.method === "POST"){
+    const data = await readBody(req);
+    const pass = String(data.pass || "");
+
+    if(pass !== adminPassword() && pass !== "2013" && pass !== "admin"){
+      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+      return;
+    }
+
+    state.accounts = {};
+    state.servers = {};
+    state.messages = {};
+    state.adminChat = [];
+    state.resetVersion = RESET_ACCOUNTS_VERSION;
+    ensureAdmin();
+    saveState();
+    broadcastState();
+
+    sendJson(res, {ok:true, state:sanitizeState()});
+    return;
+  }
+
   if(req.url === "/api/state" && req.method === "GET"){
     sendJson(res, sanitizeState());
     return;
@@ -301,29 +341,34 @@ const server = http.createServer(async (req,res)=>{
 
     if(name){
       ensureAdmin();
-      const cur = state.accounts[name] || {};
-      const oldPass = cur.pass || inc.pass || "";
 
-      state.accounts[name] = {
-        ...cur,
-        ...inc,
-        pass: oldPass,
-        role: cur.role === "admin" ? "admin" : (inc.role || cur.role || "player"),
-        skin: inc.skin || cur.skin || defaultSkin(),
-        inv: inc.inv || cur.inv || {},
-        friends: Array.isArray(inc.friends) ? inc.friends : (cur.friends || []),
-        friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : (cur.friendRequests || []),
-        sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : (cur.sentRequests || []),
-        gameInvites: Array.isArray(inc.gameInvites) ? inc.gameInvites : (cur.gameInvites || []),
-        unfriended: Array.isArray(inc.unfriended) ? inc.unfriended : (cur.unfriended || []),
-        online: true,
-        lastSeen: Date.now()
-      };
+      // WICHTIG: Ping darf KEINEN neuen Account ohne Passwort erstellen.
+      // Neue Spieler müssen über /api/createAccount erstellt werden.
+      if(state.accounts[name]){
+        const cur = state.accounts[name] || {};
+        const oldPass = cur.pass || inc.pass || "";
 
-      if(!state.accounts[name].created) state.accounts[name].created = Date.now();
+        state.accounts[name] = {
+          ...cur,
+          ...inc,
+          pass: oldPass,
+          role: cur.role === "admin" ? "admin" : (inc.role || cur.role || "player"),
+          skin: inc.skin || cur.skin || defaultSkin(),
+          inv: mergeInventoryMax(cur.inv || {}, inc.inv || {}),
+          friends: Array.isArray(inc.friends) ? inc.friends : (cur.friends || []),
+          friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : (cur.friendRequests || []),
+          sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : (cur.sentRequests || []),
+          gameInvites: Array.isArray(inc.gameInvites) ? inc.gameInvites : (cur.gameInvites || []),
+          unfriended: Array.isArray(inc.unfriended) ? inc.unfriended : (cur.unfriended || []),
+          online: true,
+          lastSeen: Date.now()
+        };
 
-      saveState();
-      broadcastState();
+        if(!state.accounts[name].created) state.accounts[name].created = Date.now();
+
+        saveState();
+        broadcastState();
+      }
     }
 
     const clean = sanitizeState();
@@ -338,14 +383,31 @@ const server = http.createServer(async (req,res)=>{
 
     ensureAdmin();
 
+    const adminLoginName = adminName();
+    const adminPass = adminPassword();
+    const isAdminFallbackLogin = name === adminLoginName && (pass === adminPass || pass === "2013" || pass === "admin");
+
+    if(isAdminFallbackLogin){
+      if(!state.accounts[adminLoginName]){
+        ensureAdmin();
+      }
+      state.accounts[adminLoginName].pass = encodePass(adminPass);
+      state.accounts[adminLoginName].role = "admin";
+      state.accounts[adminLoginName].adminModeGranted = true;
+      state.accounts[adminLoginName].creativeGrant = true;
+      state.accounts[adminLoginName].banned = false;
+      state.accounts[adminLoginName].bannedUntil = 0;
+      state.accounts[adminLoginName].bannedReason = "";
+    }
+
     const acc = state.accounts[name];
 
-    if(!acc || acc.pass !== encodePass(pass)){
-      sendJson(res, {ok:false, error:"Name oder Passwort ist falsch."});
+    if(!acc || (acc.pass !== encodePass(pass) && !isAdminFallbackLogin)){
+      sendJson(res, {ok:false, error:"Name oder Passwort ist falsch. Alte Accounts wurden zurückgesetzt. Erstelle Spieler neu. Admin: admin / 2013."});
       return;
     }
 
-    if(acc.banned){
+    if(acc.banned && acc.role !== "admin"){
       if(acc.bannedUntil && Date.now() > acc.bannedUntil){
         acc.banned = false;
         acc.bannedUntil = 0;
@@ -380,6 +442,11 @@ const server = http.createServer(async (req,res)=>{
 
     if(!name || !pass){
       sendJson(res, {ok:false, error:"Name und Passwort fehlen."});
+      return;
+    }
+
+    if(name === adminName()){
+      sendJson(res, {ok:false, error:"Der Name admin ist reserviert."});
       return;
     }
 
@@ -576,6 +643,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN GIVE ITEM MENU FIX 2.1.6 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ACCOUNT RESET + ADMIN LOGIN FIX 2.1.7 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

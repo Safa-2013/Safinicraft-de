@@ -1262,7 +1262,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN GIVE ITEM MENU FIX VERSION 2.1.6</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ACCOUNT RESET + ADMIN LOGIN FIX VERSION 2.1.7</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -6288,12 +6288,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
         localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
       }else if(onlineMode){
-        loginMessage((result && result.error) || "Name oder Passwort ist falsch.");
+        loginMessage((result && result.error) || "Name oder Passwort ist falsch. Nach Reset bitte neue Spieler erstellen. Admin: admin / 2013 testen.");
         return;
       }
     }catch(e){
       if(onlineMode){
-        loginMessage("Server-Fehler beim Login. Warte kurz und lade die Seite neu.");
+        loginMessage("Server lädt noch. Warte kurz und lade mit Cmd + Shift + R neu.");
         return;
       }
     }
@@ -7181,6 +7181,23 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
   }, 1200);
 
+
+  const CLIENT_ACCOUNT_RESET_VERSION = "2.1.7";
+
+  function resetOldLocalAccountsOnce(){
+    try{
+      if(localStorage.getItem("safinicraft_client_account_reset_version") !== CLIENT_ACCOUNT_RESET_VERSION){
+        localStorage.removeItem("safinicraft_current_user");
+        localStorage.removeItem("safinicraft_accounts");
+        localStorage.removeItem("safinicraft_accounts_backup");
+        localStorage.removeItem("safinicraft_servers");
+        localStorage.removeItem("safinicraft_messages");
+        localStorage.removeItem("safinicraft_admin_chat");
+        localStorage.setItem("safinicraft_client_account_reset_version", CLIENT_ACCOUNT_RESET_VERSION);
+      }
+    }catch(e){}
+  }
+
   function init(){
     worlds={};
     createWorld("earth");
@@ -7214,6 +7231,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     refreshAdminChatFromServer(true);
     if(isAdmin()) fetchAdminAccountsDirect(true).then(()=>renderAdminPlayersList());
   }},2000);
+  resetOldLocalAccountsOnce();
   init();
   loadServerState();loop();
 });
