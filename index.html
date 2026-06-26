@@ -800,7 +800,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN-FIX VERSION 1.7.0</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN-LOGIN FIX VERSION 1.7.1</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -4547,48 +4547,61 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       return;
     }
 
-    if(onlineMode){
-      try{
-        const result = await apiLogin(name, pass);
-        if(!result.ok){
-          loginMessage(result.error || "Login fehlgeschlagen.");
-          return;
+    let usedServerLogin = false;
+
+    try{
+      const result = await apiLogin(name, pass);
+
+      if(result && result.ok){
+        usedServerLogin = true;
+        onlineMode = true;
+
+        onlineAccountsCache = normalizeAccounts((result.state && result.state.accounts) || {});
+        if(!onlineAccountsCache[name]){
+          onlineAccountsCache[name] = result.account || {
+            role: name === "admin" ? "admin" : "player",
+            skin: skinForAccount(),
+            friends:[],
+            friendRequests:[],
+            sentRequests:[],
+            gameInvites:[],
+            unfriended:[],
+            inv:{},
+            online:true
+          };
         }
 
-        onlineAccountsCache = normalizeAccounts(result.state.accounts || {});
-        onlineServersCache = result.state.servers || {};
-        onlineMessagesCache = result.state.messages || {};
-        onlineModsCache = result.state.mods || defaultMods();
-        onlineAdminItemsCache = result.state.adminItems || {};
-        onlineWorldSettingsCache = result.state.worldSettings || {};
-        window.__lastLoginAccount = result.account || (result.state.accounts ? result.state.accounts[name] : null);
+        onlineServersCache = (result.state && result.state.servers) || {};
+        onlineMessagesCache = (result.state && result.state.messages) || {};
+        onlineModsCache = (result.state && result.state.mods) || defaultMods();
+        onlineAdminItemsCache = (result.state && result.state.adminItems) || {};
+        onlineWorldSettingsCache = (result.state && result.state.worldSettings) || {};
+
         localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
         localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
         localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
         localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
         localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
         localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
-      }catch(e){
-        loginMessage("Server-Fehler beim Login.");
+      }else if(onlineMode){
+        loginMessage((result && result.error) || "Name oder Passwort ist falsch.");
+        return;
+      }
+    }catch(e){
+      if(onlineMode){
+        loginMessage("Server-Fehler beim Login. Warte kurz und lade die Seite neu.");
         return;
       }
     }
 
     const accounts = getAccounts();
 
-    // Wichtig: Bei Online-Login kommt der Account vom Server.
-    // Falls der lokale Browser ihn noch nicht kennt, wird er jetzt eingesetzt.
-    if(!accounts[name] && onlineMode && window.__lastLoginAccount){
-      accounts[name] = window.__lastLoginAccount;
-      saveAccounts(accounts);
-    }
-
     if(!accounts[name]){
-      loginMessage("Diesen Spieler gibt es nicht. Server hat den Account nicht geschickt. Prüfe server.js.");
+      loginMessage("Diesen Spieler gibt es nicht. Erstelle ihn zuerst.");
       return;
     }
 
-    if(!onlineMode && accounts[name].pass !== encodePass(pass)){
+    if(!usedServerLogin && accounts[name].pass !== encodePass(pass)){
       loginMessage("Falsches Passwort.");
       return;
     }
@@ -4627,7 +4640,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     localStorage.setItem("safinicraft_current_user", name);
     document.body.classList.remove("loggedOut");
     document.body.classList.add("loggedIn");
-    msg("Willkommen bei Safinicraft.de, " + name + "! Deine Freunde, Items und dein Skin wurden geladen.");
+    msg("Willkommen bei Safinicraft.de, " + name + "! Login erfolgreich.");
     renderFriendsPage();
     renderAdminPage();
     loadAdminItemsIntoGame();

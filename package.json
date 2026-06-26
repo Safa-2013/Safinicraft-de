@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "1.7.0",
-  "description": "Safinicraft.de Admin Login Fix",
+  "version": "1.7.1",
+  "description": "Safinicraft Admin Login Fix 1.7.1",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

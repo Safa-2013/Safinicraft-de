@@ -73,14 +73,6 @@ function ensureAdmin(){
   state.accounts[name].pass = encodePass(pass);
   state.accounts[name].role = "admin";
   if(!state.accounts[name].skin) state.accounts[name].skin = defaultSkin();
-
-  // Falls früher ein admin/admin existierte, auch diesen als Admin lassen,
-  // wenn ADMIN_NAME=admin ist.
-  if(name === "admin" && state.accounts.admin){
-    state.accounts.admin.pass = encodePass(pass);
-    state.accounts.admin.role = "admin";
-    if(!state.accounts.admin.skin) state.accounts.admin.skin = defaultSkin();
-  }
 }
 
 function sanitizeState(){
@@ -111,8 +103,8 @@ function loadState(){
 }
 
 function saveState(){
-  ensureAdmin();
   try{
+    ensureAdmin();
     fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2), "utf8");
   }catch(e){
     console.error("Konnte server_data.json nicht speichern:", e.message);
@@ -412,6 +404,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN-FIX 1.7.0 läuft auf Port " + PORT);
-  console.log("Admin Login: ADMIN_NAME=" + adminName() + " | ADMIN_PASSWORD ist in Render versteckt.");
+  console.log("Safinicraft.de ADMIN-LOGIN FIX 1.7.1 läuft auf Port " + PORT);
+  console.log("ADMIN_NAME=" + adminName());
 });
