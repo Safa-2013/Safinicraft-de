@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.0.1",
-  "description": "Safinicraft Online Only Fix",
+  "version": "2.0.2",
+  "description": "Safinicraft Movement and Skin Error Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -1013,7 +1013,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ONLINE ONLY FIX VERSION 2.0.1</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">MOVE + SKIN ERROR FIX VERSION 2.0.2</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1087,7 +1087,7 @@
   <div class="gameWrap">
     
   <div class="onlineHelpBox">
-    Online-Version: Wenn du dich nicht bewegen kannst, einmal in die Spielwelt klicken. 
+    Online-Version: Zum Bewegen einmal in die Spielwelt klicken. 
     iMac/Mac: A/D laufen, W oder Leertaste springen. Linksklick = abbauen/angreifen, Rechtsklick = platzieren.
   </div>
 
@@ -1726,8 +1726,60 @@ document.addEventListener("DOMContentLoaded", function(){
 
   let keys = {left:false,right:false,jump:false,jet:false,down:false};
 
+  function normalizeSkinPixels(input){
+    const fallback = makeDefaultSkin("photo");
+    let src = input;
+
+    if(src && Array.isArray(src.pixels)){
+      src = src.pixels;
+    }
+
+    if(!Array.isArray(src) || src.length===0){
+      src = fallback;
+    }
+
+    const sh = src.length || 32;
+    const sw = Math.max(1, ...src.map(row=>Array.isArray(row) ? row.length : 0), 16);
+    const out = Array.from({length:32}, ()=>Array(16).fill(null));
+
+    if(sh >= 32 && sw >= 16){
+      for(let y=0;y<32;y++){
+        for(let x=0;x<16;x++){
+          const val = src[y] && src[y][x];
+          out[y][x] = val !== undefined ? val : null;
+        }
+      }
+      return out;
+    }
+
+    for(let y=0;y<32;y++){
+      for(let x=0;x<16;x++){
+        const sy = Math.min(sh-1, Math.floor(y * sh / 32));
+        const sx = Math.min(sw-1, Math.floor(x * sw / 16));
+        const val = src[sy] && src[sy][sx];
+        out[y][x] = val !== undefined ? val : null;
+      }
+    }
+
+    return out;
+  }
+
+  function repairAllSkins(){
+    skinPixels = normalizeSkinPixels(skinPixels);
+    activeSkin = normalizeSkinPixels(activeSkin);
+    const accounts = getAccounts();
+    let changed = false;
+    Object.keys(accounts || {}).forEach(name=>{
+      if(accounts[name] && accounts[name].skin){
+        accounts[name].skin = normalizeSkinPixels(accounts[name].skin);
+        changed = true;
+      }
+    });
+    if(changed) saveAccounts(accounts);
+  }
+
   let skinPixels = makeDefaultSkin("photo");
-  let activeSkin = JSON.parse(JSON.stringify(skinPixels));
+  let activeSkin = normalizeSkinPixels(JSON.parse(JSON.stringify(skinPixels)));
 
   function msg(t){document.getElementById("msg").textContent=t;document.getElementById("skinMsg").textContent=t}
   function inBounds(x,y){return x>=0&&x<worldCols&&y>=0&&y<worldRows}
@@ -1916,6 +1968,7 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function draw(){
+    repairAllSkins();
     repairWorldIfNeeded("draw");
     updateCamera();
 
@@ -2059,10 +2112,11 @@ document.addEventListener("DOMContentLoaded", function(){
       }
     }
 
+    activeSkin = normalizeSkinPixels(activeSkin);
     drawSkinAt(ctx,activeSkin,px,py,player.inCar?1.25:2);
 
     // sichtbares Item in der Hand
-    if(selected!=="hand"){
+    if(selected!=="hand" && defs[selected]){
       ctx.fillStyle=defs[selected].color;
       const hx=player.facing>=0?px+28:px-10;
       const hy=py+22;
@@ -2074,9 +2128,15 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function drawSkinAt(context,pixels,x,y,scale){
-    for(let py=0;py<32;py++)for(let px=0;px<16;px++){
-      let c=pixels[py][px];if(!c)continue;
-      context.fillStyle=c;context.fillRect(x+px*scale,y+py*scale,scale,scale);
+    pixels = normalizeSkinPixels(pixels);
+    for(let py=0;py<32;py++){
+      const row = pixels[py] || [];
+      for(let px=0;px<16;px++){
+        let c=row[px];
+        if(!c) continue;
+        context.fillStyle=c;
+        context.fillRect(x+px*scale,y+py*scale,scale,scale);
+      }
     }
   }
 
@@ -3021,26 +3081,31 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
   function getDrop(b){if(b==="grass")return"dirt";if(b==="stone")return"cobblestone";if(b==="coal_ore")return"coal";if(b==="iron_ore")return"iron_ore";if(b==="gold_ore")return"gold_ore";if(b==="diamond_ore")return"diamond";if(b==="fire")return null;return b}
 
+  function applyMoveKey(e,down){
+    if(e.metaKey || e.ctrlKey || e.altKey) return false;
+    const tag=(document.activeElement && document.activeElement.tagName || "").toLowerCase();
+    if(["input","textarea","select"].includes(tag)) return false;
+    let k=e.key.toLowerCase();
+    let handled=true;
+    if(k==="a"||k==="arrowleft")keys.left=down;
+    else if(k==="d"||k==="arrowright")keys.right=down;
+    else if(k==="w"||k==="arrowup"||e.key===" ")keys.jump=down;
+    else if(k==="j")keys.jet=down;
+    else if(k==="s"||k==="arrowdown")keys.down=down;
+    else handled=false;
+    if(handled && e.key===" ") e.preventDefault();
+    return handled;
+  }
+
   document.addEventListener("keydown",e=>{
-    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    if(applyMoveKey(e,true)) return;
     const tag=(document.activeElement && document.activeElement.tagName || "").toLowerCase();
     if(["input","textarea","select"].includes(tag)) return;
-    if(e.key===" ") e.preventDefault();
     let k=e.key.toLowerCase();
-    if(k==="a"||k==="arrowleft")keys.left=true;
-    if(k==="d"||k==="arrowright")keys.right=true;
-    if(k==="w"||k==="arrowup"||e.key===" ")keys.jump=true;
-    if(k==="j")keys.jet=true;
-    if(k==="s"||k==="arrowdown")keys.down=true;
     if(k==="e")toggleCar();
   });
   document.addEventListener("keyup",e=>{
-    let k=e.key.toLowerCase();
-    if(k==="a"||k==="arrowleft")keys.left=false;
-    if(k==="d"||k==="arrowright")keys.right=false;
-    if(k==="w"||k==="arrowup"||e.key===" ")keys.jump=false;
-    if(k==="j")keys.jet=false;
-    if(k==="s"||k==="arrowdown")keys.down=false;
+    applyMoveKey(e,false);
   });
 
   function usePortal(){
@@ -3083,13 +3148,17 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     return p;
   }
   function renderSkinCanvas(){
+    if(!skinCanvas || !sctx) return;
+    skinPixels = normalizeSkinPixels(skinPixels);
     sctx.clearRect(0,0,skinCanvas.width,skinCanvas.height);
     const scale=20;
-    for(let y=0;y<32;y++)for(let x=0;x<16;x++){
-      sctx.fillStyle=skinPixels[y][x]||"#2a2a2a";
-      sctx.fillRect(x*scale,y*scale,scale,scale);
-      sctx.strokeStyle="rgba(255,255,255,.15)";
-      sctx.strokeRect(x*scale,y*scale,scale,scale);
+    for(let y=0;y<32;y++){
+      for(let x=0;x<16;x++){
+        sctx.fillStyle=(skinPixels[y] && skinPixels[y][x]) || "#2a2a2a";
+        sctx.fillRect(x*scale,y*scale,scale,scale);
+        sctx.strokeStyle="rgba(255,255,255,.15)";
+        sctx.strokeRect(x*scale,y*scale,scale,scale);
+      }
     }
   }
   function paintSkin(e){
@@ -5122,7 +5191,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       acc.sentRequests = Array.isArray(acc.sentRequests) ? acc.sentRequests : [];
       acc.gameInvites = Array.isArray(acc.gameInvites) ? acc.gameInvites : [];
       acc.unfriended = Array.isArray(acc.unfriended) ? acc.unfriended : [];
-      acc.skin = acc.skin || makeDefaultSkin("photo");
+      acc.skin = normalizeSkinPixels(acc.skin || makeDefaultSkin("photo"));
       acc.role = acc.role || "player";
       acc.banned = !!acc.banned;
       acc.bannedUntil = Number(acc.bannedUntil || 0);
@@ -5246,7 +5315,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   function skinForAccount(){
-    return JSON.parse(JSON.stringify(activeSkin || skinPixels || makeDefaultSkin("photo")));
+    return normalizeSkinPixels(JSON.parse(JSON.stringify(activeSkin || skinPixels || makeDefaultSkin("photo"))));
   }
 
   async function createAccount(){
@@ -5379,8 +5448,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
 
     if(accounts[name].skin){
-      activeSkin = JSON.parse(JSON.stringify(accounts[name].skin));
-      skinPixels = JSON.parse(JSON.stringify(accounts[name].skin));
+      activeSkin = normalizeSkinPixels(JSON.parse(JSON.stringify(accounts[name].skin)));
+      skinPixels = normalizeSkinPixels(JSON.parse(JSON.stringify(accounts[name].skin)));
+      accounts[name].skin = normalizeSkinPixels(accounts[name].skin);
     } else {
       accounts[name].skin = skinForAccount();
     }
@@ -5702,7 +5772,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const scaleX = canvas.width / 16;
     const scaleY = canvas.height / 32;
 
-    if(!pixels) pixels = makeDefaultSkin("photo");
+    pixels = normalizeSkinPixels(pixels);
 
     for(let y=0;y<32;y++){
       for(let x=0;x<16;x++){
@@ -6054,7 +6124,25 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const g=groundAt(10);player.x=10*cell+2;player.y=(g-2)*cell;player.spawnX=player.x;player.spawnY=player.y;player.hp=player.maxHp;player.hunger=player.maxHunger;player.fuel=inv.fuel_cell*40;ensurePlayerWorldVisible();
     updateCreativeStatus();updateCreativeStatus();renderAll();setupItemPainter();drawItemPaintCanvas();msg("Spiel gestartet. Skin vom Foto ist Standard.");
   }
-  function loop(){update();draw();requestAnimationFrame(loop)}
+  function loop(){
+    try{
+      repairAllSkins();
+      update();
+      draw();
+    }catch(e){
+      console.error(e);
+      try{
+        repairAllSkins();
+        forceWorldVisibleNow();
+        draw();
+        msg("Fehler wurde automatisch repariert. Du kannst weiterspielen.");
+      }catch(e2){
+        console.error(e2);
+        msg("Ein Fehler ist passiert. Lade die Seite neu mit Cmd + Shift + R.");
+      }
+    }
+    requestAnimationFrame(loop)
+  }
   init();
   loadServerState();loop();
 });
