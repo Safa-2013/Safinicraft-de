@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Safinicraft.de</title>
+<title>Safinicraft.de - Latest</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;background:#0e0e0e;color:white;font-family:Arial,sans-serif;text-align:center}
@@ -46,21 +46,102 @@
   }
   .mobileControls{
     display:none;
-    position:sticky;
+    position:fixed;
+    left:0;
+    right:0;
     bottom:0;
-    z-index:60;
-    background:rgba(15,15,15,.92);
+    z-index:200;
+    background:rgba(15,15,15,.96);
     border-top:3px solid #333;
-    padding:8px;
+    padding:10px 12px;
+    justify-content:space-between;
+    align-items:center;
     gap:8px;
-    justify-content:center;
-    flex-wrap:wrap;
+    box-shadow:0 -6px 18px rgba(0,0,0,.45);
+    touch-action:none;
+    user-select:none;
   }
-  .mobileControls button{
-    min-width:70px;
-    min-height:48px;
-    font-size:16px;
-    border:2px solid #555;
+  .joystickWrap{
+    width:132px;
+    height:132px;
+    position:relative;
+    flex:0 0 auto;
+    touch-action:none;
+  }
+  .joystickBase{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    background:radial-gradient(circle,#333 0%,#191919 70%);
+    border:3px solid #666;
+    box-shadow:inset 0 0 18px rgba(0,0,0,.8),0 0 14px rgba(0,0,0,.45);
+  }
+  .joystickKnob{
+    position:absolute;
+    width:54px;
+    height:54px;
+    left:39px;
+    top:39px;
+    border-radius:50%;
+    background:#ffd84d;
+    border:3px solid #fff;
+    box-shadow:0 4px 12px rgba(0,0,0,.6);
+    pointer-events:none;
+  }
+  .joystickLabel{
+    position:absolute;
+    left:0;
+    right:0;
+    top:-23px;
+    text-align:center;
+    color:#fff;
+    font-size:12px;
+    font-weight:bold;
+    pointer-events:none;
+  }
+  .joystickHint{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:-20px;
+    text-align:center;
+    color:#aaa;
+    font-size:11px;
+    pointer-events:none;
+  }
+  .mobileMiddleHint{
+    flex:1;
+    max-width:360px;
+    text-align:center;
+    color:#ddd;
+    font-size:12px;
+    line-height:1.35;
+    background:#1e1e1e;
+    border:2px solid #444;
+    border-radius:12px;
+    padding:8px;
+  }
+  .mobileModeDisplay{
+    color:#ffd84d;
+    font-weight:bold;
+  }
+  .mobileJumpBig{
+    width:126px;
+    height:126px;
+    border-radius:50%;
+    border:4px solid #fff;
+    background:#ffd84d;
+    color:#111;
+    font-weight:bold;
+    font-size:18px;
+    line-height:1.15;
+    box-shadow:0 4px 18px rgba(0,0,0,.65);
+    touch-action:none;
+    flex:0 0 auto;
+  }
+  .mobileJumpBig:active{
+    transform:scale(.96);
+    background:#fff067;
   }
   .skinUploadBox{
     display:flex;
@@ -78,11 +159,12 @@
     color:white;
   }
   @media (max-width: 800px){
-    body{font-size:14px}
+    body{font-size:14px;padding-bottom:185px}
     .topbar button{font-size:12px;padding:8px}
     .mobileControls{display:flex}
     #game{width:100vw;border-left:none;border-right:none}
     .itemBtn{min-width:100px;font-size:12px}
+    .gameChatOverlay{right:6px;top:6px;width:230px;max-height:210px}
   }
 
 
@@ -91,7 +173,11 @@
   body.loggedOut #craftPage,
   body.loggedOut #skinPage,
   body.loggedOut #creativePage,
-  body.loggedOut #friendsPage{
+  body.loggedOut #friendsPage,
+  body.loggedOut #modsPage,
+  body.loggedOut #aiPage,
+  body.loggedOut #ovenPage,
+  body.loggedOut #adminPage{
     display:none !important;
   }
   body.loggedIn #loginPage{
@@ -264,6 +350,446 @@
     #gameChatBox{height:110px;}
   }
 
+
+  .modBuilderGrid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:12px;
+    max-width:1160px;
+    margin:10px auto;
+  }
+  .modPanel{
+    background:#202020;
+    border:2px solid #444;
+    border-radius:12px;
+    padding:12px;
+    text-align:left;
+  }
+  .modPanel input,.modPanel select,.modPanel textarea{
+    width:100%;
+    box-sizing:border-box;
+    margin:6px 0;
+    padding:10px;
+    border-radius:8px;
+    border:2px solid #555;
+    background:#111;
+    color:#fff;
+    font-family:Arial,sans-serif;
+  }
+  .modPanel textarea{min-height:82px;resize:vertical}
+  .modCard{
+    background:#111;
+    border:2px solid #555;
+    border-radius:12px;
+    padding:10px;
+    margin:8px 0;
+  }
+  .modPreview{
+    width:100%;
+    height:92px;
+    border-radius:10px;
+    border:2px solid #333;
+    margin:6px 0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    color:white;
+    text-shadow:0 2px 4px #000;
+  }
+  .aiChatBox{
+    height:180px;
+    overflow:auto;
+    background:#111;
+    border:2px solid #444;
+    border-radius:10px;
+    padding:8px;
+    margin:8px 0;
+  }
+
+
+  .modCard.selectedMod{
+    border-color:#ffd84d;
+    box-shadow:0 0 0 3px rgba(255,216,77,.25);
+  }
+  .modCard.privateMod{
+    border-color:#555;
+  }
+  .modCard.publicMod{
+    border-color:#2e8b57;
+  }
+  .modStatusLine{
+    margin-top:6px;
+    font-size:12px;
+    color:#ccc;
+  }
+
+
+  .assistantPageGrid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+    gap:12px;
+    max-width:1180px;
+    margin:10px auto;
+  }
+  .aiFullBox{
+    background:#202020;
+    border:2px solid #444;
+    border-radius:14px;
+    padding:12px;
+    text-align:left;
+  }
+  .bigAiChat{
+    height:420px;
+    overflow:auto;
+    background:#0f0f0f;
+    border:2px solid #333;
+    border-radius:14px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .aiBubble{
+    max-width:82%;
+    padding:10px 12px;
+    border-radius:14px;
+    line-height:1.35;
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
+    white-space:pre-wrap;
+  }
+  .aiBubble.user{
+    align-self:flex-end;
+    background:#1f6feb;
+    color:white;
+    border-bottom-right-radius:4px;
+  }
+  .aiBubble.bot{
+    align-self:flex-start;
+    background:#2b2b2b;
+    color:#f0f0f0;
+    border-bottom-left-radius:4px;
+  }
+  .aiInputRow{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+  }
+  .aiInputRow input{
+    flex:1;
+    padding:12px;
+    border-radius:10px;
+    border:2px solid #555;
+    background:#111;
+    color:#fff;
+  }
+  .ovenRecipe{
+    background:#111;
+    border:2px solid #444;
+    border-radius:12px;
+    padding:10px;
+    margin:8px 0;
+  }
+  .adminLocked{
+    background:#3a1e1e;
+    border:2px solid #aa4444;
+    border-radius:12px;
+    padding:12px;
+  }
+  .adminToolGrid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    gap:12px;
+    max-width:1180px;
+    margin:10px auto;
+  }
+  .adminPanel{
+    background:#202020;
+    border:2px solid #444;
+    border-radius:12px;
+    padding:12px;
+    text-align:left;
+  }
+  .adminPanel input,.adminPanel select,.adminPanel textarea{
+    width:100%;
+    box-sizing:border-box;
+    margin:6px 0;
+    padding:10px;
+    border-radius:8px;
+    border:2px solid #555;
+    background:#111;
+    color:#fff;
+    font-family:Arial,sans-serif;
+  }
+
+  .adminItemCard{
+    background:#111;
+    border:2px solid #555;
+    border-radius:10px;
+    padding:8px;
+    margin:8px 0;
+  }
+
+
+  .itemEditorWrap{
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin:10px 0;
+  }
+  #itemPaintCanvas{
+    width:320px;
+    height:320px;
+    image-rendering:pixelated;
+    background:#111;
+    border:4px solid #ffd84d;
+    touch-action:none;
+    display:block;
+    margin:8px auto;
+    cursor:crosshair;
+  }
+  #itemPreviewCanvas{
+    width:96px;
+    height:96px;
+    image-rendering:pixelated;
+    background:#111;
+    border:3px solid #555;
+    border-radius:8px;
+    display:block;
+    margin:8px auto;
+  }
+  .itemToolRow{
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin:8px 0;
+  }
+  .itemToolRow button{
+    min-width:74px;
+  }
+  .itemColorPreset{
+    width:34px;
+    height:34px;
+    min-width:34px !important;
+    border-radius:8px;
+    border:2px solid #fff !important;
+    padding:0 !important;
+  }
+  .paintModeActive{
+    background:#ffd84d !important;
+    color:#111 !important;
+    border-color:#fff !important;
+  }
+
+
+  .adminCraftingBox{
+    margin-top:12px;
+    padding:10px;
+    border:2px solid #555;
+    border-radius:12px;
+    background:#111;
+  }
+  .adminRecipeGrid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+    max-width:390px;
+    margin:8px auto;
+  }
+  .adminRecipeGrid select{
+    min-height:44px;
+    font-size:12px;
+    padding:5px;
+  }
+  .explosionText{
+    color:#ffcc00;
+    font-weight:bold;
+    text-shadow:0 2px 4px #000;
+  }
+
+
+  .craftingWorkbenchBox{
+    display:grid;
+    grid-template-columns:minmax(300px,420px) minmax(300px,1fr);
+    gap:14px;
+    max-width:1180px;
+    margin:12px auto;
+    padding:0 12px;
+  }
+  .craftingTablePanel,.craftAllItemsPanel{
+    background:#202020;
+    border:2px solid #444;
+    border-radius:14px;
+    padding:12px;
+    text-align:left;
+  }
+  .craftingGrid3x3{
+    display:grid;
+    grid-template-columns:repeat(3,92px);
+    grid-template-rows:repeat(3,92px);
+    gap:8px;
+    justify-content:center;
+    margin:12px auto;
+  }
+  .craftSlot{
+    background:#101010;
+    border:3px solid #555;
+    border-radius:12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:#ddd;
+    font-size:12px;
+    cursor:pointer;
+    user-select:none;
+    min-width:92px;
+    min-height:92px;
+  }
+  .craftSlot.filled{
+    border-color:#ffd84d;
+    background:#27210e;
+  }
+  .craftSlot .dot{
+    width:22px;
+    height:22px;
+    margin-bottom:5px;
+  }
+  .craftingControls{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .craftSearch{
+    width:100%;
+    box-sizing:border-box;
+    padding:10px;
+    border-radius:10px;
+    border:2px solid #555;
+    background:#111;
+    color:#fff;
+    margin-bottom:8px;
+  }
+  .craftAllItemsList{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:7px;
+    max-height:520px;
+    overflow:auto;
+    padding-right:4px;
+  }
+  .craftAllItemBtn{
+    background:#111;
+    border:2px solid #444;
+    color:#fff;
+    border-radius:10px;
+    padding:8px;
+    text-align:left;
+    cursor:pointer;
+    min-height:58px;
+  }
+  .craftAllItemBtn.selectedCraftItem{
+    border-color:#ffd84d;
+    background:#3b2f08;
+  }
+  .craftAllItemBtn small{
+    color:#aaa;
+  }
+  @media(max-width:800px){
+    .craftingWorkbenchBox{
+      grid-template-columns:1fr;
+    }
+    .craftingGrid3x3{
+      grid-template-columns:repeat(3,82px);
+      grid-template-rows:repeat(3,82px);
+    }
+    .craftSlot{
+      min-width:82px;
+      min-height:82px;
+      font-size:11px;
+    }
+  }
+
+
+  .adminCraftingWorkbench{
+    display:grid;
+    grid-template-columns:300px 1fr;
+    gap:12px;
+    align-items:start;
+  }
+  .adminRecipeGrid{
+    display:grid;
+    grid-template-columns:repeat(3,84px);
+    grid-template-rows:repeat(3,84px);
+    gap:7px;
+    justify-content:center;
+    margin:10px auto;
+  }
+  .adminRecipeSlot{
+    background:#101010;
+    border:3px solid #555;
+    border-radius:12px;
+    min-width:84px;
+    min-height:84px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+    cursor:pointer;
+    font-size:11px;
+    color:#ddd;
+    user-select:none;
+  }
+  .adminRecipeSlot.filled{
+    border-color:#ffd84d;
+    background:#30280d;
+  }
+  .adminRecipeItemsList{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(135px,1fr));
+    gap:7px;
+    max-height:350px;
+    overflow:auto;
+    padding-right:4px;
+  }
+  .adminRecipeItemBtn{
+    background:#111;
+    border:2px solid #444;
+    color:#fff;
+    border-radius:10px;
+    padding:8px;
+    text-align:left;
+    cursor:pointer;
+    min-height:56px;
+  }
+  .adminRecipeItemBtn.selectedAdminRecipeItem{
+    border-color:#ffd84d;
+    background:#3b2f08;
+  }
+  .adminRecipeSlot .dot,
+  .adminRecipeItemBtn .dot{
+    width:20px;
+    height:20px;
+    margin-bottom:4px;
+  }
+  @media(max-width:900px){
+    .adminCraftingWorkbench{grid-template-columns:1fr}
+    .adminRecipeGrid{
+      grid-template-columns:repeat(3,78px);
+      grid-template-rows:repeat(3,78px);
+    }
+    .adminRecipeSlot{
+      min-width:78px;
+      min-height:78px;
+    }
+  }
+
 </style>
 </head>
 <body class="loggedOut">
@@ -293,7 +819,11 @@
 
 <div class="topbar">
   <button id="tabWorld" class="active">Spielwelt</button>
-  <button id="tabCraft">Crafting / Mods</button>
+  <button id="tabCraft">Crafting</button>
+  <button id="tabMods">Mods erstellen</button>
+  <button id="tabAI">KI Chat</button>
+  <button id="tabOven">Ofen</button>
+  <button id="tabAdmin">Admin</button>
   <button id="tabSkin">Skin malen</button>
   <button id="tabCreative">Kreativ Mode</button>
   <button id="tabFriends">Freunde / Online</button>
@@ -319,7 +849,8 @@
     <b>Hunger:</b> <span id="hungerText">10/10</span> |
     <b>Jetpack-Fuel:</b> <span id="fuelText">0</span> |
     <b>Im Auto:</b> <span id="carText">Nein</span> |
-    <b>In der Hand:</b> <span id="heldText">Hand</span>
+    <b>In der Hand:</b> <span id="heldText">Hand</span> |
+    <b>Mod:</b> <span id="activeModLabel">Keine</span>
   </div>
 
   <div class="box">
@@ -349,18 +880,27 @@
   </div>
   <div id="msg" class="message"></div>
   <div class="mobileControls">
-    <button id="mobileLeft">◀</button>
-    <button id="mobileRight">▶</button>
-    <button id="mobileJump">⬆ Springen</button>
-    <button id="mobileDown">⬇ Runter</button>
-    <button id="mobileJet">🚀 Jetpack</button>
-    <button id="mobileUse">E / Auto</button>
+    <div id="moveJoystick" class="joystickWrap">
+      <div class="joystickLabel">Bewegung</div>
+      <div class="joystickBase"></div>
+      <div id="moveKnob" class="joystickKnob"></div>
+      <div class="joystickHint">links / rechts</div>
+    </div>
+
+    <div class="mobileMiddleHint">
+      Handy-Steuerung:<br>
+      kurzer Tipp mit Block = platzieren<br>
+      gedrückt halten mit Hand/Werkzeug = abbauen<br>
+      Modus: <span id="mobileModeDisplay" class="mobileModeDisplay">Tippen/Bauen</span>
+    </div>
+
+    <button id="mobileJumpBtn" class="mobileJumpBig">⬆<br>Springen</button>
   </div>
 </div>
 
 <div id="craftPage" class="page">
   <div class="box">
-    <b>Rezeptbuch:</b> Grün = du kannst es craften. Rot = Material fehlt. 
+    <b>Rezeptbuch:</b> Grün = du kannst es craften. Rot = Material fehlt.
     Hier sind auch Mods wie Auto, Jetpack, Küche, Kühlschrank und Pixel-Pistole.
   </div>
 
@@ -428,6 +968,272 @@
       Dann ist im Crafting-Buch alles grün, du bekommst keinen Schaden,
       kannst fliegen und Blöcke werden nicht verbraucht.
     </p>
+  </div>
+</div>
+
+
+
+
+
+<div id="aiPage" class="page">
+  <div class="box">
+    <h2 class="title">Safinicraft KI Chat</h2>
+    <p>
+      Hier kannst du Fragen zum Spiel stellen. Die KI erklärt dir Crafting, Hunger, Mods, Freunde, Server und Steuerung.
+      Sie ist eine einfache Safinicraft-Spiel-KI im Browser, kein echtes ChatGPT.
+    </p>
+  </div>
+
+  <div class="aiFullBox">
+    <div id="mainAiChat" class="bigAiChat">
+      <div class="aiBubble bot">Hi, ich bin die Safinicraft-KI. Frag mich z.B. „Wie baue ich eine Brücke?“, „Wie mache ich Mods?“ oder „Wie bekomme ich Essen?“</div>
+    </div>
+    <div class="aiInputRow">
+      <input id="mainAiInput" placeholder="Frage an die KI schreiben...">
+      <button id="btnMainAiSend">Senden</button>
+      <button id="btnMainAiHelp">Tipps</button>
+    </div>
+  </div>
+</div>
+
+<div id="ovenPage" class="page">
+  <div class="box">
+    <h2 class="title">Ofen</h2>
+    <p>
+      Hier kannst du Erze schmelzen und Essen kochen. Du brauchst einen Ofen und meistens Kohle.
+    </p>
+    <div id="ovenStatus" class="message">Wähle ein Rezept.</div>
+  </div>
+
+  <div class="assistantPageGrid">
+    <div class="aiFullBox">
+      <h3>Ofen-Rezepte</h3>
+      <div id="ovenRecipes"></div>
+    </div>
+    <div class="aiFullBox">
+      <h3>Inventar</h3>
+      <div id="ovenInventory" class="inventory"></div>
+    </div>
+  </div>
+</div>
+
+<div id="adminPage" class="page">
+  <div class="box">
+    <h2 class="title">Admin Studio</h2>
+    <p>
+      Nur ein geheimer Admin-Account kann hier das Spiel verändern.
+      Admin kann mit der KI neue Items, Fantasy-Waffen, Blöcke und Weltfarben erstellen.
+    </p>
+    <div id="adminStatus" class="message">Admin-Bereich wird geprüft...</div>
+  </div>
+
+  <div id="adminLockedBox" class="adminLocked">
+    Dieser Bereich ist gesperrt. Die Admin-Zugangsdaten werden nicht öffentlich angezeigt.
+  </div>
+
+  <div id="adminTools" class="adminToolGrid" style="display:none">
+    <div class="adminPanel">
+      <h3>Admin-KI</h3>
+      <p class="small">
+        Beispiele: „Mache eine neue Waffe Laser“, „Ändere die Welt zu Nacht“, „Mache einen neuen blauen Block“.
+      </p>
+      <div id="adminAiChat" class="aiChatBox">
+        <div class="chatMsg"><b>Admin-KI:</b> Sag mir, was ich ändern soll. Ich kann neue Fantasy-Items erstellen und die Weltfarbe ändern.</div>
+      </div>
+      <textarea id="adminAiInput" placeholder="Admin-Befehl schreiben..."></textarea>
+      <button id="btnAdminAiRun">Admin-KI ausführen</button>
+    </div>
+
+    <div class="adminPanel">
+      <h3>Neues Item malen</h3>
+      <label>Item-Name</label>
+      <input id="adminItemName" placeholder="z.B. Laser Waffe oder Rubin Block">
+      <label>Item-Typ</label>
+      <select id="adminItemType">
+        <option value="weapon">Fantasy-Waffe</option>
+        <option value="block">Block</option>
+        <option value="tool">Werkzeug</option>
+        <option value="food">Essen</option>
+      </select>
+
+      <label>Waffen-Effekt</label>
+      <select id="adminWeaponEffect">
+        <option value="normal">Normaler Pixel-Schuss</option>
+        <option value="explosive">Explodiert und macht Flächenschaden</option>
+        <option value="strong">Starker Einzelschuss</option>
+      </select>
+
+      <label>Farbe</label>
+      <input type="color" id="adminPaintColor" value="#ffcc00">
+
+      <div class="itemToolRow">
+        <button id="btnPaintMode" class="paintModeActive">Malen</button>
+        <button id="btnEraseMode">Radierer</button>
+        <button id="btnFillItemPaint">Füllen</button>
+        <button id="btnClearItemPaint">Löschen</button>
+      </div>
+
+      <div class="itemToolRow">
+        <button class="itemColorPreset" data-color="#ffcc00" style="background:#ffcc00"></button>
+        <button class="itemColorPreset" data-color="#e53935" style="background:#e53935"></button>
+        <button class="itemColorPreset" data-color="#43a047" style="background:#43a047"></button>
+        <button class="itemColorPreset" data-color="#1e88e5" style="background:#1e88e5"></button>
+        <button class="itemColorPreset" data-color="#8e24aa" style="background:#8e24aa"></button>
+        <button class="itemColorPreset" data-color="#ffffff" style="background:#ffffff"></button>
+        <button class="itemColorPreset" data-color="#111111" style="background:#111111"></button>
+      </div>
+
+      <div class="itemEditorWrap">
+        <div>
+          <div class="small">Pixel-Malfeld 16×16</div>
+          <canvas id="itemPaintCanvas" width="16" height="16"></canvas>
+          <div id="itemPaintInfo" class="small">Malen: Maus gedrückt halten und über Pixel ziehen. Handy: Finger ziehen. Rechtsklick = Radierer.</div>
+        </div>
+        <div>
+          <div class="small">Vorschau</div>
+          <canvas id="itemPreviewCanvas" width="16" height="16"></canvas>
+          <div class="small">So sieht das Item im Spiel ungefähr aus.</div>
+        </div>
+      </div>
+
+      <div class="adminCraftingBox">
+        <h4>Crafting-Rezept für dieses Item</h4>
+        <p class="small">
+          Links ist der 3×3 Crafting-Table für das neue Admin-Item.
+          Rechts sind alle Items, die im Spiel existieren. Wähle rechts ein Item und klicke dann links in ein Feld.
+        </p>
+
+        <div class="adminCraftingWorkbench">
+          <div>
+            <h4>3×3 Crafting-Table</h4>
+            <div id="adminRecipeGrid" class="adminRecipeGrid"></div>
+            <div class="itemToolRow">
+              <button id="btnClearAdminRecipe">Rezept leeren</button>
+              <button id="btnAutoAdminRecipe">Auto-Rezept</button>
+            </div>
+            <div id="adminRecipeInfo" class="message">Wähle rechts Items und lege sie links ins Rezept.</div>
+          </div>
+
+          <div>
+            <h4>Alle Items im Spiel</h4>
+            <input id="adminRecipeSearch" class="craftSearch" placeholder="Item suchen...">
+            <div id="adminRecipeItemsList" class="adminRecipeItemsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="btnCreatePaintedItem">Gemaltes Item privat erstellen</button>
+    </div>
+
+    <div class="adminPanel">
+      <h3>Admin Items</h3>
+      <p class="small">Neue Items werden auf dem Server gespeichert und im Inventar sichtbar.</p>
+      <div id="adminItemsList"></div>
+    </div>
+
+    <div class="adminPanel">
+      <h3>Alle Spieler</h3>
+      <p class="small">Hier sieht der Admin alle Accounts, Skins, Online-Status und Item-Anzahl.</p>
+      <div id="adminPlayersList"></div>
+    </div>
+  </div>
+</div>
+
+
+<div id="modsPage" class="page">
+  <div class="box">
+    <h2 class="title">Mods erstellen, testen & online stellen</h2>
+    <p>
+      Hier kannst du Mods auswählen oder frei beschreiben. Vor dem Online-Stellen bleibt der Mod privat.
+      Du kannst in der Mod-Testwelt bauen/abbauen; diese Änderungen gehören dann zum Mod.
+      In der normalen Spielwelt ist der Mod nicht automatisch Kreativ Mode.
+    </p>
+    <div id="modsCreativeStatus" class="message">Öffne einen Mod im Testbereich, dann wird Kreativ Mode nur dort aktiviert.</div>
+    <button id="btnDeactivateMod">Aktiven Mod deaktivieren</button>
+  </div>
+
+  <div class="modBuilderGrid">
+    <div class="modPanel">
+      <h3>1. Mod erstellen</h3>
+      <label>Mod-Name ist Pflicht</label>
+      <input id="modNameInput" placeholder="Mod-Name, z.B. Laser Auto oder Monster Haus">
+
+      <label>Du kannst auswählen:</label>
+      <select id="modTypeSelect">
+        <option value="house">Haus / Gebäude</option>
+        <option value="background">Hintergrund</option>
+        <option value="mob">Mob</option>
+        <option value="car">Auto</option>
+        <option value="weapon">Fantasy-Waffe</option>
+        <option value="template">Vorlage / Mix</option>
+      </select>
+
+      <label>Hauptfarbe</label>
+      <input type="color" id="modColorInput" value="#2f80ed">
+
+      <label>Hintergrundfarbe</label>
+      <input type="color" id="modBgInput" value="#87ceeb">
+
+      <label>Fähigkeit</label>
+      <select id="modAbilitySelect">
+        <option value="friendly">Freundlich / harmlos</option>
+        <option value="hostile">Spieler verfolgen und angreifen</option>
+        <option value="guard">Haus bewachen</option>
+        <option value="fast">Schnell laufen/fahren</option>
+        <option value="builder">Blöcke platzieren / bauen</option>
+        <option value="shoot">Fantasy-Projektile schießen</option>
+        <option value="explode_soft">Fantasy-Explosion ohne echtes Waffenwissen</option>
+      </select>
+
+      <label>Oder schreibe, was du willst:</label>
+      <textarea id="modPromptInput" placeholder="Beispiel: Erstelle einen Mod mit einer Laser-Waffe, einem roten Auto und einem Monster, das Spieler verfolgt."></textarea>
+
+      <button id="btnAskModAI">Mit schlauer Mod-KI chatten</button>
+      <button id="btnSmartModCreate">KI erstellt Mod aus Name/Wunsch</button>
+      <button id="btnRandomMod">KI macht Idee ohne Text</button>
+      <button id="btnCreateMod">Privaten Mod erstellen</button>
+
+      <div class="aiChatBox" id="modAiChat">
+        <div class="chatMsg"><b>KI:</b> Du kannst mit mir chatten oder direkt einen Mod erstellen. Name ist Pflicht. Ich erkenne z.B. Haus, Auto, Monster, Hintergrund und Fantasy-Waffe.</div>
+      </div>
+    </div>
+
+    <div class="modPanel">
+      <h3>2. Testbereich</h3>
+      <p class="small">
+        Im Testbereich bist du Kreativ. Alles, was du dort baust oder abbaust, wird im Mod gespeichert.
+        Andere Spieler sehen diese gebauten Sachen erst, wenn du den Mod online stellst.
+      </p>
+      <div id="modTestStatus" class="message">Kein Mod im Testbereich.</div>
+      <button id="btnEnterModTest">Ausgewählten Mod testen/bearbeiten</button>
+      <button id="btnExitModTest">Testbereich verlassen</button>
+      <button id="btnPublishSelectedMod">Ausgewählten Mod online stellen</button>
+      <button id="btnUnpublishSelectedMod">Von Öffentlichkeit rausnehmen</button>
+    </div>
+
+    <div class="modPanel">
+      <h3>Vorlagen</h3>
+      <button class="modTemplateBtn" data-template="starter_house">Starter-Haus</button>
+      <button class="modTemplateBtn" data-template="tree_house">Baumhaus</button>
+      <button class="modTemplateBtn" data-template="castle">Mini-Burg</button>
+      <button class="modTemplateBtn" data-template="garage">Garage mit Auto</button>
+      <button class="modTemplateBtn" data-template="night_bg">Nacht-Hintergrund</button>
+      <button class="modTemplateBtn" data-template="hostile_mob">Monster-Mob</button>
+      <button class="modTemplateBtn" data-template="weapon_pack">Fantasy-Waffen-Pack</button>
+      <div id="templateInfo" class="message">Wähle eine Vorlage aus.</div>
+    </div>
+
+    <div class="modPanel">
+      <h3>Meine privaten Mods</h3>
+      <p class="small">Nur du kannst diese Mods testen. Sie sind noch nicht öffentlich.</p>
+      <div id="privateModsList"></div>
+    </div>
+
+    <div class="modPanel">
+      <h3>Öffentliche Mods</h3>
+      <p class="small">Diese Mods können alle Spieler benutzen.</p>
+      <div id="publicModsList"></div>
+    </div>
   </div>
 </div>
 
@@ -518,7 +1324,7 @@ document.addEventListener("DOMContentLoaded", function(){
   const skinCanvas = document.getElementById("skinCanvas");
   const sctx = skinCanvas.getContext("2d");
 
-  const cell = 20;
+  const cell = 22;
   const worldCols = 150;
   const worldRows = 230;
   const worldW = worldCols * cell;
@@ -529,6 +1335,9 @@ document.addEventListener("DOMContentLoaded", function(){
   let selectedChatFriend = null;
   let voiceStream = null;
   let currentServerId = null;
+  let mobileActionMode = "place";
+  let joystickState = {moveTouch:null,actionTouch:null};
+  let canvasHold = {active:false,broke:false,timer:null,interval:null,event:null,target:null};
 
   // Echter Online-Modus:
   // Wenn diese Datei über server.js läuft, werden Accounts, Freunde, Items, Server und Chat
@@ -536,12 +1345,27 @@ document.addEventListener("DOMContentLoaded", function(){
   let onlineAccountsCache = null;
   let onlineServersCache = null;
   let onlineMessagesCache = null;
+  let onlineModsCache = null;
+  let onlineAdminItemsCache = null;
+  let onlineWorldSettingsCache = null;
+  let modSkyColor = null;
+  let selectedModId = null;
+  let activeModId = null;
+  let activeModMode = "none"; // none | play | edit
+  let normalWorldSnapshot = null;
+  let modAiHistory = [];
+  let itemPaintPixels = Array.from({length:16},()=>Array(16).fill(null));
+  let itemPaintMode = "paint";
+  let adminRecipeGridItems = Array(9).fill(null);
+  let adminRecipeSelectedItem = null;
   let onlineSocket = null;
   let onlineMode = false;
   let currentPlanet = "earth";
   let buildMode = true;
   let creativeMode = false;
   let selected = "hand";
+  let craftGridItems = Array(9).fill(null);
+  let craftSelectedItem = null;
   let paintMode = "paint";
 
   const planets = {
@@ -626,10 +1450,11 @@ document.addEventListener("DOMContentLoaded", function(){
   let mobs = [];
   let vehicles = [];
   let bullets = [];
+  let explosions = [];
 
   let player = {
     x:10*cell,y:20*cell,w:16,h:34,vx:0,vy:0,
-    hp:10,maxHp:10,hurt:0,onGround:false,hunger:10,maxHunger:10,hungerTimer:0,
+    hp:10,maxHp:10,hurt:0,onGround:false,hunger:10,maxHunger:10,hungerTimer:0,lastBreakTick:-99999,
     spawnX:10*cell,spawnY:20*cell,
     fuel:0,inCar:null,facing:1
   };
@@ -721,7 +1546,7 @@ document.addEventListener("DOMContentLoaded", function(){
   };
   function spawnMob(type,tileX){
     let g=groundAt(tileX),d=mobDefs[type];
-    mobs.push({type,x:tileX*cell,y:(g-2)*cell,w:type==="slime"?34:36,h:type==="slime"?28:36,vx:Math.random()<.5?-.55:.55,vy:0,hp:d.hp,maxHp:d.hp,hurt:0});
+    mobs.push({type,x:tileX*cell,y:(g-2)*cell,w:type==="slime"?34:36,h:type==="slime"?28:36,vx:Math.random()<.5?-.16:.16,vy:0,hp:d.hp,maxHp:d.hp,hurt:0});
   }
   function randomMob(){let a=Object.keys(mobDefs);return a[Math.floor(Math.random()*a.length)]}
 
@@ -752,7 +1577,7 @@ document.addEventListener("DOMContentLoaded", function(){
   function draw(){
     updateCamera();
     const p=planets[currentPlanet];
-    ctx.fillStyle=p.sky;ctx.fillRect(0,0,game.width,game.height);
+    ctx.fillStyle=modSkyColor || p.sky;ctx.fillRect(0,0,game.width,game.height);
     ctx.fillStyle=currentPlanet==="moon"?"#f8f3aa":"#ffe066";
     ctx.beginPath();ctx.arc(currentPlanet==="mars"?800:140,75,28,0,Math.PI*2);ctx.fill();
     if(currentPlanet==="space"){ctx.fillStyle="#000";ctx.fillRect(0,0,game.width,game.height)}
@@ -769,6 +1594,7 @@ document.addEventListener("DOMContentLoaded", function(){
     vehicles.forEach(drawVehicle);
     mobs.forEach(drawMob);
     bullets.forEach(drawBullet);
+    explosions.forEach(drawExplosion);
     drawOtherPlayers();
     drawPlayer();
     drawHUD();
@@ -894,7 +1720,7 @@ document.addEventListener("DOMContentLoaded", function(){
       const hy=py+22;
       ctx.fillRect(hx,hy,10,6);
       ctx.strokeStyle="#111";ctx.strokeRect(hx,hy,10,6);
-      if(selected==="pixel_pistol"){ctx.fillStyle="#111";ctx.fillRect(hx+(player.facing>=0?8:-4),hy+2,6,2)}
+      if(defs[selected]&&defs[selected].tool==="pistol"){ctx.fillStyle="#111";ctx.fillRect(hx+(player.facing>=0?8:-4),hy+2,6,2)}
     }
     ctx.globalAlpha=1;
   }
@@ -932,7 +1758,25 @@ document.addEventListener("DOMContentLoaded", function(){
       ctx.fillStyle="#fff";ctx.font="11px Arial";ctx.fillText("Du sitzt im Auto",px+1,py-4);
     }
   }
-  function drawBullet(b){ctx.fillStyle="#ffd84d";ctx.fillRect(b.x-camX,b.y-camY,8,3)}
+  function drawBullet(b){
+    ctx.fillStyle=b.effect==="explosive"?"#ff6d00":"#ffd84d";
+    ctx.fillRect(b.x-camX,b.y-camY,b.effect==="explosive"?10:8,b.effect==="explosive"?5:3);
+  }
+  function drawExplosion(ex){
+    const a=Math.max(0,ex.life/24);
+    ctx.save();
+    ctx.globalAlpha=a;
+    ctx.strokeStyle="#ffcc00";
+    ctx.lineWidth=4;
+    ctx.beginPath();
+    ctx.arc(ex.x-camX,ex.y-camY,ex.r*(1-a*.35),0,Math.PI*2);
+    ctx.stroke();
+    ctx.fillStyle="rgba(255,109,0,.25)";
+    ctx.beginPath();
+    ctx.arc(ex.x-camX,ex.y-camY,ex.r*(1-a*.5),0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
   function drawHUD(){
     document.getElementById("planetName").textContent=planets[currentPlanet].name;
     document.getElementById("hpText").textContent=player.hp+"/"+player.maxHp;
@@ -940,6 +1784,11 @@ document.addEventListener("DOMContentLoaded", function(){
     document.getElementById("fuelText").textContent=player.fuel;
     document.getElementById("carText").textContent=player.inCar?"Ja":"Nein";
     document.getElementById("heldText").textContent=selected==="hand" ? "Hand" : defs[selected].name;
+    const activeModLabel=document.getElementById("activeModLabel");
+    if(activeModLabel){
+      const mods=getMods();
+      activeModLabel.textContent=activeModId && mods[activeModId] ? mods[activeModId].name+" ("+activeModMode+")" : "Keine";
+    }
     ctx.fillStyle="rgba(0,0,0,.62)";ctx.fillRect(8,8,365,60);
     ctx.fillStyle="#fff";ctx.font="14px Arial";ctx.fillText("Planet: "+planets[currentPlanet].name+" | Tiefe: "+Math.floor(player.y/cell)+(creativeMode?" | Kreativ":" | Survival"),18,30);
     for(let i=0;i<player.maxHp;i++){ctx.fillStyle=i<player.hp?"#ff3333":"#555";ctx.fillRect(18+i*24,40,18,16)}
@@ -994,7 +1843,141 @@ document.addEventListener("DOMContentLoaded", function(){
     {out:"glass",count:1,need:{sand:1,fire:1},desc:"Sand + Feuer → Glas"},
     {out:"bread",count:1,need:{wheat:3},desc:"3 Weizen → Brot"}
   ];
-  function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).every(k=>(inv[k]||0)>=r.need[k])}
+  
+  function renderCraftingTable(){
+    const grid=document.getElementById("craftingGrid");
+    if(!grid) return;
+
+    grid.innerHTML="";
+    craftGridItems.forEach((item,idx)=>{
+      const slot=document.createElement("div");
+      slot.className="craftSlot "+(item?"filled":"");
+      if(item && defs[item]){
+        slot.innerHTML=`<span class="dot" style="background:${defs[item].color}"></span><b>${defs[item].name}</b><small>Rechtsklick = leer</small>`;
+      }else{
+        slot.innerHTML=`<span class="small">Leer</span><small>${idx+1}</small>`;
+      }
+
+      slot.onclick=()=>{
+        if(craftSelectedItem){
+          if(!creativeMode && (inv[craftSelectedItem]||0)<=0){
+            document.getElementById("craftingResultBox").textContent="Du hast dieses Item nicht im Inventar.";
+            return;
+          }
+          craftGridItems[idx]=craftSelectedItem;
+          renderCraftingTable();
+          updateCraftingResult();
+        }else{
+          document.getElementById("craftingResultBox").textContent="Wähle zuerst rechts ein Item aus.";
+        }
+      };
+
+      slot.oncontextmenu=(e)=>{
+        e.preventDefault();
+        craftGridItems[idx]=null;
+        renderCraftingTable();
+        updateCraftingResult();
+      };
+
+      grid.appendChild(slot);
+    });
+
+    updateCraftingResult();
+  }
+
+  function getAllExistingItemIds(){
+    loadAdminItemsIntoGame();
+    const ids=new Set();
+    inventoryOrder.forEach(id=>{if(defs[id])ids.add(id);});
+    Object.keys(defs).forEach(id=>ids.add(id));
+    return Array.from(ids).sort((a,b)=>defs[a].name.localeCompare(defs[b].name));
+  }
+
+  function renderAllCraftItems(){
+    const box=document.getElementById("craftAllItemsList");
+    if(!box) return;
+
+    const search=(document.getElementById("craftItemSearch")?.value||"").toLowerCase();
+    const ids=getAllExistingItemIds().filter(id=>{
+      const name=(defs[id]?.name||id).toLowerCase();
+      return !search || name.includes(search) || id.toLowerCase().includes(search);
+    });
+
+    box.innerHTML="";
+
+    ids.forEach(id=>{
+      const btn=document.createElement("button");
+      const amount=creativeMode ? "∞" : (inv[id]||0);
+      btn.className="craftAllItemBtn "+(craftSelectedItem===id?"selectedCraftItem":"");
+      btn.innerHTML=`<span class="dot" style="background:${defs[id].color}"></span><b>${defs[id].name}</b><br><small>ID: ${id}<br>Du hast: ${amount}</small>`;
+      btn.onclick=()=>{
+        craftSelectedItem=id;
+        document.getElementById("craftingResultBox").textContent="Ausgewählt für Crafting-Tisch: "+defs[id].name;
+        renderAllCraftItems();
+      };
+      box.appendChild(btn);
+    });
+  }
+
+  function craftGridCounts(){
+    const counts={};
+    craftGridItems.forEach(id=>{
+      if(id) counts[id]=(counts[id]||0)+1;
+    });
+    return counts;
+  }
+
+  function sameRecipeNeed(a,b){
+    const ak=Object.keys(a).sort();
+    const bk=Object.keys(b).sort();
+    if(ak.length!==bk.length) return false;
+    return ak.every((k,i)=>k===bk[i] && a[k]===b[k]);
+  }
+
+  function findRecipeFromGrid(){
+    const counts=craftGridCounts();
+    if(Object.keys(counts).length===0) return null;
+    return recipes.find(r=>sameRecipeNeed(counts,r.need)) || null;
+  }
+
+  function updateCraftingResult(){
+    const box=document.getElementById("craftingResultBox");
+    if(!box) return;
+    const r=findRecipeFromGrid();
+    if(!r){
+      const counts=craftGridCounts();
+      if(Object.keys(counts).length===0){
+        box.textContent="Lege Items in den 3×3 Crafting-Tisch.";
+      }else{
+        box.textContent="Kein passendes Rezept gefunden.";
+      }
+      return;
+    }
+    const ok=canCraft(r);
+    box.textContent=(ok?"Rezept gefunden: ":"Material fehlt für: ")+defs[r.out].name+" x"+r.count;
+  }
+
+  function craftFromTable(){
+    const r=findRecipeFromGrid();
+    if(!r){
+      document.getElementById("craftingResultBox").textContent="Kein passendes Rezept im 3×3 Tisch.";
+      return;
+    }
+    const index=recipes.indexOf(r);
+    craft(index);
+    if(canCraft(r) || creativeMode){
+      // Wenn genug Material da ist, Tisch bleibt liegen. Sonst leeren wir fehlende Slots nicht automatisch.
+    }
+    updateCraftingResult();
+  }
+
+  function clearCraftingTable(){
+    craftGridItems=Array(9).fill(null);
+    renderCraftingTable();
+    updateCraftingResult();
+  }
+
+function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).every(k=>(inv[k]||0)>=r.need[k])}
   function renderRecipes(){
     const book=document.getElementById("recipeBook");book.innerHTML="";
     recipes.forEach((r,i)=>{
@@ -1005,7 +1988,16 @@ document.addEventListener("DOMContentLoaded", function(){
       row.appendChild(btn);book.appendChild(row);
     });
   }
-  function craft(i){let r=recipes[i];if(!canCraft(r))return;if(!creativeMode)Object.keys(r.need).forEach(k=>inv[k]-=r.need[k]);inv[r.out]=(inv[r.out]||0)+r.count;if(r.out==="fuel_cell")player.fuel+=r.count*40;msg("Gecraftet: "+defs[r.out].name+" x"+r.count);saveAccountState();renderAll()}
+  function craft(i){
+    let r=recipes[i];
+    if(!canCraft(r))return;
+    if(!creativeMode)Object.keys(r.need).forEach(k=>inv[k]-=r.need[k]);
+    inv[r.out]=(inv[r.out]||0)+r.count;
+    if(r.out==="fuel_cell")player.fuel+=r.count*40;
+    msg("Gecraftet: "+defs[r.out].name+" x"+r.count);
+    saveAccountState();
+    renderAll();
+  }
 
   function update(){
     tick++;
@@ -1024,7 +2016,7 @@ document.addEventListener("DOMContentLoaded", function(){
     updateVehicles();
     updateBullets();
     if(tick%20===0)saveAccountState();
-    if(tick%planets[currentPlanet].mobRate===0&&mobs.length<16)spawnMob(randomMob(),clamp(Math.floor(player.x/cell)+10,2,worldCols-2));
+    if(tick%planets[currentPlanet].mobRate===0&&mobs.length<8)spawnMob(randomMob(),clamp(Math.floor(player.x/cell)+10,2,worldCols-2));
   }
 
   function updateSand(x,y,m){if(y+1>=worldRows)return;if(world[y+1][x]==="air"||world[y+1][x]==="water"){swap(x,y,x,y+1);m[y+1][x]=true;return}let d=Math.random()<.5?-1:1;if(inBounds(x+d,y+1)&&(world[y+1][x+d]==="air"||world[y+1][x+d]==="water")){swap(x,y,x+d,y+1);m[y+1][x+d]=true}}
@@ -1042,7 +2034,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
   function isFood(item){
-    return ["apple","bread","raw_meat","cooked_meat"].includes(item);
+    return ["apple","bread","raw_meat","cooked_meat"].includes(item) || (defs[item] && defs[item].foodValue);
   }
 
   function eatSelected(){
@@ -1059,7 +2051,8 @@ document.addEventListener("DOMContentLoaded", function(){
     if(selected==="apple") value = 2;
     if(selected==="bread") value = 4;
     if(selected==="raw_meat") value = 2;
-    if(selected==="cooked_meat") value = 5;
+    if(selected==="cooked_meat") value = 5; // gekochte Sachen geben 5 Hunger
+    if(defs[selected] && defs[selected].foodValue) value = defs[selected].foodValue;
 
     if(player.hunger >= player.maxHunger){
       msg("Du bist schon satt.");
@@ -1076,8 +2069,17 @@ document.addEventListener("DOMContentLoaded", function(){
   function updateHunger(){
     if(creativeMode) return;
 
+    // Hunger-System:
+    // Normal: ca. alle 15 Sekunden -1 Hunger.
+    // Wenn du dich bewegst/rennst oder ständig Blöcke abbaust: ca. alle 5 Sekunden -1 Hunger.
+    const movingFast = Math.abs(player.vx) > 1.6 || keys.left || keys.right || keys.jet || player.inCar;
+    const breakingOften = (tick - (player.lastBreakTick || -99999)) < 300;
+    const active = movingFast || breakingOften;
+
+    const limit = active ? 300 : 900; // ca. 5s oder 15s bei 60 FPS
+
     player.hungerTimer++;
-    if(player.hungerTimer >= 520){
+    if(player.hungerTimer >= limit){
       player.hungerTimer = 0;
       if(player.hunger > 0){
         player.hunger--;
@@ -1085,7 +2087,7 @@ document.addEventListener("DOMContentLoaded", function(){
         hurtPlayer(1, "Hunger");
       }
 
-      if(player.hunger >= 9 && player.hp < player.maxHp && tick % 1040 === 0){
+      if(player.hunger >= 9 && player.hp < player.maxHp && tick % 900 === 0){
         player.hp++;
       }
     }
@@ -1147,17 +2149,17 @@ document.addEventListener("DOMContentLoaded", function(){
   function updateMobs(){
     mobs.forEach(m=>{
       if(m.hurt>0)m.hurt--;
-      const d=mobDefs[m.type];
+      const d=mobDefs[m.type] || {name:m.customName||"Mod-Mob",hostile:!!m.hostile,drop:"apple"};
 
       if(!d.hostile && tick%120===0 && Math.random()<0.8){
-        m.vx = Math.random()<0.5 ? -1.05 : 1.05;
+        m.vx = Math.random()<0.5 ? -0.18 : 0.18;
       }
 
-      if(d.hostile && Math.abs(player.x-m.x)<300 && Math.abs(player.y-m.y)<150){
-        m.vx = player.x < m.x ? -1.25 : 1.25;
+      if(d.hostile && Math.abs(player.x-m.x)<240 && Math.abs(player.y-m.y)<150){
+        m.vx = player.x < m.x ? -0.32 : 0.32;
       }
 
-      if(tick%180===0 && Math.random()<0.25 && isMobOnGround(m)){
+      if(tick%320===0 && Math.random()<0.12 && isMobOnGround(m)){
         m.vy=-5.2;
       }
 
@@ -1260,8 +2262,74 @@ document.addEventListener("DOMContentLoaded", function(){
     });
   }
   function updateBullets(){
-    bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;const bt=tile(b.x,b.y);if(inBounds(bt.x,bt.y)&&!passable(world[bt.y][bt.x]))b.life=0;mobs.forEach(m=>{if(b.x>m.x&&b.x<m.x+m.w&&b.y>m.y&&b.y<m.y+m.h){m.hp-=3;m.hurt=20;b.life=0;if(m.hp<=0){let drop=mobDefs[m.type].drop;inv[drop]=(inv[drop]||0)+1;mobs=mobs.filter(mm=>mm!==m);msg(mobDefs[m.type].name+" besiegt → "+defs[drop].name)}}})});
+    bullets.forEach(b=>{
+      b.x+=b.vx;
+      b.y+=b.vy;
+      b.life--;
+
+      let hit=false;
+      const bt=tile(b.x,b.y);
+      if(inBounds(bt.x,bt.y)&&!passable(world[bt.y][bt.x])) hit=true;
+
+      mobs.forEach(m=>{
+        if(b.x>m.x&&b.x<m.x+m.w&&b.y>m.y&&b.y<m.y+m.h){
+          hit=true;
+          if(b.effect!=="explosive") damageMobFromBullet(m,b.damage||3);
+        }
+      });
+
+      if(b.life<=0) hit=true;
+
+      if(hit){
+        if(b.effect==="explosive") explodeAt(b.x,b.y,b.radius||70,b.damage||7);
+        b.life=0;
+      }
+    });
+
     bullets=bullets.filter(b=>b.life>0);
+    explosions.forEach(ex=>ex.life--);
+    explosions=explosions.filter(ex=>ex.life>0);
+  }
+
+  function damageMobFromBullet(m,damage){
+    m.hp-=damage;
+    m.hurt=20;
+    if(m.hp<=0){
+      const md=mobDefs[m.type] || {name:m.customName||"Mod-Mob",drop:"apple"};
+      let drop=md.drop||"apple";
+      inv[drop]=(inv[drop]||0)+1;
+      mobs=mobs.filter(mm=>mm!==m);
+      msg(md.name+" besiegt → "+defs[drop].name);
+    }
+  }
+
+  function explodeAt(x,y,radius,damage){
+    explosions.push({x,y,r:radius,life:24});
+    mobs.slice().forEach(m=>{
+      const mx=m.x+m.w/2,my=m.y+m.h/2;
+      const dist=Math.hypot(mx-x,my-y);
+      if(dist<=radius){
+        damageMobFromBullet(m,Math.max(1,Math.round(damage*(1-dist/radius)+2)));
+      }
+    });
+
+    const cx=Math.floor(x/cell),cy=Math.floor(y/cell);
+    const br=Math.ceil(radius/cell);
+    for(let yy=cy-br;yy<=cy+br;yy++){
+      for(let xx=cx-br;xx<=cx+br;xx++){
+        if(!inBounds(xx,yy)) continue;
+        const dist=Math.hypot(xx*cell+cell/2-x,yy*cell+cell/2-y);
+        if(dist<=radius*.55 && ["leaves","wood","dirt","sand"].includes(world[yy][xx])){
+          setBlock(xx,yy,"air");
+        }
+      }
+    }
+
+    if(Math.hypot(player.x+player.w/2-x,player.y+player.h/2-y)<=radius && !creativeMode){
+      hurtPlayer(2,"Explosion");
+    }
+
+    msg("Boom! Explosion macht Flächenschaden.");
   }
   function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 
@@ -1289,6 +2357,20 @@ document.addEventListener("DOMContentLoaded", function(){
       return;
     }
 
+    if(e.mobileAction==="attack"){
+      if(defs[selected]&&defs[selected].tool==="pistol"&&(creativeMode||(inv[selected]||0)>0)){
+        shoot(clickX,clickY);
+        return;
+      }
+      if(mob){
+        attackMob(mob);
+        renderAll();
+        return;
+      }
+      msg("Kein Monster getroffen.");
+      return;
+    }
+
     if(eatSelected()) return;
 
     if(world[p.y][p.x]==="planet_portal"){
@@ -1297,7 +2379,7 @@ document.addEventListener("DOMContentLoaded", function(){
       return;
     }
 
-    if(selected==="pixel_pistol"&&(creativeMode||inv.pixel_pistol>0)){
+    if(defs[selected]&&defs[selected].tool==="pistol"&&(creativeMode||(inv[selected]||0)>0)){
       shoot(clickX,clickY);
       return;
     }
@@ -1320,12 +2402,116 @@ document.addEventListener("DOMContentLoaded", function(){
     if(defs[selected] && defs[selected].place){
       placeBlock(p.x,p.y);
     } else {
-      msg("Linksklick ist Platzieren/Benutzen. Zum Abbauen Rechtsklick benutzen.");
+      msg("Kurz tippen mit Block = platzieren. Gedrückt halten mit Hand/Werkzeug = abbauen.");
     }
     renderAll();
   }
-  game.addEventListener("mousedown",handleCanvasAction);
-  game.addEventListener("touchstart",function(e){if(e.touches.length>0)handleCanvasAction(e.touches[0]);},{passive:false});
+  function normalizedCanvasEvent(e, touchMode=false){
+    const t = e.touches && e.touches.length ? e.touches[0] :
+              e.changedTouches && e.changedTouches.length ? e.changedTouches[0] : e;
+
+    return {
+      clientX:t.clientX,
+      clientY:t.clientY,
+      button:touchMode ? (mobileActionMode==="break"?2:0) : (e.button || 0),
+      mobileAction:touchMode ? mobileActionMode : undefined,
+      preventDefault:()=>{ if(e.preventDefault) e.preventDefault(); }
+    };
+  }
+
+  function canHoldBreakWithSelected(){
+    return selected==="hand" || (defs[selected] && defs[selected].tool);
+  }
+
+  function canvasHoldBreak(){
+    if(!canvasHold.active || !canvasHold.target) return;
+
+    if(!canHoldBreakWithSelected()){
+      msg("Zum Abbauen Hand oder Werkzeug auswählen.");
+      endCanvasHold(null,true);
+      return;
+    }
+
+    const p = canvasHold.target;
+    if(!inBounds(p.x,p.y)) return;
+
+    const pt=tile(player.x+player.w/2,player.y+player.h/2);
+    const dist=Math.abs(p.x-pt.x)+Math.abs(p.y-pt.y);
+
+    if(dist>8 && !creativeMode){
+      msg("Zu weit weg. Geh näher ran.");
+      endCanvasHold(null,true);
+      return;
+    }
+
+    canvasHold.broke = true;
+    breakBlock(p.x,p.y);
+    renderAll();
+  }
+
+  function startCanvasHold(e, touchMode=false){
+    const ev = normalizedCanvasEvent(e,touchMode);
+    ev.preventDefault();
+
+    if(!touchMode && ev.button!==0 && ev.button!==2) return;
+
+    const p = pointerCell(ev);
+    if(!inBounds(p.x,p.y)) return;
+
+    canvasHold.active = true;
+    canvasHold.broke = false;
+    canvasHold.event = ev;
+    canvasHold.target = p;
+
+    clearTimeout(canvasHold.timer);
+    clearInterval(canvasHold.interval);
+
+    const delay = (ev.button===2 || ev.mobileAction==="break") ? 220 : 650;
+
+    canvasHold.timer = setTimeout(()=>{
+      canvasHoldBreak();
+      canvasHold.interval = setInterval(canvasHoldBreak, 360);
+    }, delay);
+  }
+
+  function moveCanvasHold(e, touchMode=false){
+    if(!canvasHold.active) return;
+    const ev = normalizedCanvasEvent(e,touchMode);
+    canvasHold.event = ev;
+    const p = pointerCell(ev);
+    if(inBounds(p.x,p.y)) canvasHold.target = p;
+  }
+
+  function endCanvasHold(e, cancel=false){
+    if(!canvasHold.active) return;
+
+    clearTimeout(canvasHold.timer);
+    clearInterval(canvasHold.interval);
+
+    const wasBroken = canvasHold.broke;
+    const ev = canvasHold.event;
+
+    canvasHold.active = false;
+    canvasHold.broke = false;
+    canvasHold.timer = null;
+    canvasHold.interval = null;
+    canvasHold.event = null;
+    canvasHold.target = null;
+
+    if(!cancel && !wasBroken && ev){
+      handleCanvasAction(ev);
+    }
+  }
+
+  game.addEventListener("mousedown",e=>startCanvasHold(e,false));
+  window.addEventListener("mousemove",e=>moveCanvasHold(e,false));
+  window.addEventListener("mouseup",e=>endCanvasHold(e,false));
+  game.addEventListener("mouseleave",e=>endCanvasHold(e,true));
+
+  game.addEventListener("touchstart",e=>startCanvasHold(e,true),{passive:false});
+  game.addEventListener("touchmove",e=>moveCanvasHold(e,true),{passive:false});
+  game.addEventListener("touchend",e=>endCanvasHold(e,false),{passive:false});
+  game.addEventListener("touchcancel",e=>endCanvasHold(e,true),{passive:false});
   function shoot(tx,ty){
     const sx=player.x+player.w/2;
     const sy=player.y+16;
@@ -1334,23 +2520,100 @@ document.addEventListener("DOMContentLoaded", function(){
     const len=Math.hypot(dx,dy)||1;
     dx/=len;dy/=len;
     player.facing=dx>=0?1:-1;
-    bullets.push({x:sx,y:sy,vx:dx*9,vy:dy*9,life:90});
-    msg("Pixel-Pistole schießt in deine Blickrichtung.");
+
+    const d = defs[selected] || defs.pixel_pistol;
+    const explosive = d.effect==="explosive";
+    const speed = explosive ? 6.2 : 9;
+
+    bullets.push({
+      x:sx,y:sy,
+      vx:dx*speed,
+      vy:dy*speed,
+      life:explosive?120:90,
+      owner:currentUser||"player",
+      item:selected,
+      effect:d.effect||"normal",
+      damage:d.damage||3,
+      radius:d.radius||0
+    });
+
+    msg(explosive ? d.name+" abgefeuert: Explosion bei Treffer." : d.name+" schießt.");
   }
-  function attackMob(m){let dmg=selected==="stone_sword"?3:1;m.hp-=dmg;m.hurt=20;if(m.hp<=0){let drop=mobDefs[m.type].drop;inv[drop]=(inv[drop]||0)+1;mobs=mobs.filter(x=>x!==m);msg(mobDefs[m.type].name+" besiegt → "+defs[drop].name)}}
+  function attackMob(m){
+    let dmg=selected==="stone_sword"?3:1;
+    if(defs[selected]&&defs[selected].tool==="pistol") dmg=2;
+    m.hp-=dmg;
+    m.hurt=20;
+    if(m.hp<=0){
+      const md=mobDefs[m.type] || {name:m.customName||"Mod-Mob",drop:"apple"};
+      let drop=md.drop||"apple";
+      inv[drop]=(inv[drop]||0)+1;
+      mobs=mobs.filter(x=>x!==m);
+      msg(md.name+" besiegt → "+defs[drop].name);
+    }
+  }
   function placeCar(x,y){if(world[y][x]!=="air"){msg("Hier ist kein Platz fürs Auto.");return}vehicles.push({x:x*cell,y:y*cell-20,w:60,h:34,vx:0,vy:0});if(!creativeMode)inv.car_item--;msg("Auto platziert. Drücke E in der Nähe zum Einsteigen.")}
+  function findPlaceTarget(x,y){
+    if(!inBounds(x,y)) return null;
+
+    const target = world[y][x];
+    if(target==="air" || target==="water"){
+      return {x,y,replace:target};
+    }
+
+    const playerCenterX = player.x + player.w/2;
+    const blockCenterX = x*cell + cell/2;
+    const sideTowardPlayer = playerCenterX < blockCenterX ? -1 : 1;
+
+    const options = [
+      {x:x+sideTowardPlayer,y:y},
+      {x:x,y:y-1},
+      {x:x-sideTowardPlayer,y:y},
+      {x:x,y:y+1}
+    ];
+
+    for(const o of options){
+      if(inBounds(o.x,o.y) && (world[o.y][o.x]==="air" || world[o.y][o.x]==="water")){
+        return {x:o.x,y:o.y,replace:world[o.y][o.x]};
+      }
+    }
+
+    return null;
+  }
+
   function placeBlock(x,y){
     if(!defs[selected].place){msg("Dieses Item kann man nicht setzen.");return}
-    if(world[y][x]!=="air"){msg("Da ist schon ein Block.");return}
+
+    const targetInfo = findPlaceTarget(x,y);
+
+    if(!targetInfo){
+      msg("Hier kann kein Block platziert werden.");
+      return;
+    }
+
+    const px = targetInfo.x;
+    const py = targetInfo.y;
+    const target = targetInfo.replace;
+
     if(!creativeMode && (inv[selected]||0)<=0){msg("Du hast davon nichts mehr.");return}
-    if(overlap({x:x*cell,y:y*cell,w:cell,h:cell},player)){msg("Nicht in deinen Körper setzen.");return}
-    setBlock(x,y,selected);if(!creativeMode)inv[selected]--;addServerBlockEvent('place',selected,x,y);saveAccountState();msg(defs[selected].name+" gesetzt.")
+
+    if(overlap({x:px*cell,y:py*cell,w:cell,h:cell},player)){
+      msg("Nicht in deinen Körper setzen.");
+      return;
+    }
+
+    setBlock(px,py,selected);
+    if(!creativeMode)inv[selected]--;
+    addServerBlockEvent('place',selected,px,py);
+    recordModBlockChange('place', selected, px, py);
+    saveAccountState();
+    msg(defs[selected].name+(target==="water"?" als Brücke über Wasser":"")+" gesetzt.");
   }
   function breakBlock(x,y){
     let b=world[y][x];if(b==="air")return;
     if(b==="secret_code"){msg("Geheimer Code gefunden: 2013");return;}
     let check=creativeMode ? {ok:true} : canBreak(b,selected);if(!check.ok){msg(check.reason);return}
-    let drop=getDrop(b);if(drop)inv[drop]=(inv[drop]||0)+1;addServerBlockEvent('break',b,x,y);setBlock(x,y,"air");saveAccountState();msg(defs[b].name+" abgebaut"+(drop?" → "+defs[drop].name:"")+".")
+    let drop=getDrop(b);if(drop)inv[drop]=(inv[drop]||0)+1;player.lastBreakTick=tick;addServerBlockEvent('break',b,x,y);recordModBlockChange('break',b,x,y);setBlock(x,y,"air");saveAccountState();msg(defs[b].name+" abgebaut"+(drop?" → "+defs[drop].name:"")+".")
   }
   function canBreak(b,tool){
     if(b==="bedrock")return{ok:false,reason:"Bedrock kann man nicht abbauen."};
@@ -1489,6 +2752,1260 @@ document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("btnImageToSkin").onclick=imageToSkinFromUpload;
 
 
+
+
+
+  function isAdmin(){
+    if(!currentUser) return false;
+    const accounts = getAccounts();
+    return !!(accounts[currentUser] && accounts[currentUser].role === "admin");
+  }
+
+  function getAdminItems(){
+    try{
+      const items = onlineAdminItemsCache || JSON.parse(localStorage.getItem("safinicraft_admin_items") || "{}") || {};
+      onlineAdminItemsCache = items;
+      localStorage.setItem("safinicraft_admin_items", JSON.stringify(items));
+      return items;
+    }catch(e){return {};}
+  }
+
+  function saveAdminItems(items){
+    onlineAdminItemsCache = items || {};
+    localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
+    postServer("/api/adminItems", {adminItems: onlineAdminItemsCache});
+  }
+
+  function getWorldSettings(){
+    try{
+      const settings = onlineWorldSettingsCache || JSON.parse(localStorage.getItem("safinicraft_world_settings") || "{}") || {};
+      onlineWorldSettingsCache = settings;
+      localStorage.setItem("safinicraft_world_settings", JSON.stringify(settings));
+      return settings;
+    }catch(e){return {};}
+  }
+
+  function saveWorldSettings(settings){
+    onlineWorldSettingsCache = settings || {};
+    localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
+    postServer("/api/worldSettings", {worldSettings: onlineWorldSettingsCache});
+  }
+
+  function applyWorldSettings(){
+    const s = getWorldSettings();
+    if(s.skyColor){
+      modSkyColor = s.skyColor;
+    }
+    if(s.gravity && planets.earth){
+      Object.keys(planets).forEach(p=>planets[p].gravity = s.gravity);
+    }
+  }
+
+  function loadAdminItemsIntoGame(){
+    const items = getAdminItems();
+
+    // alte Admin-Items aus der aktuellen Anzeige entfernen
+    inventoryOrder = inventoryOrder.filter(id=>!(defs[id] && defs[id].adminItem));
+    Object.keys(defs).forEach(id=>{ if(defs[id] && defs[id].adminItem) delete defs[id]; });
+    for(let i=recipes.length-1;i>=0;i--){
+      if(recipes[i].adminRecipe) recipes.splice(i,1);
+    }
+
+    Object.keys(items).forEach(id=>{
+      const item = items[id];
+
+      // Nicht veröffentlichte Items sieht nur der Admin zum Testen.
+      if(!item.published && !isAdmin()) return;
+
+      defs[id] = {
+        name:item.name,
+        color:item.color || "#ffcc00",
+        place:item.type==="block",
+        tool:item.type==="weapon" ? "pistol" : item.type==="tool" ? "pickaxe" : undefined,
+        tier:item.type==="weapon" ? 2 : 1,
+        foodValue:item.type==="food" ? 5 : undefined,
+        adminItem:true,
+        icon:item.icon || null,
+        effect:item.effect || "normal",
+        damage:item.damage || (item.effect==="explosive"?7:3),
+        radius:item.radius || (item.effect==="explosive"?70:0),
+        published:!!item.published
+      };
+
+      if(!inventoryOrder.includes(id)) inventoryOrder.push(id);
+      if(inv[id]===undefined) inv[id]=0;
+
+      if(item.recipe && Object.keys(item.recipe).length>0){
+        recipes.push({
+          out:id,
+          count:1,
+          need:item.recipe,
+          desc:(item.published?"Admin-Rezept":"Privates Admin-Rezept")+" → "+item.name,
+          adminRecipe:true
+        });
+      }
+    });
+
+    renderRecipes();
+  }
+
+  function makeSafeId(name,prefix="admin_item"){
+    return prefix+"_"+String(name||"item").toLowerCase()
+      .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+      .replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,28)+"_"+Date.now();
+  }
+
+  function recipeSelectableItems(){
+    loadAdminItemsIntoGame();
+    const ids = new Set();
+    inventoryOrder.forEach(id=>{ if(defs[id]) ids.add(id); });
+    Object.keys(defs).forEach(id=>ids.add(id));
+    return Array.from(ids)
+      .filter(id=>defs[id])
+      .sort((a,b)=>defs[a].name.localeCompare(defs[b].name))
+      .map(id=>({id,name:defs[id].name,color:defs[id].color}));
+  }
+
+  function buildAdminRecipeGrid(){
+    const grid=document.getElementById("adminRecipeGrid");
+    if(!grid) return;
+
+    grid.innerHTML="";
+    adminRecipeGridItems.forEach((item,idx)=>{
+      const slot=document.createElement("div");
+      slot.className="adminRecipeSlot "+(item?"filled":"");
+
+      if(item && defs[item]){
+        slot.innerHTML=`<span class="dot" style="background:${defs[item].color}"></span><b>${defs[item].name}</b><small>Rechtsklick = leer</small>`;
+      }else{
+        slot.innerHTML=`<span class="small">Leer</span><small>${idx+1}</small>`;
+      }
+
+      slot.onclick=()=>{
+        if(!adminRecipeSelectedItem){
+          const info=document.getElementById("adminRecipeInfo");
+          if(info) info.textContent="Wähle zuerst rechts ein Item aus.";
+          return;
+        }
+        adminRecipeGridItems[idx]=adminRecipeSelectedItem;
+        renderAdminRecipeGrid();
+      };
+
+      slot.oncontextmenu=(e)=>{
+        e.preventDefault();
+        adminRecipeGridItems[idx]=null;
+        renderAdminRecipeGrid();
+      };
+
+      grid.appendChild(slot);
+    });
+  }
+
+  function renderAdminRecipeItemsList(){
+    const box=document.getElementById("adminRecipeItemsList");
+    if(!box) return;
+
+    const search=(document.getElementById("adminRecipeSearch")?.value||"").toLowerCase();
+    const items=recipeSelectableItems().filter(it=>{
+      return !search || it.name.toLowerCase().includes(search) || it.id.toLowerCase().includes(search);
+    });
+
+    box.innerHTML="";
+
+    items.forEach(it=>{
+      const btn=document.createElement("button");
+      btn.className="adminRecipeItemBtn "+(adminRecipeSelectedItem===it.id?"selectedAdminRecipeItem":"");
+      btn.innerHTML=`<span class="dot" style="background:${it.color}"></span><b>${it.name}</b><br><small>ID: ${it.id}</small>`;
+      btn.onclick=()=>{
+        adminRecipeSelectedItem=it.id;
+        const info=document.getElementById("adminRecipeInfo");
+        if(info) info.textContent="Ausgewählt: "+it.name+". Klicke jetzt links in ein Feld.";
+        renderAdminRecipeItemsList();
+      };
+      box.appendChild(btn);
+    });
+  }
+
+  function renderAdminRecipeGrid(){
+    buildAdminRecipeGrid();
+    renderAdminRecipeItemsList();
+    const info=document.getElementById("adminRecipeInfo");
+    if(info){
+      const recipe=getAdminRecipeFromGrid();
+      const count=Object.values(recipe).reduce((a,b)=>a+b,0);
+      if(count===0) info.textContent="Wähle rechts Items und lege sie links ins Rezept.";
+      else info.textContent="Rezept enthält "+count+" Zutaten: "+recipeToText(recipe);
+    }
+  }
+
+  function getAdminRecipeFromGrid(){
+    const need={};
+    adminRecipeGridItems.forEach(id=>{
+      if(id) need[id]=(need[id]||0)+1;
+    });
+    return need;
+  }
+
+  function clearAdminRecipeGrid(){
+    adminRecipeGridItems=Array(9).fill(null);
+    renderAdminRecipeGrid();
+  }
+
+  function setAdminRecipeAuto(type,effect){
+    adminRecipeGridItems=Array(9).fill(null);
+    const put=(idx,id)=>{ if(defs[id]) adminRecipeGridItems[idx]=id; };
+
+    if(type==="weapon"){
+      put(1,"iron_ingot");
+      put(3,"iron_ingot");
+      put(4,effect==="explosive"?"fuel_cell":"coal");
+      put(5,"iron_ingot");
+      put(7,"stick");
+    }else if(type==="block"){
+      put(0,"cobblestone");put(1,"cobblestone");put(2,"cobblestone");
+      put(3,"cobblestone");put(4,"coal");put(5,"cobblestone");
+      put(6,"cobblestone");put(7,"cobblestone");put(8,"cobblestone");
+    }else if(type==="food"){
+      put(1,"bread");put(4,"apple");put(7,"cooked_meat");
+    }else{
+      put(1,"iron_ingot");put(4,"stick");put(7,"stick");
+    }
+
+    renderAdminRecipeGrid();
+  }
+
+  function createAdminItem(name,type,color,icon,options={}){
+    if(!isAdmin()){msg("Nur Admin darf Items erstellen.");return null;}
+    if(!name || !name.trim()){msg("Item braucht einen Namen.");return null;}
+    const items = getAdminItems();
+    const effect = options.effect || document.getElementById("adminWeaponEffect")?.value || "normal";
+    const id = makeSafeId(name, type==="weapon"?"weapon":type==="block"?"block":"item");
+    const recipe = options.recipe || getAdminRecipeFromGrid();
+
+    items[id] = {
+      id,
+      name:name.trim(),
+      type,
+      color:color || "#ffcc00",
+      icon:icon ? JSON.parse(JSON.stringify(icon)) : null,
+      creator:"admin",
+      created:Date.now(),
+      updated:Date.now(),
+      published:false,
+      effect: type==="weapon" ? effect : "normal",
+      damage: type==="weapon" ? (effect==="explosive"?8:effect==="strong"?6:3) : 1,
+      radius: type==="weapon" && effect==="explosive" ? 85 : 0,
+      recipe
+    };
+
+    saveAdminItems(items);
+    loadAdminItemsIntoGame();
+
+    // Admin darf private Items testen.
+    inv[id] = Math.max(inv[id]||0, 20);
+    selected = id;
+    saveAccountState();
+    renderAll();
+    renderAdminItemsList();
+    msg("Privates Admin Item erstellt: "+name+". Erst online stellen, dann sehen es alle.");
+    return id;
+  }
+
+  function addAdminAiMessage(from,text){
+    const box=document.getElementById("adminAiChat");
+    if(!box) return;
+    const div=document.createElement("div");
+    div.className="chatMsg "+(from==="Admin"?"mine":"");
+    div.innerHTML="<b>"+escapeHtml(from)+":</b> "+escapeHtml(text);
+    box.appendChild(div);
+    box.scrollTop=box.scrollHeight;
+  }
+
+  function runAdminAI(){
+    if(!isAdmin()){
+      msg("Nur admin darf das.");
+      return;
+    }
+    const input=document.getElementById("adminAiInput");
+    const text=(input.value||"").trim();
+    if(!text){addAdminAiMessage("Admin-KI","Schreib einen Befehl, z.B. „Mache eine neue Waffe Laser“ oder „Ändere die Welt zu Nacht“.");return;}
+    input.value="";
+    addAdminAiMessage("Admin",text);
+
+    const t=text.toLowerCase();
+    let answer="Ich habe den Befehl verstanden, aber noch nichts verändert.";
+
+    if(t.includes("welt") || t.includes("hintergrund") || t.includes("sky") || t.includes("nacht") || t.includes("farbe")){
+      let color="#87ceeb";
+      if(t.includes("nacht")||t.includes("dunkel")) color="#0b102a";
+      else if(t.includes("rot")) color="#9b1c1c";
+      else if(t.includes("grün")||t.includes("gruen")) color="#1f8f4a";
+      else if(t.includes("blau")) color="#1e63c8";
+      else if(t.includes("gelb")) color="#d7b44a";
+      else if(t.includes("lila")||t.includes("violett")) color="#4b247a";
+      const s=getWorldSettings();
+      s.skyColor=color;
+      saveWorldSettings(s);
+      applyWorldSettings();
+      renderAll();
+      answer="Weltfarbe geändert. Neue Weltfarbe: "+color;
+    }
+
+    if(t.includes("waffe")||t.includes("pistole")||t.includes("laser")||t.includes("schwert")||t.includes("kanone")||t.includes("raketen")||t.includes("raketenwerfer")||t.includes("explodiert")||t.includes("explosion")||t.includes("schaden")){
+      const wantsExplosion = t.includes("raketen")||t.includes("raketenwerfer")||t.includes("explodiert")||t.includes("explosion");
+      const name = extractAdminName(text) || (wantsExplosion?"Raketenwerfer":"Neue Fantasy-Waffe");
+      document.getElementById("adminItemType").value="weapon";
+      document.getElementById("adminWeaponEffect").value=wantsExplosion?"explosive":"normal";
+      document.getElementById("adminItemName").value=name;
+      setAdminRecipeAuto("weapon",wantsExplosion?"explosive":"normal");
+      const id=createAdminItem(name,"weapon",wantsExplosion?"#ff6d00":"#ffcc00",itemPaintPixels,{effect:wantsExplosion?"explosive":"normal"});
+      answer="Ich habe deinen Wunsch umgesetzt: "+name+" ist eine private Fantasy-Waffe. Effekt: "+(wantsExplosion?"Explosion mit Flächenschaden":"normaler Schuss")+". Stelle sie online, wenn alle Spieler sie nutzen sollen.";
+    }
+
+    if(t.includes("block")||t.includes("stein")||t.includes("erz")){
+      const name = extractAdminName(text) || "Admin Block";
+      const id=createAdminItem(name,"block",document.getElementById("adminPaintColor")?.value || "#2f80ed",itemPaintPixels);
+      answer="Neuer Block erstellt: "+name+". Du kannst ihn platzieren und anmalen.";
+    }
+
+    if(t.includes("essen")||t.includes("food")||t.includes("hunger")){
+      const name = extractAdminName(text) || "Admin Essen";
+      createAdminItem(name,"food","#e67e22",itemPaintPixels);
+      answer="Neues Essen erstellt: "+name+". Es gibt Hunger zurück.";
+    }
+
+    addAdminAiMessage("Admin-KI",answer);
+    renderAdminPage();
+  }
+
+  function extractAdminName(text){
+    const cleaned=text.replace(/mache|mach|erstelle|eine|einen|neue|neuen|bitte|waffe|pistole|block|item|essen|food|mit|der|die|das/gi," ").replace(/\s+/g," ").trim();
+    return cleaned.length>2 ? cleaned.split(" ").slice(0,4).join(" ") : null;
+  }
+
+  function drawPixelIcon(canvas,pixels,fallbackColor){
+    const c=canvas.getContext("2d");
+    c.imageSmoothingEnabled=false;
+    c.clearRect(0,0,16,16);
+    if(pixels){
+      for(let y=0;y<16;y++){
+        for(let x=0;x<16;x++){
+          if(pixels[y] && pixels[y][x]){
+            c.fillStyle=pixels[y][x];
+            c.fillRect(x,y,1,1);
+          }
+        }
+      }
+    }else{
+      c.fillStyle=fallbackColor||"#ffcc00";
+      c.fillRect(4,4,8,8);
+    }
+  }
+
+  function recipeToText(recipe){
+    if(!recipe || Object.keys(recipe).length===0) return "kein Rezept";
+    return Object.keys(recipe).map(id=>(defs[id]?defs[id].name:id)+" x"+recipe[id]).join(", ");
+  }
+
+  function toggleAdminItemPublished(id){
+    const items=getAdminItems();
+    if(!items[id]) return;
+    items[id].published=!items[id].published;
+    items[id].updated=Date.now();
+    saveAdminItems(items);
+    loadAdminItemsIntoGame();
+    renderAdminItemsList();
+    renderRecipes();
+    msg(items[id].published?items[id].name+" ist jetzt online.":items[id].name+" ist jetzt privat/offline.");
+  }
+
+  function deleteAdminItem(id){
+    const items=getAdminItems();
+    if(!items[id]) return;
+    const name=items[id].name;
+    if(!confirm("Item wirklich löschen? "+name)) return;
+    delete items[id];
+    saveAdminItems(items);
+    if(defs[id]) delete defs[id];
+    inventoryOrder = inventoryOrder.filter(x=>x!==id);
+    delete inv[id];
+    for(let i=recipes.length-1;i>=0;i--){
+      if(recipes[i].out===id) recipes.splice(i,1);
+    }
+    saveAccountState();
+    loadAdminItemsIntoGame();
+    renderAdminItemsList();
+    renderRecipes();
+    renderAll();
+    msg("Item gelöscht: "+name);
+  }
+
+  function renderAdminItemsList(){
+    const box=document.getElementById("adminItemsList");
+    if(!box) return;
+    const items=getAdminItems();
+    box.innerHTML="";
+    const ids=Object.keys(items).sort((a,b)=>(items[b].created||0)-(items[a].created||0));
+    if(ids.length===0){box.innerHTML="<p class='small'>Noch keine Admin Items.</p>";return;}
+    ids.forEach(id=>{
+      const item=items[id];
+      const div=document.createElement("div");
+      div.className="adminItemCard";
+      div.innerHTML="<b>"+escapeHtml(item.name)+"</b><br><span class='small'>Typ: "+escapeHtml(item.type)+" | Effekt: "+escapeHtml(item.effect||"normal")+" | Status: "+(item.published?"Online":"Privat")+"</span><br><span class='small'>Rezept: "+recipeToText(item.recipe)+"</span><br>";
+      const iconCanvas=document.createElement("canvas");
+      iconCanvas.width=16;iconCanvas.height=16;
+      iconCanvas.style.width="48px";iconCanvas.style.height="48px";iconCanvas.style.imageRendering="pixelated";
+      iconCanvas.style.border="2px solid #555";iconCanvas.style.background="#111";iconCanvas.style.margin="6px 0";
+      div.appendChild(iconCanvas);
+      setTimeout(()=>drawPixelIcon(iconCanvas,item.icon,item.color),0);
+      const give=document.createElement("button");
+      give.textContent="Mir geben";
+      give.onclick=()=>{loadAdminItemsIntoGame();inv[id]=(inv[id]||0)+20;selected=id;saveAccountState();renderAll();msg(item.name+" erhalten.");};
+      div.appendChild(give);
+
+      const pub=document.createElement("button");
+      pub.textContent=item.published?"Offline nehmen":"Online stellen";
+      pub.onclick=()=>toggleAdminItemPublished(id);
+      div.appendChild(pub);
+
+      const del=document.createElement("button");
+      del.textContent="Löschen";
+      del.onclick=()=>deleteAdminItem(id);
+      div.appendChild(del);
+
+      box.appendChild(div);
+    });
+  }
+
+  function renderAdminPlayersList(){
+    const box=document.getElementById("adminPlayersList");
+    if(!box) return;
+    const accounts=getAccounts();
+    box.innerHTML="";
+    const names=Object.keys(accounts).sort((a,b)=>a.localeCompare(b));
+    if(names.length===0){
+      box.innerHTML="<p class='small'>Noch keine Spieler.</p>";
+      return;
+    }
+
+    names.forEach(name=>{
+      const acc=accounts[name] || {};
+      const card=document.createElement("div");
+      card.className="playerCard";
+
+      const canvas=document.createElement("canvas");
+      canvas.width=40;
+      canvas.height=80;
+      canvas.className="miniSkin";
+      card.appendChild(canvas);
+
+      const info=document.createElement("div");
+      info.className="playerCardInfo";
+      const invCount=acc.inv ? Object.values(acc.inv).reduce((a,b)=>a+(Number(b)||0),0) : 0;
+      const role=acc.role==="admin" ? "Admin" : "Spieler";
+      info.innerHTML =
+        "<b>"+escapeHtml(name)+"</b> <span class='badge "+(acc.role==="admin"?"pending":"")+"'>"+role+"</span><br>"+
+        (acc.online ? "<span class='onlineTag'>● online</span>" : "<span class='small'>offline</span>")+"<br>"+
+        "<span class='small'>Freunde: "+((acc.friends||[]).length)+" | Items: "+invCount+"</span><br>"+
+        "<span class='small'>Erstellt: "+(acc.created?new Date(acc.created).toLocaleDateString():"unbekannt")+"</span>";
+      card.appendChild(info);
+      box.appendChild(card);
+      setTimeout(()=>drawMiniSkinToCanvas(canvas, acc.skin || makeDefaultSkin("photo")),0);
+    });
+  }
+
+  function renderAdminPage(){
+    const status=document.getElementById("adminStatus");
+    const locked=document.getElementById("adminLockedBox");
+    const tools=document.getElementById("adminTools");
+    if(!status||!locked||!tools) return;
+    if(isAdmin()){
+      status.textContent="Admin aktiv. Du kannst das Spiel verändern.";
+      locked.style.display="none";
+      tools.style.display="grid";
+      renderAdminItemsList();
+      renderAdminPlayersList();
+      renderAdminRecipeGrid();
+      setupItemPainter();
+      drawItemPaintCanvas();
+    }else{
+      status.textContent="Nicht als Admin eingeloggt.";
+      locked.style.display="block";
+      tools.style.display="none";
+    }
+  }
+
+  function drawItemPaintCanvas(){
+    const canvas=document.getElementById("itemPaintCanvas");
+    if(!canvas) return;
+    const c=canvas.getContext("2d");
+    c.imageSmoothingEnabled=false;
+    c.clearRect(0,0,16,16);
+
+    // Transparenter Hintergrund als Schachbrett
+    for(let y=0;y<16;y++){
+      for(let x=0;x<16;x++){
+        c.fillStyle=(x+y)%2===0?"#202020":"#151515";
+        c.fillRect(x,y,1,1);
+      }
+    }
+
+    // Pixel malen
+    for(let y=0;y<16;y++){
+      for(let x=0;x<16;x++){
+        if(itemPaintPixels[y][x]){
+          c.fillStyle=itemPaintPixels[y][x];
+          c.fillRect(x,y,1,1);
+        }
+      }
+    }
+
+    // Vorschau ohne Raster
+    const preview=document.getElementById("itemPreviewCanvas");
+    if(preview){
+      const p=preview.getContext("2d");
+      p.imageSmoothingEnabled=false;
+      p.clearRect(0,0,16,16);
+      for(let y=0;y<16;y++){
+        for(let x=0;x<16;x++){
+          if(itemPaintPixels[y][x]){
+            p.fillStyle=itemPaintPixels[y][x];
+            p.fillRect(x,y,1,1);
+          }
+        }
+      }
+    }
+
+    const info=document.getElementById("itemPaintInfo");
+    if(info){
+      info.textContent=(itemPaintMode==="erase"?"Radierer aktiv":"Malen aktiv")+" | gedrückt halten und ziehen | Rechtsklick = Radierer";
+    }
+  }
+
+  function setItemPaintMode(mode){
+    itemPaintMode=mode;
+    const paintBtn=document.getElementById("btnPaintMode");
+    const eraseBtn=document.getElementById("btnEraseMode");
+    if(paintBtn) paintBtn.classList.toggle("paintModeActive",mode==="paint");
+    if(eraseBtn) eraseBtn.classList.toggle("paintModeActive",mode==="erase");
+    drawItemPaintCanvas();
+  }
+
+  function fillItemPaint(){
+    const color=document.getElementById("adminPaintColor").value;
+    for(let y=0;y<16;y++){
+      for(let x=0;x<16;x++){
+        itemPaintPixels[y][x]=color;
+      }
+    }
+    drawItemPaintCanvas();
+  }
+
+  function paintItemAt(clientX,clientY,forceErase=false){
+    const canvas=document.getElementById("itemPaintCanvas");
+    if(!canvas) return;
+    const r=canvas.getBoundingClientRect();
+    const x=Math.floor((clientX-r.left)/r.width*16);
+    const y=Math.floor((clientY-r.top)/r.height*16);
+    if(x>=0&&x<16&&y>=0&&y<16){
+      itemPaintPixels[y][x]=(itemPaintMode==="erase"||forceErase)?null:document.getElementById("adminPaintColor").value;
+      drawItemPaintCanvas();
+    }
+  }
+
+  function setupItemPainter(){
+    const canvas=document.getElementById("itemPaintCanvas");
+    if(!canvas || canvas.dataset.ready==="1") return;
+    canvas.dataset.ready="1";
+    let painting=false;
+    let forceErase=false;
+
+    const start=e=>{
+      e.preventDefault();
+      painting=true;
+      forceErase = e.button===2;
+      const t=e.touches?e.touches[0]:e;
+      paintItemAt(t.clientX,t.clientY,forceErase);
+    };
+
+    const move=e=>{
+      if(!painting)return;
+      e.preventDefault();
+      const t=e.touches?e.touches[0]:e;
+      paintItemAt(t.clientX,t.clientY,forceErase);
+    };
+
+    const end=e=>{
+      painting=false;
+      forceErase=false;
+    };
+
+    canvas.addEventListener("contextmenu",e=>e.preventDefault());
+    canvas.addEventListener("mousedown",start);
+    window.addEventListener("mousemove",move);
+    window.addEventListener("mouseup",end);
+    canvas.addEventListener("touchstart",start,{passive:false});
+    canvas.addEventListener("touchmove",move,{passive:false});
+    canvas.addEventListener("touchend",end,{passive:false});
+    canvas.addEventListener("touchcancel",end,{passive:false});
+
+    document.getElementById("btnPaintMode").onclick=()=>setItemPaintMode("paint");
+    document.getElementById("btnEraseMode").onclick=()=>setItemPaintMode("erase");
+    document.getElementById("btnFillItemPaint").onclick=fillItemPaint;
+
+    document.querySelectorAll(".itemColorPreset").forEach(btn=>{
+      btn.onclick=()=>{
+        document.getElementById("adminPaintColor").value=btn.dataset.color;
+        setItemPaintMode("paint");
+      };
+    });
+
+    drawItemPaintCanvas();
+  }
+
+  function defaultMods(){
+    const now = Date.now();
+    return {
+      starter_house:{
+        id:"starter_house",name:"Starter-Haus",type:"house",color:"#8b5a2b",bg:"#87ceeb",
+        ability:"friendly",prompt:"Ein einfaches Haus mit Tür und Dach.",creator:"System",published:true,blocks:[],created:now-70000
+      },
+      tree_house:{
+        id:"tree_house",name:"Baumhaus",type:"house",color:"#3fa34d",bg:"#8fd0ff",
+        ability:"friendly",prompt:"Ein Haus auf Holz mit Blättern.",creator:"System",published:true,blocks:[],created:now-60000
+      },
+      castle:{
+        id:"castle",name:"Mini-Burg",type:"house",color:"#777777",bg:"#8aa3c6",
+        ability:"guard",prompt:"Eine kleine Burg aus Stein mit Türmen.",creator:"System",published:true,blocks:[],created:now-50000
+      },
+      garage:{
+        id:"garage",name:"Garage mit Auto",type:"car",color:"#d32f2f",bg:"#87ceeb",
+        ability:"fast",prompt:"Eine Garage und ein schnelles Auto.",creator:"System",published:true,blocks:[],created:now-40000
+      },
+      night_bg:{
+        id:"night_bg",name:"Nacht-Hintergrund",type:"background",color:"#202040",bg:"#0b102a",
+        ability:"friendly",prompt:"Dunkler Nachthimmel mit Sternen.",creator:"System",published:true,blocks:[],created:now-30000
+      },
+      hostile_mob:{
+        id:"hostile_mob",name:"Jäger-Monster",type:"mob",color:"#7b1fa2",bg:"#33160d",
+        ability:"hostile",prompt:"Ein Mob, der Spieler verfolgt und angreift.",creator:"System",published:true,blocks:[],created:now-20000
+      },
+      weapon_pack:{
+        id:"weapon_pack",name:"Fantasy-Waffen-Pack",type:"weapon",color:"#ffb300",bg:"#1b1b1b",
+        ability:"shoot",prompt:"Fantasy-Pixelwaffe, die im Spiel Projektile schießt.",creator:"System",published:true,blocks:[],created:now-10000
+      }
+    };
+  }
+
+  function normalizeMods(mods){
+    mods = mods || {};
+    const defs = defaultMods();
+    Object.keys(defs).forEach(id=>{
+      if(!mods[id]) mods[id] = defs[id];
+    });
+    Object.keys(mods).forEach(id=>{
+      const m = mods[id];
+      m.id = m.id || id;
+      m.name = m.name || "Unbenannter Mod";
+      m.type = m.type || "template";
+      m.color = m.color || "#2f80ed";
+      m.bg = m.bg || "#87ceeb";
+      m.ability = m.ability || "friendly";
+      m.prompt = m.prompt || "";
+      m.creator = m.creator || "System";
+      m.published = !!m.published;
+      m.blocks = Array.isArray(m.blocks) ? m.blocks : [];
+      m.created = m.created || Date.now();
+      m.updated = m.updated || m.created;
+      m.publicRemoved = !!m.publicRemoved;
+    });
+    return mods;
+  }
+
+  function getMods(){
+    try{
+      const mods = normalizeMods(onlineModsCache || JSON.parse(localStorage.getItem("safinicraft_mods") || "null") || defaultMods());
+      onlineModsCache = mods;
+      localStorage.setItem("safinicraft_mods", JSON.stringify(mods));
+      return mods;
+    }catch(e){
+      return normalizeMods(defaultMods());
+    }
+  }
+
+  function saveMods(mods){
+    onlineModsCache = normalizeMods(mods || {});
+    localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
+            localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
+            localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
+      localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
+      localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
+    postServer("/api/mods", {mods: onlineModsCache});
+  }
+
+  function getSelectedMod(){
+    const mods = getMods();
+    return selectedModId ? mods[selectedModId] : null;
+  }
+
+  function setSelectedMod(id){
+    selectedModId = id;
+    const mods = getMods();
+    const mod = mods[id];
+    if(mod){
+      document.getElementById("modNameInput").value = mod.creator==="System" ? "" : mod.name;
+      document.getElementById("modTypeSelect").value = mod.type;
+      document.getElementById("modColorInput").value = mod.color;
+      document.getElementById("modBgInput").value = mod.bg;
+      document.getElementById("modAbilitySelect").value = mod.ability;
+      document.getElementById("modPromptInput").value = mod.prompt || "";
+      document.getElementById("modTestStatus").textContent = "Ausgewählt: " + mod.name;
+    }
+    renderModsList();
+  }
+
+  function currentModFromForm(){
+    const name = document.getElementById("modNameInput").value.trim();
+    if(!name){
+      msg("Mod-Name ist Pflicht.");
+      addModAiMessage("KI","Gib dem Mod zuerst einen Namen. Danach kann ich ihn erstellen.");
+      return null;
+    }
+    return {
+      id:"mod_"+Date.now()+"_"+Math.floor(Math.random()*9999),
+      name,
+      type:document.getElementById("modTypeSelect").value,
+      color:document.getElementById("modColorInput").value,
+      bg:document.getElementById("modBgInput").value,
+      ability:document.getElementById("modAbilitySelect").value,
+      prompt:document.getElementById("modPromptInput").value.trim(),
+      creator:currentUser || "Gast",
+      published:false,
+      publicRemoved:false,
+      blocks:[],
+      created:Date.now(),
+      updated:Date.now()
+    };
+  }
+
+  function aiReadWish(text){
+    const t=(text||"").toLowerCase();
+    let type=document.getElementById("modTypeSelect").value;
+    let ability=document.getElementById("modAbilitySelect").value;
+    let color=document.getElementById("modColorInput").value;
+    let bg=document.getElementById("modBgInput").value;
+
+    if(t.includes("waffe")||t.includes("pistole")||t.includes("laser")||t.includes("kanone")||t.includes("rakete")||t.includes("schießen")||t.includes("schiessen")){
+      type="weapon";ability="shoot";color="#ffb300";
+    }
+    if(t.includes("auto")||t.includes("car")||t.includes("rennwagen")){
+      type="car";ability=t.includes("schnell")?"fast":"friendly";color="#d32f2f";
+    }
+    if(t.includes("haus")||t.includes("villa")||t.includes("burg")||t.includes("base")||t.includes("basis")){
+      type="house";ability=t.includes("bewach")?"guard":"friendly";color=t.includes("stein")||t.includes("burg")?"#777777":"#8b5a2b";
+    }
+    if(t.includes("monster")||t.includes("zombie")||t.includes("mob")||t.includes("gegner")){
+      type="mob";ability=(t.includes("freund")||t.includes("harmlos"))?"friendly":"hostile";color="#7b1fa2";
+    }
+    if(t.includes("hintergrund")||t.includes("nacht")||t.includes("sky")||t.includes("farbe")||t.includes("weltfarbe")){
+      type="background";ability="friendly";color=t.includes("nacht")?"#202040":color;bg=t.includes("nacht")?"#0b102a":bg;
+    }
+    if(t.includes("bauen")||t.includes("builder")||t.includes("builder-mob")) ability="builder";
+    if(t.includes("spieler") && (t.includes("angreifen")||t.includes("jagen")||t.includes("verfolgen"))) ability="hostile";
+    if(t.includes("explosion")||t.includes("explodiert")) ability="explode_soft";
+
+    document.getElementById("modTypeSelect").value=type;
+    document.getElementById("modAbilitySelect").value=ability;
+    document.getElementById("modColorInput").value=color;
+    document.getElementById("modBgInput").value=bg;
+
+    return {type,ability,color,bg};
+  }
+
+  function aiModAnswer(text){
+    const r = aiReadWish(text);
+    const map = {
+      house:"Ich habe daraus einen Gebäude-Mod gemacht. Du kannst ihn im Testbereich öffnen und dort weiterbauen.",
+      background:"Ich habe daraus einen Hintergrund-Mod gemacht. Beim Spielen ändert er die Weltfarbe.",
+      mob:"Ich habe daraus einen Mob-Mod gemacht. Die Fähigkeit bestimmt, wie der Mob reagiert.",
+      car:"Ich habe daraus einen Auto-Mod gemacht. Beim Spielen erscheint ein Auto.",
+      weapon:"Ich habe daraus eine Fantasy-Waffe gemacht. Sie ist nur eine Pixel-Spielwaffe und schießt einfache Projektile.",
+      template:"Ich habe daraus eine gemischte Vorlage gemacht."
+    };
+    return (map[r.type]||map.template)+" Fähigkeit: "+r.ability+". Name eingeben und dann „KI erstellt Mod“ oder „Privaten Mod erstellen“.";
+  }
+
+  function addModAiMessage(from,text){
+    const box=document.getElementById("modAiChat");
+    if(!box) return;
+    const div=document.createElement("div");
+    div.className="chatMsg "+(from==="Du"?"mine":"");
+    div.innerHTML="<b>"+escapeHtml(from)+":</b> "+escapeHtml(text);
+    box.appendChild(div);
+    box.scrollTop=box.scrollHeight;
+    modAiHistory.push({from,text,time:Date.now()});
+  }
+
+  function askModAI(){
+    const text=document.getElementById("modPromptInput").value.trim();
+    if(!text){
+      addModAiMessage("KI","Du kannst auch einfach nur chatten. Schreib mir z.B. „Ich will ein Auto mit Laser“ oder klicke „KI macht Idee ohne Text“.");
+      return;
+    }
+    addModAiMessage("Du",text);
+    addModAiMessage("KI",aiModAnswer(text));
+  }
+
+  function randomAiIdea(){
+    const ideas=[
+      {name:"Laser Auto",prompt:"Ein rotes Auto mit Fantasy-Laser-Waffe",type:"car",ability:"shoot",color:"#d32f2f",bg:"#87ceeb"},
+      {name:"Zombie Jäger",prompt:"Ein lila Monster, das Spieler verfolgt",type:"mob",ability:"hostile",color:"#7b1fa2",bg:"#33160d"},
+      {name:"Nacht Base",prompt:"Ein dunkler Nacht-Hintergrund mit einer kleinen Base",type:"background",ability:"friendly",color:"#202040",bg:"#0b102a"},
+      {name:"Builder Roboter",prompt:"Ein Roboter-Mob, der Blöcke bauen kann",type:"mob",ability:"builder",color:"#607d8b",bg:"#87ceeb"},
+      {name:"Stein Burg",prompt:"Eine kleine Burg mit Wächter-Mob",type:"house",ability:"guard",color:"#777777",bg:"#8aa3c6"}
+    ];
+    const i=ideas[Math.floor(Math.random()*ideas.length)];
+    document.getElementById("modNameInput").value=i.name;
+    document.getElementById("modPromptInput").value=i.prompt;
+    document.getElementById("modTypeSelect").value=i.type;
+    document.getElementById("modAbilitySelect").value=i.ability;
+    document.getElementById("modColorInput").value=i.color;
+    document.getElementById("modBgInput").value=i.bg;
+    addModAiMessage("KI","Ich habe eine Idee vorbereitet: "+i.name+". Du kannst sie jetzt als privaten Mod erstellen oder testen.");
+  }
+
+  function createMod(publish=false){
+    const mods=getMods();
+    const mod=currentModFromForm();
+    if(!mod) return null;
+    aiReadWish(mod.prompt+" "+mod.name);
+    mod.type=document.getElementById("modTypeSelect").value;
+    mod.ability=document.getElementById("modAbilitySelect").value;
+    mod.color=document.getElementById("modColorInput").value;
+    mod.bg=document.getElementById("modBgInput").value;
+    mod.published=!!publish;
+    mods[mod.id]=mod;
+    saveMods(mods);
+    selectedModId=mod.id;
+    renderModsList();
+    msg(publish?"Mod online gestellt: "+mod.name:"Privater Mod erstellt: "+mod.name);
+    addModAiMessage("KI","Mod „"+mod.name+"“ wurde privat erstellt. Öffne den Testbereich, baue dort etwas und stelle ihn danach online.");
+    return mod;
+  }
+
+  function smartCreateMod(){
+    const name=document.getElementById("modNameInput").value.trim();
+    if(!name){
+      msg("Mod-Name ist Pflicht.");
+      addModAiMessage("KI","Ich kann ohne Text eine Idee machen, aber der Mod braucht trotzdem einen Namen.");
+      return;
+    }
+    const prompt=document.getElementById("modPromptInput").value.trim();
+    if(prompt) aiReadWish(prompt+" "+name);
+    else addModAiMessage("KI","Du hast keinen Wunschtext geschrieben. Ich nehme Typ/Farbe/Fähigkeit aus der Auswahl.");
+    createMod(false);
+  }
+
+  function applyTemplate(id){
+    const mods=getMods();
+    const mod=mods[id] || defaultMods()[id];
+    if(!mod) return;
+    document.getElementById("modNameInput").value=mod.creator==="System" ? "" : mod.name;
+    document.getElementById("modTypeSelect").value=mod.type;
+    document.getElementById("modColorInput").value=mod.color;
+    document.getElementById("modBgInput").value=mod.bg;
+    document.getElementById("modAbilitySelect").value=mod.ability;
+    document.getElementById("modPromptInput").value=mod.prompt;
+    selectedModId = id;
+    document.getElementById("templateInfo").textContent="Vorlage geladen: "+mod.name+". Gib einen eigenen Namen ein.";
+    addModAiMessage("KI","Vorlage „"+mod.name+"“ geladen. Gib deinem eigenen Mod einen Namen und erstelle ihn privat.");
+    renderModsList();
+  }
+
+  function snapshotNormalWorld(){
+    normalWorldSnapshot = {
+      currentPlanet,
+      worlds: JSON.parse(JSON.stringify(worlds)),
+      player: JSON.parse(JSON.stringify(player)),
+      inv: JSON.parse(JSON.stringify(inv)),
+      modSkyColor
+    };
+  }
+
+  function restoreNormalWorld(){
+    if(!normalWorldSnapshot) return;
+    currentPlanet = normalWorldSnapshot.currentPlanet;
+    worlds = normalWorldSnapshot.worlds;
+    player = normalWorldSnapshot.player;
+    inv = normalWorldSnapshot.inv;
+    modSkyColor = normalWorldSnapshot.modSkyColor;
+    world = worlds[currentPlanet].world;
+    fireLife = worlds[currentPlanet].fireLife;
+    mobs = worlds[currentPlanet].mobs;
+    vehicles = worlds[currentPlanet].vehicles || [];
+    normalWorldSnapshot = null;
+  }
+
+  function applyModBlocksToWorld(mod){
+    if(!mod.blocks) return;
+    mod.blocks.forEach(ch=>{
+      if(ch.planet && ch.planet!==currentPlanet) return;
+      if(inBounds(ch.x,ch.y)){
+        setBlock(ch.x,ch.y,ch.block || "air");
+      }
+    });
+  }
+
+  function applyModBase(mod){
+    if(mod.type==="background"){
+      modSkyColor = mod.bg || mod.color;
+    }
+    if(mod.type==="house" || mod.type==="template"){
+      buildHouseFromMod(mod,true);
+    }
+    if(mod.type==="car"){
+      placeCar(Math.floor(player.x/cell)+3,Math.floor(player.y/cell));
+    }
+    if(mod.type==="mob"){
+      spawnCustomMob(mod);
+    }
+    if(mod.type==="weapon"){
+      inv.pixel_pistol = Math.max(inv.pixel_pistol||0, 1);
+      inv.iron_ingot = Math.max(inv.iron_ingot||0, 5);
+      selected = "pixel_pistol";
+      msg("Fantasy-Waffe aktiviert: Pixel-Pistole erhalten.");
+    }
+    applyModBlocksToWorld(mod);
+  }
+
+  function playModNormal(id){
+    const mod=getMods()[id];
+    if(!mod) return;
+    if(!normalWorldSnapshot) snapshotNormalWorld();
+    activeModId=id;
+    activeModMode="play";
+    setCreativeMode(false);
+    applyModBase(mod);
+    msg("Mod aktiv: "+mod.name+". Du bist nicht im Kreativ Mode.");
+    switchTab("worldPage","tabWorld");
+    renderModsList();
+    renderAll();
+  }
+
+  function enterModTest(id){
+    const mod=getMods()[id || selectedModId];
+    if(!mod){msg("Wähle zuerst einen Mod aus.");return;}
+    if(mod.creator!==currentUser && currentUser){
+      msg("Du kannst nur eigene Mods bearbeiten. Öffentliche Mods kannst du normal benutzen.");
+      return;
+    }
+    if(!normalWorldSnapshot) snapshotNormalWorld();
+    activeModId=mod.id;
+    selectedModId=mod.id;
+    activeModMode="edit";
+    worlds={};
+    createWorld("earth");
+    currentPlanet="earth";
+    world=worlds.earth.world;
+    fireLife=worlds.earth.fireLife;
+    mobs=worlds.earth.mobs;
+    vehicles=worlds.earth.vehicles||[];
+    player.x=8*cell;
+    player.y=20*cell;
+    modSkyColor=mod.bg || null;
+    setCreativeMode(true);
+    applyModBase(mod);
+    const st=document.getElementById("modTestStatus");
+    if(st) st.textContent="Testbereich aktiv: "+mod.name+". Alles was du baust/abbaust, wird im Mod gespeichert.";
+    addModAiMessage("KI","Ich beobachte den Testbereich. Wenn du Blöcke baust oder abbaust, speichere ich sie im Mod.");
+    switchTab("worldPage","tabWorld");
+    renderAll();
+  }
+
+  function exitModTest(){
+    if(activeModMode==="edit"){
+      saveMods(getMods());
+      addModAiMessage("KI","Testbereich gespeichert. Du kannst den Mod jetzt online stellen.");
+    }
+    activeModId=null;
+    activeModMode="none";
+    modSkyColor=null;
+    restoreNormalWorld();
+    setCreativeMode(false);
+    const st=document.getElementById("modTestStatus");
+    if(st) st.textContent="Testbereich verlassen. Normale Welt ohne Mod.";
+    renderModsList();
+    renderAll();
+  }
+
+  function deactivateMod(){
+    activeModId=null;
+    activeModMode="none";
+    modSkyColor=null;
+    restoreNormalWorld();
+    setCreativeMode(false);
+    msg("Mod deaktiviert. Welt ohne Mod ist aktiv.");
+    renderModsList();
+    renderAll();
+  }
+
+  function recordModBlockChange(action, block, x, y){
+    if(activeModMode!=="edit" || !activeModId) return;
+    const mods=getMods();
+    const mod=mods[activeModId];
+    if(!mod) return;
+    mod.blocks = Array.isArray(mod.blocks) ? mod.blocks : [];
+    const existing = mod.blocks.findIndex(ch=>ch.x===x && ch.y===y && (ch.planet||"earth")===currentPlanet);
+    const change = {x,y,planet:currentPlanet,block: action==="break" ? "air" : block, action, time:Date.now()};
+    if(existing>=0) mod.blocks[existing]=change;
+    else mod.blocks.push(change);
+    mod.updated=Date.now();
+    mods[activeModId]=mod;
+    saveMods(mods);
+    const count=mod.blocks.length;
+    const box=document.getElementById("modTestStatus");
+    if(box) box.textContent="Mod-Test aktiv: "+mod.name+" | gespeicherte Bauänderungen: "+count;
+    if(count%5===0) addModAiMessage("KI","Ich habe jetzt "+count+" Bauänderungen im Mod gespeichert.");
+  }
+
+  function publishSelectedMod(){
+    const mod=getSelectedMod();
+    if(!mod){msg("Wähle zuerst einen Mod aus.");return;}
+    if(mod.creator!=="System" && mod.creator!==currentUser){msg("Du kannst nur eigene Mods veröffentlichen.");return;}
+    const mods=getMods();
+    mods[mod.id].published=true;
+    mods[mod.id].publicRemoved=false;
+    mods[mod.id].updated=Date.now();
+    saveMods(mods);
+    msg("Mod online gestellt: "+mod.name);
+    renderModsList();
+  }
+
+  function unpublishSelectedMod(){
+    const mod=getSelectedMod();
+    if(!mod){msg("Wähle zuerst einen Mod aus.");return;}
+    if(mod.creator!=="System" && mod.creator!==currentUser){msg("Du kannst nur eigene Mods rausnehmen.");return;}
+    const mods=getMods();
+    mods[mod.id].published=false;
+    mods[mod.id].publicRemoved=true;
+    mods[mod.id].updated=Date.now();
+    saveMods(mods);
+    msg("Mod ist nicht mehr öffentlich, aber nicht gelöscht: "+mod.name);
+    renderModsList();
+  }
+
+  function buildHouseFromMod(mod,silent=false){
+    const baseX=clamp(Math.floor(player.x/cell)+4,2,worldCols-14);
+    const baseY=clamp(Math.floor(player.y/cell)+3,5,worldRows-8);
+    const wall = mod.color==="#777777" ? "cobblestone" : "planks";
+    const roof = "wood";
+
+    for(let x=0;x<9;x++){
+      setBlock(baseX+x,baseY,wall);
+      setBlock(baseX+x,baseY-5,roof);
+    }
+    for(let y=1;y<=5;y++){
+      setBlock(baseX,baseY-y,wall);
+      setBlock(baseX+8,baseY-y,wall);
+    }
+    for(let x=1;x<8;x++){
+      if(x!==4) setBlock(baseX+x,baseY-1,"glass");
+    }
+    setBlock(baseX+4,baseY-1,"air");
+    setBlock(baseX+4,baseY-2,"air");
+
+    if(mod.ability==="guard"){
+      spawnCustomMob({name:"Wächter",color:"#777777",ability:"guard",type:"mob"});
+    }
+    if(mod.ability==="builder"){
+      setBlock(baseX+2,baseY-6,"torch");
+      setBlock(baseX+6,baseY-6,"torch");
+    }
+
+    if(!silent){saveAccountState();renderAll();}
+  }
+
+  function spawnCustomMob(mod){
+    const x=clamp(Math.floor(player.x/cell)+6,2,worldCols-2);
+    const y=groundAt(x)-2;
+    const hostile = mod.ability==="hostile" || mod.ability==="guard" || mod.ability==="shoot";
+    const speed = mod.ability==="fast" ? 0.55 : 0.22;
+    mobs.push({
+      x:x*cell,y:y*cell,w:22,h:26,type:"custom",
+      hp: hostile?6:4,
+      vx:Math.random()<.5?-speed:speed,
+      vy:0,hurt:0,
+      customName:mod.name,
+      customColor:mod.color || "#7b1fa2",
+      hostile,
+      ability:mod.ability
+    });
+    renderAll();
+  }
+
+  function createModCard(mod,group){
+    const card=document.createElement("div");
+    card.className="modCard "+(mod.published?"publicMod":"privateMod")+(selectedModId===mod.id?" selectedMod":"");
+    const preview=document.createElement("div");
+    preview.className="modPreview";
+    preview.style.background=mod.type==="background" ? mod.bg : mod.color;
+    preview.textContent=mod.type.toUpperCase();
+    card.innerHTML="<b>"+escapeHtml(mod.name)+"</b><br><span class='small'>Typ: "+escapeHtml(mod.type)+" | Fähigkeit: "+escapeHtml(mod.ability)+" | Von: "+escapeHtml(mod.creator||"System")+"</span><div class='modStatusLine'>"+(mod.published?"Öffentlich":"Privat / nicht öffentlich")+" | Bauänderungen: "+(mod.blocks?mod.blocks.length:0)+"</div>";
+    card.appendChild(preview);
+
+    const select=document.createElement("button");
+    select.textContent="Auswählen";
+    select.onclick=()=>setSelectedMod(mod.id);
+    card.appendChild(select);
+
+    const play=document.createElement("button");
+    play.textContent="Normal spielen";
+    play.onclick=()=>playModNormal(mod.id);
+    card.appendChild(play);
+
+    if(mod.creator===currentUser){
+      const test=document.createElement("button");
+      test.textContent="Testen/Bearbeiten";
+      test.onclick=()=>enterModTest(mod.id);
+      card.appendChild(test);
+    }
+
+    if(mod.creator===currentUser){
+      const pub=document.createElement("button");
+      pub.textContent=mod.published?"Öffentlich rausnehmen":"Online stellen";
+      pub.onclick=()=>{setSelectedMod(mod.id); mod.published?unpublishSelectedMod():publishSelectedMod();};
+      card.appendChild(pub);
+    }
+
+    return card;
+  }
+
+  function renderModsList(){
+    const privateList=document.getElementById("privateModsList");
+    const publicList=document.getElementById("publicModsList");
+    const oldList=document.getElementById("modsList");
+    const mods=getMods();
+    const ids=Object.keys(mods).sort((a,b)=>(mods[b].updated||mods[b].created||0)-(mods[a].updated||mods[a].created||0));
+
+    if(privateList) privateList.innerHTML="";
+    if(publicList) publicList.innerHTML="";
+    if(oldList) oldList.innerHTML="";
+
+    let privCount=0,pubCount=0;
+
+    ids.forEach(id=>{
+      const mod=mods[id];
+      const own = mod.creator===currentUser || mod.creator==="System";
+      if(mod.published){
+        if(publicList){publicList.appendChild(createModCard(mod,"public"));pubCount++;}
+      }else if(own){
+        if(privateList){privateList.appendChild(createModCard(mod,"private"));privCount++;}
+      }
+    });
+
+    if(privateList && privCount===0) privateList.innerHTML="<p class='small'>Noch keine privaten Mods.</p>";
+    if(publicList && pubCount===0) publicList.innerHTML="<p class='small'>Noch keine öffentlichen Mods.</p>";
+
+    const st=document.getElementById("modTestStatus");
+    if(st && activeModId){
+      const mod=mods[activeModId];
+      st.textContent=(activeModMode==="edit"?"Testbereich: ":"Aktiver Mod: ")+(mod?mod.name:"Unbekannt");
+    }
+  }
+
+  function openModsPage(){
+    switchTab("modsPage","tabMods");
+    if(!creativeMode) setCreativeMode(true);
+    const st=document.getElementById("modsCreativeStatus");
+    if(st) st.textContent="Mods-Seite: Kreativ Mode ist hier aktiv. Normales Spielen mit Mod ist später wieder ohne Kreativ.";
+    renderModsList();
+  }
+
+
+  function addMainAiMessage(from,text){
+    const box=document.getElementById("mainAiChat");
+    if(!box) return;
+    const div=document.createElement("div");
+    div.className="aiBubble "+(from==="Du"?"user":"bot");
+    div.textContent=text;
+    box.appendChild(div);
+    box.scrollTop=box.scrollHeight;
+  }
+
+  function answerMainAI(text){
+    const t=(text||"").toLowerCase();
+    if(t.includes("brücke")||t.includes("bruecke")||t.includes("wasser")){
+      return "Für eine Brücke: Wähle z.B. Holz, Erde oder Stein aus und tippe/klicke kurz auf das Wasser. Wasser darf mit Blöcken ersetzt werden.";
+    }
+    if(t.includes("hunger")||t.includes("essen")){
+      return "Hunger sinkt normal langsam. Wenn du viel läufst oder abbaust, sinkt er schneller. Iss Apfel, Brot oder gebratenes Fleisch. Gebratenes Fleisch gibt 5 Hunger.";
+    }
+    if(t.includes("ofen")||t.includes("schmelzen")||t.includes("kochen")){
+      return "Gehe auf die Seite Ofen. Dort kannst du Eisenerz zu Eisenbarren, Golderz zu Goldbarren, Sand zu Glas und rohes Fleisch zu gebratenem Fleisch machen.";
+    }
+    if(t.includes("mod")||t.includes("mods")){
+      return "Auf der Mods-Seite kannst du private Mods erstellen, im Testbereich bauen und danach online stellen. Öffentliche Mods von anderen kannst du nur spielen, nicht bearbeiten.";
+    }
+    if(t.includes("freund")||t.includes("server")||t.includes("online")){
+      return "Auf Freunde/Online kannst du Freunde anfragen, Server erstellen und Freunde einladen. Andere Spieler sieht man im gleichen Server und auf dem gleichen Planeten.";
+    }
+    if(t.includes("admin")){
+      return "Admin-Account: Name admin, Passwort admin. Der Admin kann im Admin Studio neue Items malen, Fantasy-Waffen erstellen und die Weltfarbe ändern.";
+    }
+    if(t.includes("steuerung")||t.includes("handy")){
+      return "Handy: Links ist Bewegung. Rechts ist Springen. Kurz mit Block tippen = platzieren. Mit Hand/Werkzeug gedrückt halten = abbauen.";
+    }
+    return "Ich bin die Safinicraft-KI. Ich kann dir beim Spiel helfen. Frag mich zu Crafting, Mods, Server, Hunger, Ofen, Admin, Handy-Steuerung oder Blöcken.";
+  }
+
+  function sendMainAI(){
+    const input=document.getElementById("mainAiInput");
+    const text=(input.value||"").trim();
+    if(!text) return;
+    input.value="";
+    addMainAiMessage("Du",text);
+    addMainAiMessage("KI",answerMainAI(text));
+  }
+
+  const ovenRecipesData=[
+    {name:"Eisenerz schmelzen",in:"iron_ore",fuel:"coal",out:"iron_ingot",count:1,need:1},
+    {name:"Golderz schmelzen",in:"gold_ore",fuel:"coal",out:"gold_ingot",count:1,need:1},
+    {name:"Sand zu Glas",in:"sand",fuel:"coal",out:"glass",count:1,need:1},
+    {name:"Fleisch kochen",in:"raw_meat",fuel:"coal",out:"cooked_meat",count:1,need:1}
+  ];
+
+  function useOvenRecipe(i){
+    const r=ovenRecipesData[i];
+    if((inv.furnace||0)<=0 && !creativeMode){document.getElementById("ovenStatus").textContent="Du brauchst zuerst einen Ofen.";return;}
+    if((inv[r.in]||0)<r.need && !creativeMode){document.getElementById("ovenStatus").textContent="Material fehlt: "+defs[r.in].name;return;}
+    if((inv[r.fuel]||0)<1 && !creativeMode){document.getElementById("ovenStatus").textContent="Brennstoff fehlt: Kohle";return;}
+    if(!creativeMode){inv[r.in]-=r.need;inv[r.fuel]-=1;}
+    inv[r.out]=(inv[r.out]||0)+r.count;
+    document.getElementById("ovenStatus").textContent="Fertig: "+defs[r.out].name;
+    saveAccountState();
+    renderAll();
+    renderOvenPage();
+  }
+
+  function renderOvenPage(){
+    const rec=document.getElementById("ovenRecipes");
+    if(rec){
+      rec.innerHTML="";
+      ovenRecipesData.forEach((r,i)=>{
+        const div=document.createElement("div");
+        div.className="ovenRecipe";
+        const ok=creativeMode||((inv.furnace||0)>0&&(inv[r.in]||0)>=r.need&&(inv[r.fuel]||0)>=1);
+        div.innerHTML="<b>"+r.name+"</b><br><span class='small'>"+defs[r.in].name+" + Kohle → "+defs[r.out].name+"</span><br>";
+        const btn=document.createElement("button");
+        btn.textContent=ok?"Starten":"Material fehlt";
+        btn.onclick=()=>useOvenRecipe(i);
+        div.appendChild(btn);
+        rec.appendChild(div);
+      });
+    }
+    renderInventory("ovenInventory",true);
+  }
+
   function switchTab(page,btn){
     document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
     document.querySelectorAll(".topbar button").forEach(b=>{if(b.id.startsWith("tab"))b.classList.remove("active")});
@@ -1496,12 +4013,16 @@ document.addEventListener("DOMContentLoaded", function(){
   }
   document.getElementById("tabWorld").onclick=()=>switchTab("worldPage","tabWorld");
   document.getElementById("tabCraft").onclick=()=>switchTab("craftPage","tabCraft");
+  document.getElementById("tabMods").onclick=openModsPage;
+  document.getElementById("tabAI").onclick=()=>switchTab("aiPage","tabAI");
+  document.getElementById("tabOven").onclick=()=>{switchTab("ovenPage","tabOven");renderOvenPage();};
+  document.getElementById("tabAdmin").onclick=()=>{switchTab("adminPage","tabAdmin");renderAdminPage();setupItemPainter();drawItemPaintCanvas();};
   document.getElementById("tabSkin").onclick=()=>switchTab("skinPage","tabSkin");
   document.getElementById("btnMode").onclick=()=>{buildMode=!buildMode;document.getElementById("btnMode").textContent=buildMode?"Modus: Bauen":"Modus: Abbauen";document.getElementById("btnMode").classList.toggle("active",!buildMode)};
   document.getElementById("btnSpawnMob").onclick=()=>{spawnMob(randomMob(),clamp(Math.floor(player.x/cell)+7,2,worldCols-2));msg("Mob gespawnt.")};
   document.getElementById("btnSave").onclick=()=>{worlds[currentPlanet]={world,fireLife,mobs,vehicles};localStorage.setItem("minicraft_planet_mod",JSON.stringify({worlds,currentPlanet,inv,player,activeSkin,skinPixels,creativeMode}));saveAccountState();msg("Gespeichert.")};
   document.getElementById("btnLoad").onclick=()=>{let s=localStorage.getItem("minicraft_planet_mod");if(!s){msg("Kein Speicherstand.");return}let d=JSON.parse(s);worlds=d.worlds;currentPlanet=d.currentPlanet;inv=d.inv;player=d.player;
-    if(player.hunger===undefined){player.hunger=10;player.maxHunger=10;player.hungerTimer=0;}activeSkin=d.activeSkin;skinPixels=d.skinPixels;creativeMode=!!d.creativeMode;updateCreativeStatus();world=worlds[currentPlanet].world;fireLife=worlds[currentPlanet].fireLife;mobs=worlds[currentPlanet].mobs;vehicles=worlds[currentPlanet].vehicles||[];renderAll();msg("Geladen.")};
+    if(player.hunger===undefined){player.hunger=10;player.maxHunger=10;player.hungerTimer=0;} if(player.lastBreakTick===undefined){player.lastBreakTick=-99999;}activeSkin=d.activeSkin;skinPixels=d.skinPixels;creativeMode=!!d.creativeMode;updateCreativeStatus();world=worlds[currentPlanet].world;fireLife=worlds[currentPlanet].fireLife;mobs=worlds[currentPlanet].mobs;vehicles=worlds[currentPlanet].vehicles||[];renderAll();msg("Geladen.")};
   document.getElementById("btnReset").onclick=()=>{if(confirm("Neue Welt?"))init()};
 
 
@@ -1542,6 +4063,27 @@ document.addEventListener("DOMContentLoaded", function(){
   document.getElementById("tabCreative").onclick=()=>switchTab("creativePage","tabCreative");
   document.getElementById("btnUnlockCreative").onclick=unlockCreativeWithCode;
   document.getElementById("btnCreativeOff").onclick=()=>setCreativeMode(false);
+  document.getElementById("btnAskModAI").onclick=askModAI;
+  document.getElementById("btnSmartModCreate").onclick=smartCreateMod;
+  document.getElementById("btnRandomMod").onclick=randomAiIdea;
+  document.getElementById("btnCreateMod").onclick=()=>createMod(false);
+  document.getElementById("btnEnterModTest").onclick=()=>enterModTest(selectedModId);
+  document.getElementById("btnExitModTest").onclick=exitModTest;
+  document.getElementById("btnPublishSelectedMod").onclick=publishSelectedMod;
+  document.getElementById("btnUnpublishSelectedMod").onclick=unpublishSelectedMod;
+  document.getElementById("btnDeactivateMod").onclick=deactivateMod;
+  document.getElementById("btnMainAiSend").onclick=sendMainAI;
+  document.getElementById("btnMainAiHelp").onclick=()=>{addMainAiMessage("KI",answerMainAI("tipps"));};
+  document.getElementById("mainAiInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendMainAI();});
+  document.getElementById("btnAdminAiRun").onclick=runAdminAI;
+  document.getElementById("adminItemType").addEventListener("change",()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value));
+  document.getElementById("adminWeaponEffect").addEventListener("change",()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value));
+  document.getElementById("btnClearAdminRecipe").onclick=clearAdminRecipeGrid;
+  document.getElementById("btnAutoAdminRecipe").onclick=()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value);
+  document.getElementById("adminRecipeSearch").addEventListener("input",renderAdminRecipeItemsList);
+  document.getElementById("btnClearItemPaint").onclick=()=>{itemPaintPixels=Array.from({length:16},()=>Array(16).fill(null));drawItemPaintCanvas();};
+  document.getElementById("btnCreatePaintedItem").onclick=()=>{createAdminItem(document.getElementById("adminItemName").value,document.getElementById("adminItemType").value,document.getElementById("adminPaintColor").value,itemPaintPixels,{effect:document.getElementById("adminWeaponEffect").value});};
+  document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));
 
   function holdButton(id, keyName){
     const el = document.getElementById(id);
@@ -1554,12 +4096,96 @@ document.addEventListener("DOMContentLoaded", function(){
     el.addEventListener("mouseup", end);
     el.addEventListener("mouseleave", end);
   }
-  holdButton("mobileLeft","left");
-  holdButton("mobileRight","right");
-  holdButton("mobileJump","jump");
-  holdButton("mobileDown","down");
-  holdButton("mobileJet","jet");
-  document.getElementById("mobileUse").onclick=toggleCar;
+  function setMobileAction(mode){
+    mobileActionMode = mode;
+    const display = document.getElementById("mobileModeDisplay");
+    if(display) display.textContent = mode==="break" ? "Gedrückt halten = Abbauen" : "Tippen/Bauen";
+  }
+
+  function resetMoveKeys(){
+    keys.left=false;
+    keys.right=false;
+    keys.jump=false;
+    keys.down=false;
+    keys.jet=false;
+  }
+
+  function joystickCenter(el){
+    const r = el.getBoundingClientRect();
+    return {x:r.left+r.width/2,y:r.top+r.height/2, radius:Math.min(r.width,r.height)/2};
+  }
+
+  function setKnob(knob, dx, dy, radius){
+    const max = radius - 30;
+    const len = Math.hypot(dx,dy);
+    if(len > max){
+      dx = dx / len * max;
+      dy = dy / len * max;
+    }
+    knob.style.transform = "translate("+dx+"px,"+dy+"px)";
+  }
+
+  function resetKnob(knob){
+    knob.style.transform = "translate(0px,0px)";
+  }
+
+  function handleMoveJoystickTouch(touch){
+    const base = document.getElementById("moveJoystick");
+    const knob = document.getElementById("moveKnob");
+    const c = joystickCenter(base);
+    let dx = touch.clientX - c.x;
+    let dy = touch.clientY - c.y;
+
+    setKnob(knob, dx, dy, c.radius);
+
+    keys.left = dx < -22;
+    keys.right = dx > 22;
+    keys.jump = false;
+    keys.down = dy > 35;
+    keys.jet = dy < -48 && (inv.jetpack>0 || creativeMode);
+  }
+
+  function setupJoystick(baseId, knobId){
+    const base = document.getElementById(baseId);
+    const knob = document.getElementById(knobId);
+    if(!base || !knob) return;
+
+    let active = false;
+
+    const start = (e)=>{
+      e.preventDefault();
+      active = true;
+      const t = e.touches ? e.touches[0] : e;
+      handleMoveJoystickTouch(t);
+    };
+
+    const move = (e)=>{
+      if(!active) return;
+      e.preventDefault();
+      const t = e.touches ? e.touches[0] : e;
+      handleMoveJoystickTouch(t);
+    };
+
+    const end = (e)=>{
+      if(!active) return;
+      e.preventDefault();
+      active = false;
+      resetKnob(knob);
+      resetMoveKeys();
+    };
+
+    base.addEventListener("touchstart",start,{passive:false});
+    base.addEventListener("touchmove",move,{passive:false});
+    base.addEventListener("touchend",end,{passive:false});
+    base.addEventListener("touchcancel",end,{passive:false});
+
+    base.addEventListener("mousedown",start);
+    window.addEventListener("mousemove",move);
+    window.addEventListener("mouseup",end);
+  }
+
+  holdButton("mobileJumpBtn","jump");
+  setupJoystick("moveJoystick","moveKnob");
 
 
 
@@ -1616,16 +4242,26 @@ document.addEventListener("DOMContentLoaded", function(){
       onlineAccountsCache = normalizeAccounts(state.accounts || {});
       onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
+      onlineModsCache = state.mods || defaultMods();
+      onlineAdminItemsCache = state.adminItems || {};
+      onlineWorldSettingsCache = state.worldSettings || {};
       onlineMode = true;
 
       localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
       localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
       localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
+            localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
+      localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
 
       setOnlineStatus("Online-Server verbunden. Andere Geräte können jetzt mitspielen.");
       connectLiveSocket();
       renderFriendsPage();
       renderServerList();
+      renderModsList();
+      loadAdminItemsIntoGame();
+      applyWorldSettings();
+      renderAdminPage();
+      renderOvenPage();
       renderChat();
       renderAll();
     }catch(e){
@@ -1648,6 +4284,9 @@ document.addEventListener("DOMContentLoaded", function(){
             onlineAccountsCache = normalizeAccounts(msg.state.accounts || {});
             onlineServersCache = msg.state.servers || {};
             onlineMessagesCache = msg.state.messages || {};
+            onlineModsCache = msg.state.mods || defaultMods();
+            onlineAdminItemsCache = msg.state.adminItems || {};
+            onlineWorldSettingsCache = msg.state.worldSettings || {};
 
             localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
             localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
@@ -1655,6 +4294,11 @@ document.addEventListener("DOMContentLoaded", function(){
 
             renderFriendsPage();
             renderServerList();
+            renderModsList();
+            loadAdminItemsIntoGame();
+            applyWorldSettings();
+            renderAdminPage();
+            renderOvenPage();
             renderChat();
             renderAll();
           }
@@ -1823,17 +4467,51 @@ document.addEventListener("DOMContentLoaded", function(){
     document.getElementById("loginMsg").textContent = text;
   }
 
+  async function apiCreateAccount(name, pass){
+    const res = await fetch("/api/createAccount", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name, pass, skin:skinForAccount(), inv:copyInventory()})
+    });
+    return await res.json();
+  }
+
+  async function apiLogin(name, pass){
+    const res = await fetch("/api/login", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name, pass})
+    });
+    return await res.json();
+  }
+
   function skinForAccount(){
     return JSON.parse(JSON.stringify(activeSkin || skinPixels || makeDefaultSkin("photo")));
   }
 
-  function createAccount(){
+  async function createAccount(){
     const name = document.getElementById("loginName").value.trim();
     const pass = document.getElementById("loginPass").value;
 
     if(!name || !pass){
       loginMessage("Bitte Name und Passwort eingeben.");
       return;
+    }
+
+    if(onlineMode){
+      try{
+        const result = await apiCreateAccount(name, pass);
+        if(!result.ok){
+          loginMessage(result.error || "Account konnte nicht erstellt werden.");
+          return;
+        }
+        await loadServerState();
+        loginMessage("Spieler erstellt. Du kannst dich jetzt einloggen.");
+        return;
+      }catch(e){
+        loginMessage("Server-Fehler beim Erstellen.");
+        return;
+      }
     }
 
     const accounts = getAccounts();
@@ -1859,9 +4537,41 @@ document.addEventListener("DOMContentLoaded", function(){
     loginMessage("Spieler erstellt. Du kannst dich jetzt einloggen.");
   }
 
-  function loginAccount(){
+  async function loginAccount(){
     const name = document.getElementById("loginName").value.trim();
     const pass = document.getElementById("loginPass").value;
+
+    if(!name || !pass){
+      loginMessage("Bitte Name und Passwort eingeben.");
+      return;
+    }
+
+    if(onlineMode){
+      try{
+        const result = await apiLogin(name, pass);
+        if(!result.ok){
+          loginMessage(result.error || "Login fehlgeschlagen.");
+          return;
+        }
+
+        onlineAccountsCache = normalizeAccounts(result.state.accounts || {});
+        onlineServersCache = result.state.servers || {};
+        onlineMessagesCache = result.state.messages || {};
+        onlineModsCache = result.state.mods || defaultMods();
+        onlineAdminItemsCache = result.state.adminItems || {};
+        onlineWorldSettingsCache = result.state.worldSettings || {};
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+        localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
+        localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
+        localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
+        localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
+        localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
+      }catch(e){
+        loginMessage("Server-Fehler beim Login.");
+        return;
+      }
+    }
+
     const accounts = getAccounts();
 
     if(!accounts[name]){
@@ -1869,7 +4579,7 @@ document.addEventListener("DOMContentLoaded", function(){
       return;
     }
 
-    if(accounts[name].pass !== encodePass(pass)){
+    if(!onlineMode && accounts[name].pass !== encodePass(pass)){
       loginMessage("Falsches Passwort.");
       return;
     }
@@ -1900,10 +4610,6 @@ document.addEventListener("DOMContentLoaded", function(){
       player.spawnY = accounts[name].playerSave.spawnY ?? player.spawnY;
     }
 
-    const servers=getServers();
-    const found=Object.values(servers).find(s=>(s.players||[]).includes(name));
-    currentServerId = found ? found.id : null;
-
     accounts[name].online = true;
     accounts[name].lastLogin = Date.now();
     saveAccounts(accounts);
@@ -1912,8 +4618,11 @@ document.addEventListener("DOMContentLoaded", function(){
     localStorage.setItem("safinicraft_current_user", name);
     document.body.classList.remove("loggedOut");
     document.body.classList.add("loggedIn");
-    msg("Willkommen bei Safinicraft.de, " + name + "! Items, Skin und Freunde wurden geladen.");
+    msg("Willkommen bei Safinicraft.de, " + name + "! Deine Freunde, Items und dein Skin wurden geladen.");
     renderFriendsPage();
+    renderAdminPage();
+    loadAdminItemsIntoGame();
+    applyWorldSettings();
     renderAll();
   }
 
@@ -2553,7 +5262,7 @@ document.addEventListener("DOMContentLoaded", function(){
     createWorld("earth");
     currentPlanet="earth";world=worlds.earth.world;fireLife=worlds.earth.fireLife;mobs=worlds.earth.mobs;vehicles=worlds.earth.vehicles;
     const g=groundAt(10);player.x=10*cell+2;player.y=(g-2)*cell;player.spawnX=player.x;player.spawnY=player.y;player.hp=player.maxHp;player.hunger=player.maxHunger;player.fuel=inv.fuel_cell*40;
-    updateCreativeStatus();updateCreativeStatus();renderAll();msg("Spiel gestartet. Skin vom Foto ist Standard.");
+    updateCreativeStatus();updateCreativeStatus();renderAll();setupItemPainter();drawItemPaintCanvas();msg("Spiel gestartet. Skin vom Foto ist Standard.");
   }
   function loop(){update();draw();requestAnimationFrame(loop)}
   init();

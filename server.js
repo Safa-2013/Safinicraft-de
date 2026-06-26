@@ -10,16 +10,18 @@ const DATA_FILE = path.join(ROOT, "server_data.json");
 let state = {
   accounts: {},
   servers: {},
-  messages: {}
+  messages: {},
+  mods: {}
 };
 
 function loadState(){
   try{
     if(fs.existsSync(DATA_FILE)){
-      state = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-      state.accounts = state.accounts || {};
-      state.servers = state.servers || {};
-      state.messages = state.messages || {};
+      const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+      state.accounts = saved.accounts || {};
+      state.servers = saved.servers || {};
+      state.messages = saved.messages || {};
+      state.mods = saved.mods || {};
     }
   }catch(e){
     console.error("Konnte server_data.json nicht lesen:", e.message);
@@ -149,6 +151,17 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/mods" && req.method === "POST"){
+    const data = await readBody(req);
+    if(data.mods && typeof data.mods === "object"){
+      state.mods = data.mods;
+      saveState();
+      broadcastState();
+    }
+    sendJson(res, {ok:true});
+    return;
+  }
+
   let filePath = req.url.split("?")[0];
   if(filePath === "/" || filePath === "") filePath = "/index.html";
 
@@ -215,5 +228,4 @@ server.on("upgrade", (req, socket)=>{
 
 server.listen(PORT, ()=>{
   console.log("Safinicraft.de läuft auf http://localhost:" + PORT);
-  console.log("Im gleichen WLAN: öffne http://DEINE-PC-IP:" + PORT + " auf dem Handy.");
 });

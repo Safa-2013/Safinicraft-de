@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "1.0.0",
-  "description": "Safinicraft.de Online Multiplayer Demo",
+  "version": "1.6.2",
+  "description": "Safinicraft.de neueste Version mit Admin, KI, Mods, Ofen, Explosionen und Admin 3x3 Rezept",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

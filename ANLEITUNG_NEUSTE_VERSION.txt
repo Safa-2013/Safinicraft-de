@@ -1,0 +1,31 @@
+SAFINICRAFT NEUSTE VERSION
+
+Das ist die aktuellste Version mit:
+- KI Chat Seite
+- Ofen Seite
+- Admin Studio
+- geheimer Admin über Render Environment Variables
+- Admin sieht alle Spieler + Skins
+- Admin Pixel Item Painter
+- Admin Items privat/online/löschen
+- explosive Fantasy-Waffen / Raketenwerfer
+- Admin 3x3 Rezept-Tisch unter dem Designfeld
+- Mods Studio
+- Hunger Update
+- Mobile Steuerung
+
+WICHTIG:
+Wenn du im Spiel noch alte Buttons siehst, ist auf Render/GitHub noch die alte index.html aktiv oder dein Browser zeigt Cache.
+
+So aktualisieren:
+1. GitHub Repository öffnen.
+2. index.html aus diesem ZIP hochladen und alte index.html ersetzen.
+3. server.js aus diesem ZIP hochladen und alte server.js ersetzen.
+4. package.json aus diesem ZIP hochladen und alte package.json ersetzen.
+5. Commit changes klicken.
+6. Render macht automatisch Deploy oder Manual Deploy -> Deploy latest commit.
+7. Danach Website hart neu laden:
+   Mac: Cmd + Shift + R
+   Windows: Ctrl + F5
+
+JS-Syntaxprüfung: OK
