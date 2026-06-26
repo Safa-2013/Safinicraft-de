@@ -93,6 +93,7 @@ function ensureAdmin(){
 
 function sanitizeState(){
   ensureAdmin();
+  state.adminChat = Array.isArray(state.adminChat) ? state.adminChat : [];
   const copy = JSON.parse(JSON.stringify(state));
   Object.keys(copy.accounts || {}).forEach(name=>{
     delete copy.accounts[name].pass;
@@ -197,11 +198,20 @@ function mergeAccounts(incoming){
   Object.keys(incoming || {}).forEach(name=>{
     const inc = incoming[name] || {};
     const cur = state.accounts[name] || {};
+    const oldPass = cur.pass || inc.pass;
+
     state.accounts[name] = {
       ...cur,
       ...inc,
-      pass: cur.pass || inc.pass,
-      role: cur.role || inc.role || "player"
+      pass: oldPass,
+      role: cur.role === "admin" ? "admin" : (inc.role || cur.role || "player"),
+      skin: inc.skin || cur.skin || defaultSkin(),
+      inv: inc.inv || cur.inv || {},
+      friends: Array.isArray(inc.friends) ? inc.friends : (cur.friends || []),
+      friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : (cur.friendRequests || []),
+      sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : (cur.sentRequests || []),
+      gameInvites: Array.isArray(inc.gameInvites) ? inc.gameInvites : (cur.gameInvites || []),
+      unfriended: Array.isArray(inc.unfriended) ? inc.unfriended : (cur.unfriended || [])
     };
   });
   ensureAdmin();
@@ -470,6 +480,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN CHAT LIVE FIX 2.1.1 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN ALL CONTROL FIX 2.1.2 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
