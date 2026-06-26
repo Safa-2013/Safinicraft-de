@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.1.4",
-  "description": "Safinicraft Admin Player Sync Fix",
+  "version": "2.1.5",
+  "description": "Safinicraft Admin Player Local Server Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

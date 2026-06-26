@@ -136,7 +136,7 @@ function sendJson(res, data){
     "Cache-Control":"no-store",
     "Access-Control-Allow-Origin":"*",
     "Access-Control-Allow-Headers":"Content-Type",
-    "Access-Control-Allow-Methods":"GET,POST,OPTIONS"
+    "Access-Control-Allow-Methods":"GET,POST,DELETE,OPTIONS"
   });
   res.end(body);
 }
@@ -228,7 +228,7 @@ const server = http.createServer(async (req,res)=>{
     res.writeHead(204, {
       "Access-Control-Allow-Origin":"*",
       "Access-Control-Allow-Headers":"Content-Type",
-      "Access-Control-Allow-Methods":"GET,POST,OPTIONS"
+      "Access-Control-Allow-Methods":"GET,POST,DELETE,OPTIONS"
     });
     res.end();
     return;
@@ -240,6 +240,12 @@ const server = http.createServer(async (req,res)=>{
   }
 
   if(req.url === "/api/admin/accounts" && req.method === "GET"){
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, accounts:clean.accounts || {}, count:Object.keys(clean.accounts || {}).length});
+    return;
+  }
+
+  if(req.url === "/api/accounts" && req.method === "GET"){
     const clean = sanitizeState();
     sendJson(res, {ok:true, accounts:clean.accounts || {}, count:Object.keys(clean.accounts || {}).length});
     return;
@@ -527,6 +533,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN PLAYER SYNC FIX 2.1.4 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN PLAYER LOCAL+SERVER FIX 2.1.5 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

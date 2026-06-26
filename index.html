@@ -1180,6 +1180,27 @@
     margin-top:8px;
   }
 
+
+  .adminSyncBox{
+    background:#102016;
+    border:2px solid #00ff99;
+    color:#d7ffe8;
+    border-radius:12px;
+    padding:10px;
+    margin:8px 0;
+    font-weight:bold;
+  }
+  .adminSyncCount{
+    font-size:24px;
+    color:#00ff99;
+    margin:4px 0;
+  }
+  .adminSyncWarn{
+    color:#ffdd55;
+    font-weight:bold;
+    margin-top:6px;
+  }
+
 </style>
 </head>
 <body class="loggedOut">
@@ -1190,7 +1211,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN PLAYER + UPLOAD FIX VERSION 2.1.3</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN PLAYER LOCAL+SERVER FIX VERSION 2.1.5</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1638,6 +1659,7 @@
         <button id="btnRefreshAdminPlayers">Spielerliste vom Server laden</button>
       </div>
       <div id="adminPlayersCountBig" class="adminCountBig">0 Spieler</div>
+      <div id="adminPlayersSyncInfo" class="adminSyncBox"><div>Admin-Spieler-Sync</div><div id="adminPlayersCountBig" class="adminSyncCount">0 Accounts</div><div id="adminPlayersWarn" class="adminSyncWarn"></div></div>
       <div id="adminPlayerRefreshStatus" class="message"></div>
       <div id="adminPlayersList"></div>
     </div>
@@ -3325,18 +3347,26 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function getDrop(b){if(b==="grass")return"dirt";if(b==="stone")return"cobblestone";if(b==="coal_ore")return"coal";if(b==="iron_ore")return"iron_ore";if(b==="gold_ore")return"gold_ore";if(b==="diamond_ore")return"diamond";if(b==="fire")return null;return b}
 
   function applyMoveKey(e,down){
+    if(!e) return false;
     if(e.metaKey || e.ctrlKey || e.altKey) return false;
+
+    const rawKey = (typeof e.key === "string") ? e.key : "";
+    if(!rawKey) return false;
+
     const tag=(document.activeElement && document.activeElement.tagName || "").toLowerCase();
     if(["input","textarea","select"].includes(tag)) return false;
-    let k=e.key.toLowerCase();
+
+    let k=rawKey.toLowerCase();
     let handled=true;
+
     if(k==="a"||k==="arrowleft")keys.left=down;
     else if(k==="d"||k==="arrowright")keys.right=down;
-    else if(k==="w"||k==="arrowup"||e.key===" ")keys.jump=down;
+    else if(k==="w"||k==="arrowup"||rawKey===" ")keys.jump=down;
     else if(k==="j")keys.jet=down;
     else if(k==="s"||k==="arrowdown")keys.down=down;
     else handled=false;
-    if(handled && e.key===" ") e.preventDefault();
+
+    if(handled && rawKey===" " && e.preventDefault) e.preventDefault();
     return handled;
   }
 
@@ -4198,7 +4228,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
 
     if(names.length===0){
-      box.innerHTML="<p class='small'>Keine Spieler sichtbar. Klicke „Spielerliste sofort laden“. Falls nur Admin existiert: „Mich/Admin anzeigen“ aktivieren.</p>";
+      box.innerHTML="<p class='small'>Keine Spieler sichtbar. Suche löschen oder „Spielerliste sofort laden“ klicken. Der Spieler muss einmal mit dieser Version neu einloggen, dann erscheint er sofort.</p>";
       return;
     }
 
@@ -5466,6 +5496,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     };
     accounts[currentUser].online=true;
     saveAccounts(accounts);
+    announceCurrentAccountToServer(true);
   }
 
 
@@ -5489,7 +5520,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       if(!res.ok) throw new Error("Server antwortet nicht");
       const state = await res.json();
 
-      onlineAccountsCache = normalizeAccounts(state.accounts || {});
+      onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), normalizeAccounts(state.accounts || {}));
       adminDirectAccountsCache = onlineAccountsCache;
       onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
@@ -5500,6 +5531,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       onlineMode = true;
 
       localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      backupAccountsLocally(onlineAccountsCache);
       localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
       localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
       localStorage.setItem("safinicraft_admin_chat", JSON.stringify(onlineAdminChatCache || []));
@@ -5531,11 +5563,80 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     return normalizeAccounts({...((a)||{}), ...((b)||{})});
   }
 
-  function getAdminVisibleAccounts(){
-    if(isAdmin() && adminDirectAccountsCache && Object.keys(adminDirectAccountsCache).length){
-      return mergeAccountObjects(getAccounts(), adminDirectAccountsCache);
+  function backupAccountsLocally(accounts){
+    try{
+      const old = JSON.parse(localStorage.getItem("safinicraft_accounts_backup") || "{}");
+      const merged = mergeAccountObjects(old, accounts || {});
+      localStorage.setItem("safinicraft_accounts_backup", JSON.stringify(merged));
+    }catch(e){}
+  }
+
+  function getLocalBackupAccounts(){
+    try{
+      return normalizeAccounts(JSON.parse(localStorage.getItem("safinicraft_accounts_backup") || "{}"));
+    }catch(e){
+      return {};
     }
-    return getAccounts();
+  }
+
+  function getAllKnownAccounts(){
+    return mergeAccountObjects(getLocalBackupAccounts(), getAccounts());
+  }
+
+  function getAdminVisibleAccounts(){
+    const known = getAllKnownAccounts();
+    if(isAdmin() && adminDirectAccountsCache && Object.keys(adminDirectAccountsCache).length){
+      return mergeAccountObjects(known, adminDirectAccountsCache);
+    }
+    return known;
+  }
+
+  async function announceCurrentAccountToServer(quiet=true){
+    if(!currentUser || !isRealWebsiteMode()) return false;
+
+    try{
+      const accounts = getAccounts();
+      const acc = accounts[currentUser] || {};
+      const payload = {
+        name: currentUser,
+        account: {
+          ...acc,
+          online: true,
+          lastSeen: Date.now(),
+          live: {
+            x: player.x,
+            y: player.y,
+            planet: currentPlanet,
+            hp: player.hp,
+            hunger: player.hunger,
+            held: selected,
+            serverId: currentServerId,
+            lastSeen: Date.now()
+          }
+        }
+      };
+
+      const res = await fetch("/api/accountPing", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if(data && data.ok && data.accounts){
+        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), mergeAccountObjects(onlineAccountsCache || {}, data.accounts || {}));
+        adminDirectAccountsCache = isAdmin() ? onlineAccountsCache : adminDirectAccountsCache;
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      backupAccountsLocally(onlineAccountsCache);
+        if(isAdmin()) renderAdminPlayersList();
+        renderFriendsPage();
+      }
+
+      return true;
+    }catch(e){
+      if(!quiet) msg("Account konnte nicht an Server gemeldet werden.");
+      return false;
+    }
   }
 
   async function fetchAdminAccountsDirect(quiet=false){
@@ -5544,6 +5645,8 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
 
     try{
+      await announceCurrentAccountToServer(true);
+
       let data=null;
 
       try{
@@ -5561,13 +5664,22 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
       if(data && data.accounts){
         adminDirectAccountsCache = normalizeAccounts(data.accounts || {});
-        onlineAccountsCache = mergeAccountObjects(onlineAccountsCache || {}, adminDirectAccountsCache);
+        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), mergeAccountObjects(onlineAccountsCache || {}, adminDirectAccountsCache));
+        adminDirectAccountsCache = onlineAccountsCache;
         localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      backupAccountsLocally(onlineAccountsCache);
 
+        const count=Object.keys(adminDirectAccountsCache).length;
         const countBig=document.getElementById("adminPlayersCountBig");
-        if(countBig) countBig.textContent=Object.keys(adminDirectAccountsCache).length+" Accounts";
+        if(countBig) countBig.textContent=count+" Accounts";
+        const warn=document.getElementById("adminPlayersWarn");
+        if(warn){
+          warn.textContent = count<=1
+            ? "Nur 1 Account auf dem Server. Öffne den Spieler-Account nach diesem Update einmal neu, dann meldet er sich automatisch beim Admin."
+            : "";
+        }
 
-        if(!quiet) msg("Admin-Spielerliste direkt vom Server geladen.");
+        if(!quiet) msg("Admin-Spielerliste direkt vom Server geladen: "+count+" Accounts.");
         return adminDirectAccountsCache;
       }
     }catch(e){
@@ -5590,7 +5702,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
       const before = new Set(Object.keys(onlineAccountsCache || {}));
 
-      onlineAccountsCache = normalizeAccounts(state.accounts || {});
+      onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), normalizeAccounts(state.accounts || {}));
       onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
       onlineAdminChatCache = setAdminChatCache(Array.isArray(state.adminChat) ? state.adminChat : [], false);
@@ -5600,6 +5712,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       onlineMode = true;
 
       localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      backupAccountsLocally(onlineAccountsCache);
       localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
       localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
       localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
@@ -5647,7 +5760,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         try{
           const msg = JSON.parse(event.data);
           if(msg.type === "state"){
-            onlineAccountsCache = normalizeAccounts(msg.state.accounts || {});
+            onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), normalizeAccounts(msg.state.accounts || {}));
             onlineServersCache = msg.state.servers || {};
             onlineMessagesCache = msg.state.messages || {};
             onlineAdminChatCache = setAdminChatCache(Array.isArray(msg.state.adminChat) ? msg.state.adminChat : [], false);
@@ -5656,6 +5769,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
             onlineWorldSettingsCache = msg.state.worldSettings || {};
 
             localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      backupAccountsLocally(onlineAccountsCache);
             localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
             localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
 
@@ -5790,6 +5904,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     accounts = normalizeAccounts(accounts);
     onlineAccountsCache = accounts;
     localStorage.setItem("safinicraft_accounts", JSON.stringify(accounts));
+    if(typeof backupAccountsLocally === "function") backupAccountsLocally(accounts);
     postServer("/api/accounts", {accounts});
   }
 
@@ -5883,7 +5998,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
           return;
         }
         await loadServerState();
-        loginMessage("Spieler erstellt. Du kannst dich jetzt einloggen.");
+        if(result && result.state && result.state.accounts){
+          onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), normalizeAccounts(result.state.accounts || {}));
+          localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+          backupAccountsLocally(onlineAccountsCache);
+        }
+        loginMessage("Spieler erstellt und an Server gemeldet. Du kannst dich jetzt einloggen.");
         return;
       }catch(e){
         loginMessage("Server-Fehler beim Erstellen.");
@@ -5932,7 +6052,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         usedServerLogin = true;
         onlineMode = true;
 
-        onlineAccountsCache = normalizeAccounts((result.state && result.state.accounts) || {});
+        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), normalizeAccounts((result.state && result.state.accounts) || {}));
         if(!onlineAccountsCache[name]){
           onlineAccountsCache[name] = result.account || {
             role: name === "admin" ? "admin" : "player",
@@ -5954,6 +6074,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         onlineWorldSettingsCache = (result.state && result.state.worldSettings) || {};
 
         localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      backupAccountsLocally(onlineAccountsCache);
         localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
         localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
         localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
@@ -6022,6 +6143,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     ensurePlayerWorldVisible();
     applyAccountPowers();
     saveAccountState();
+    announceCurrentAccountToServer(true);
 
     localStorage.setItem("safinicraft_current_user", name);
     document.body.classList.remove("loggedOut");
@@ -6620,9 +6742,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const accounts = isAdmin() ? getAdminVisibleAccounts() : getAccounts();
     list.innerHTML = "";
 
-    const names = Object.keys(accounts);
+    const names = Object.keys(accounts).filter(name=>!(isAdmin() && name===currentUser));
     if(names.length === 0){
-      list.innerHTML = "<p class='small'>Noch keine Spieler erstellt.</p>";
+      list.innerHTML = "<p class='small'>Noch keine anderen Spieler sichtbar. Spieler müssen einmal neu einloggen, damit sie sich beim Server melden.</p>";
       return;
     }
 
@@ -6635,7 +6757,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const list = document.getElementById("notFriendList");
     if(!list || !currentUser) return;
 
-    const accounts = getAccounts();
+    const accounts = isAdmin() ? getAdminVisibleAccounts() : getAccounts();
     const me = accounts[currentUser] || {};
     list.innerHTML = "";
 
@@ -6676,7 +6798,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     if(!currentUser) return;
 
-    const accounts = getAccounts();
+    const accounts = isAdmin() ? getAdminVisibleAccounts() : getAccounts();
     const me = accounts[currentUser] || {friends:[],friendRequests:[],gameInvites:[]};
 
     renderAllPlayers();
@@ -6879,8 +7001,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     requestAnimationFrame(loop)
   }
   // ADMIN_ALL_CONTROL_INTERVAL
-  // ADMIN_PLAYER_UPLOAD_INTERVAL
+  // ADMIN_PLAYER_SYNC_HEARTBEAT
   setInterval(()=>{if(currentUser&&isRealWebsiteMode()){
+    announceCurrentAccountToServer(true);
     refreshAdminChatFromServer(true);
     if(isAdmin()) fetchAdminAccountsDirect(true).then(()=>renderAdminPlayersList());
   }},2000);
