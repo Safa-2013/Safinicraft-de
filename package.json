@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "1.8.1",
-  "description": "Safinicraft PC and Mobile Control Fix",
+  "version": "1.8.2",
+  "description": "Safinicraft World Visible Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

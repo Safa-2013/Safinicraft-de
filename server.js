@@ -409,6 +409,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de PC/MOBILE CONTROL FIX 1.8.1 läuft auf Port " + PORT);
+  console.log("Safinicraft.de WORLD VISIBLE FIX 1.8.2 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

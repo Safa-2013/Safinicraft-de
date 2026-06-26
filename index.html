@@ -906,7 +906,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">PC/MOBILE CONTROL FIX VERSION 1.8.1</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">WORLD VISIBLE FIX VERSION 1.8.2</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -938,6 +938,7 @@
   <button id="btnSpawnMob">Mob spawnen</button>
   <button id="btnSave">Speichern</button>
   <button id="btnLoad">Laden</button>
+  <button id="btnRepairWorld">Welt reparieren</button>
   <button id="btnReset">Neue Welt</button>
   <button id="btnLogout">Logout</button>
 </div>
@@ -945,7 +946,7 @@
 <div id="worldPage" class="page active">
   <div class="box">
     <b>Steuerung:</b> A/D = laufen, W/Leertaste = springen, J = Jetpack benutzen, E = Auto ein-/aussteigen. 
-    Mit Jetpack ganz nach oben fliegen = nächster Planet. Mit Planetenportal kannst du den Planet auswählen. Es gibt jetzt auch Hunger. Pixel-Pistole ist nur eine Fantasy-Spielwaffe.
+    Mit Jetpack ganz nach oben fliegen = nächster Planet. Mit Planetenportal kannst du den Planet auswählen. Es gibt jetzt auch Hunger. Pixel-Pistole ist nur eine Fantasy-Spielwaffe. Wenn du nur blauen Himmel siehst, klicke „Welt reparieren“.
     <br>
     <span class="small">Standard-Skin ist als Pixel-Version vom Foto: dunkles Shirt, beige Hose, schwarze Schuhe, dunkle Haare.</span>
   </div>
@@ -1686,6 +1687,82 @@ document.addEventListener("DOMContentLoaded", function(){
   function groundAt(x){x=clamp(Math.floor(x),0,worldCols-1);for(let y=0;y<worldRows;y++){let b=world[y][x];if(!passable(b)&&b!=="leaves")return y}return worldRows-1}
   function makeTree(x){const g=groundAt(x);for(let y=g-1;y>=g-5;y--)setBlock(x,y,"wood");for(let y=g-9;y<=g-5;y++)for(let dx=-3;dx<=3;dx++){let nx=x+dx;if(inBounds(nx,y)&&Math.abs(dx)+Math.abs(y-(g-7))<6&&world[y][nx]==="air")setBlock(nx,y,"leaves")}}
 
+  function worldSolidCount(){
+    if(!world || !world.length) return 0;
+    let count = 0;
+    for(let y=0;y<worldRows;y+=4){
+      for(let x=0;x<worldCols;x+=4){
+        if(inBounds(x,y) && world[y] && world[y][x] && !passable(world[y][x]) && world[y][x] !== "leaves"){
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  function spawnPlayerOnGround(tileX=10){
+    tileX = clamp(Math.floor(tileX || 10),2,worldCols-3);
+    const g = groundAt(tileX);
+    player.x = tileX*cell + 2;
+    player.y = Math.max(2*cell,(g-2)*cell);
+    player.vx = 0;
+    player.vy = 0;
+    player.inCar = null;
+    player.spawnX = player.x;
+    player.spawnY = player.y;
+    updateCamera();
+  }
+
+  function repairWorldIfNeeded(reason="auto"){
+    let broken = false;
+
+    if(!world || !world.length || !world[0] || world.length < worldRows/2){
+      broken = true;
+    }
+
+    if(!broken && worldSolidCount() < 25){
+      broken = true;
+    }
+
+    if(broken){
+      const keepPlanet = currentPlanet || "earth";
+      createWorld(keepPlanet);
+      currentPlanet = keepPlanet;
+      world = worlds[keepPlanet].world;
+      fireLife = worlds[keepPlanet].fireLife;
+      mobs = worlds[keepPlanet].mobs;
+      vehicles = worlds[keepPlanet].vehicles || [];
+      spawnPlayerOnGround(10);
+      msg("Welt war leer/kaputt und wurde repariert.");
+      return true;
+    }
+
+    return false;
+  }
+
+  function ensurePlayerWorldVisible(){
+    repairWorldIfNeeded("visible");
+
+    const tx = clamp(Math.floor((player.x+player.w/2)/cell),2,worldCols-3);
+    const g = groundAt(tx);
+    const groundY = (g-2)*cell;
+
+    // Wenn der Spieler viel zu hoch, viel zu tief oder außerhalb ist:
+    // direkt auf den Boden setzen, damit man Welt und Spieler sieht.
+    if(
+      !Number.isFinite(player.x) || !Number.isFinite(player.y) ||
+      player.x < 0 || player.x > worldW-cell ||
+      player.y < -cell || player.y > worldH-cell*4 ||
+      Math.abs(player.y-groundY) > cell*14
+    ){
+      spawnPlayerOnGround(tx);
+      msg("Spieler wurde wieder auf den Boden gesetzt.");
+      return true;
+    }
+
+    return false;
+  }
+
   const mobDefs = {
     cow:{name:"Kuh",hp:4,hostile:false,drop:"raw_meat"},
     pig:{name:"Schwein",hp:4,hostile:false,drop:"raw_meat"},
@@ -1725,6 +1802,7 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function draw(){
+    repairWorldIfNeeded("draw");
     updateCamera();
     const p=planets[currentPlanet];
     ctx.fillStyle=modSkyColor || p.sky;ctx.fillRect(0,0,game.width,game.height);
@@ -4335,8 +4413,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("btnSpawnMob").onclick=()=>{spawnMob(randomMob(),clamp(Math.floor(player.x/cell)+7,2,worldCols-2));msg("Mob gespawnt.")};
   document.getElementById("btnSave").onclick=()=>{worlds[currentPlanet]={world,fireLife,mobs,vehicles};localStorage.setItem("minicraft_planet_mod",JSON.stringify({worlds,currentPlanet,inv,player,activeSkin,skinPixels,creativeMode}));saveAccountState();msg("Gespeichert.")};
   document.getElementById("btnLoad").onclick=()=>{let s=localStorage.getItem("minicraft_planet_mod");if(!s){msg("Kein Speicherstand.");return}let d=JSON.parse(s);worlds=d.worlds;currentPlanet=d.currentPlanet;inv=d.inv;player=d.player;
-    if(player.hunger===undefined){player.hunger=10;player.maxHunger=10;player.hungerTimer=0;} if(player.lastBreakTick===undefined){player.lastBreakTick=-99999;}activeSkin=d.activeSkin;skinPixels=d.skinPixels;creativeMode=!!d.creativeMode;updateCreativeStatus();world=worlds[currentPlanet].world;fireLife=worlds[currentPlanet].fireLife;mobs=worlds[currentPlanet].mobs;vehicles=worlds[currentPlanet].vehicles||[];renderAll();msg("Geladen.")};
-  document.getElementById("btnReset").onclick=()=>{if(confirm("Neue Welt?"))init()};
+    if(player.hunger===undefined){player.hunger=10;player.maxHunger=10;player.hungerTimer=0;} if(player.lastBreakTick===undefined){player.lastBreakTick=-99999;}activeSkin=d.activeSkin;skinPixels=d.skinPixels;creativeMode=!!d.creativeMode;updateCreativeStatus();world=worlds[currentPlanet].world;fireLife=worlds[currentPlanet].fireLife;mobs=worlds[currentPlanet].mobs;vehicles=worlds[currentPlanet].vehicles||[];ensurePlayerWorldVisible();renderAll();msg("Geladen.")};
+  document.getElementById("btnRepairWorld").onclick=()=>{repairWorldIfNeeded("button");ensurePlayerWorldVisible();renderAll();msg("Welt repariert und Spieler auf Boden gesetzt.")};
+  document.getElementById("btnReset").onclick=()=>{init();msg("Neue Welt erstellt.")};
 
 
   function updateCreativeStatus(){
@@ -4949,6 +5028,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     accounts[name].online = true;
     accounts[name].lastLogin = Date.now();
     saveAccounts(accounts);
+    ensurePlayerWorldVisible();
     saveAccountState();
 
     localStorage.setItem("safinicraft_current_user", name);
@@ -5597,7 +5677,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     worlds={};
     createWorld("earth");
     currentPlanet="earth";world=worlds.earth.world;fireLife=worlds.earth.fireLife;mobs=worlds.earth.mobs;vehicles=worlds.earth.vehicles;
-    const g=groundAt(10);player.x=10*cell+2;player.y=(g-2)*cell;player.spawnX=player.x;player.spawnY=player.y;player.hp=player.maxHp;player.hunger=player.maxHunger;player.fuel=inv.fuel_cell*40;
+    const g=groundAt(10);player.x=10*cell+2;player.y=(g-2)*cell;player.spawnX=player.x;player.spawnY=player.y;player.hp=player.maxHp;player.hunger=player.maxHunger;player.fuel=inv.fuel_cell*40;ensurePlayerWorldVisible();
     updateCreativeStatus();updateCreativeStatus();renderAll();setupItemPainter();drawItemPaintCanvas();msg("Spiel gestartet. Skin vom Foto ist Standard.");
   }
   function loop(){update();draw();requestAnimationFrame(loop)}
