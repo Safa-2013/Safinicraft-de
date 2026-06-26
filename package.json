@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.1.9",
-  "description": "Safinicraft Admin Emergency Login",
+  "version": "2.2.0",
+  "description": "Safinicraft Secure Admin Login",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

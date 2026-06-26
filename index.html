@@ -1262,7 +1262,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN EMERGENCY LOGIN VERSION 2.1.9</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">SECURE ADMIN LOGIN VERSION 2.2.0</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1273,7 +1273,7 @@
 
     <button id="btnCreateAccount">Neuen Spieler erstellen</button>
     <button id="btnLoginAccount">Einloggen</button>
-    <button id="btnAdminEmergencyLogin" class="successBtn">Admin direkt starten</button>
+    <button id="btnAdminSecureReset" class="dangerBtn">Alle Accounts löschen außer Admin</button>
 
     <div id="onlineStatus" class="message">Online-Server wird geprüft...</div>
     <div id="loginMsg" class="message"></div>
@@ -1897,7 +1897,6 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(){
   const game = document.getElementById("game");
   const ctx = game.getContext("2d");
   const skinCanvas = document.getElementById("skinCanvas");
@@ -6193,13 +6192,8 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     let name = document.getElementById("loginName").value.trim();
     let pass = document.getElementById("loginPass").value;
 
-    if(name.toLowerCase()==="admin" && !pass){
-      pass = "2013";
-      document.getElementById("loginPass").value = "2013";
-    }
-
     if(!name || !pass){
-      loginMessage("Bitte Name und Passwort eingeben. Oder klicke auf „Admin direkt starten“.");
+      loginMessage("Bitte Name und Passwort eingeben.");
       return;
     }
 
@@ -6295,27 +6289,39 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     initGameIfNeeded();
     renderAll();
     switchTab("worldPage","tabWorld");
-    msg("Admin gestartet. Alle alten Accounts sind gelöscht.");
+    msg("Login erfolgreich.");
   }
 
-  async function adminEmergencyLogin(){
-    loginMessage("Admin wird direkt gestartet...");
+  async function adminSecureReset(){
+    const pass = document.getElementById("loginPass").value || "";
+    if(!pass){
+      loginMessage("Gib zuerst das Admin-Passwort ein. Dann Reset klicken.");
+      return;
+    }
+
+    loginMessage("Reset wird geprüft...");
 
     try{
-      const res = await fetch("/api/adminEmergencyLogin", {method:"POST", cache:"no-store"});
+      const res = await fetch("/api/hardResetAdminOnly", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({pass})
+      });
       const data = await res.json();
 
       if(data && data.ok){
-        onlineMode = true;
-        enterGameAfterLogin("admin", data.account, data.state);
+        localStorage.removeItem("safinicraft_current_user");
+        localStorage.removeItem("safinicraft_accounts");
+        localStorage.removeItem("safinicraft_accounts_backup");
+        loginMessage("Reset fertig. Jetzt als admin mit deinem Admin-Passwort einloggen.");
+        document.getElementById("loginName").value = "admin";
         return;
       }
-    }catch(e){}
 
-    // Fallback ohne Endpoint: normaler Login mit 2013.
-    document.getElementById("loginName").value = "admin";
-    document.getElementById("loginPass").value = "2013";
-    loginAccount();
+      loginMessage((data && data.error) || "Reset nicht erlaubt. Admin-Passwort falsch.");
+    }catch(e){
+      loginMessage("Reset fehlgeschlagen. Render ist vielleicht noch nicht fertig.");
+    }
   }
 
   async function loginAccount(){
@@ -7232,7 +7238,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
   document.getElementById("btnCreateAccount").onclick = createAccount;
   document.getElementById("btnLoginAccount").onclick = loginAccount;
-  document.getElementById("btnAdminEmergencyLogin")?.addEventListener("click", adminEmergencyLogin);
+  document.getElementById("btnAdminSecureReset")?.addEventListener("click", adminSecureReset);
   document.getElementById("loginName")?.addEventListener("keydown",e=>{if(e.key==="Enter") loginAccount();});
   document.getElementById("loginPass")?.addEventListener("keydown",e=>{if(e.key==="Enter") loginAccount();});
   document.getElementById("btnLogout").onclick = logoutAccount;
@@ -7253,7 +7259,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }, 1200);
 
 
-  const CLIENT_ACCOUNT_RESET_VERSION = "2.1.9";
+  const CLIENT_ACCOUNT_RESET_VERSION = "2.2.0"
 
   function resetOldLocalAccountsOnce(){
     try{
@@ -7311,7 +7317,6 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   resetOldLocalAccountsOnce();
   init();
   loadServerState();loop();
-});
 </script>
 </body>
 </html>

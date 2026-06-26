@@ -56,10 +56,10 @@ function adminName(){
 }
 
 function adminPassword(){
-  return "2013";
+  return (process.env.ADMIN_PASSWORD || "2013").trim() || "2013";
 }
 
-const RESET_ACCOUNTS_VERSION = "2.1.9";
+const RESET_ACCOUNTS_VERSION = "2.2.0"
 
 function hardResetAdminOnly(){
   state.accounts = {};
@@ -108,7 +108,7 @@ function ensureAdmin(){
   clearExpiredBans();
 
   const name = "admin";
-  const pass = "2013";
+  const pass = adminPassword();
 
   if(!state.accounts[name]){
     state.accounts[name] = {
@@ -311,12 +311,28 @@ const server = http.createServer(async (req,res)=>{
   }
 
   if(req.url === "/api/hardResetAdminOnly" && req.method === "POST"){
+    const data = await readBody(req);
+    const pass = String(data.pass || "");
+
+    if(pass !== adminPassword()){
+      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+      return;
+    }
+
     hardResetAdminOnly();
     sendJson(res, {ok:true, message:"Alle Accounts gelöscht außer admin.", state:sanitizeState()});
     return;
   }
 
   if(req.url === "/api/adminEmergencyLogin" && req.method === "POST"){
+    const data = await readBody(req);
+    const pass = String(data.pass || "");
+
+    if(pass !== adminPassword()){
+      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+      return;
+    }
+
     hardResetAdminOnly();
 
     const publicAcc = JSON.parse(JSON.stringify(state.accounts.admin));
@@ -429,9 +445,12 @@ const server = http.createServer(async (req,res)=>{
     resetAccountsForVersion();
     ensureAdmin();
 
-    // Admin muss IMMER reinkommen. Admin-Login löscht alle anderen Accounts.
-    if(name === "admin" && (pass === "2013" || pass === "admin" || pass === adminPassword())){
-      hardResetAdminOnly();
+    if(name === "admin" && pass === adminPassword()){
+      ensureAdmin();
+      state.accounts.admin.online = true;
+      state.accounts.admin.lastLogin = Date.now();
+      saveState();
+      broadcastState();
 
       const publicAcc = JSON.parse(JSON.stringify(state.accounts.admin));
       delete publicAcc.pass;
@@ -442,7 +461,7 @@ const server = http.createServer(async (req,res)=>{
     const acc = state.accounts[name];
 
     if(!acc || acc.pass !== encodePass(pass)){
-      sendJson(res, {ok:false, error:"Alle alten Accounts wurden gelöscht. Admin starten: admin / 2013 oder Button „Admin direkt starten“."});
+      sendJson(res, {ok:false, error:"Name oder Passwort falsch. Admin braucht das ADMIN_PASSWORD aus Render."});
       return;
     }
 
@@ -682,6 +701,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN EMERGENCY LOGIN 2.1.9 läuft auf Port " + PORT);
+  console.log("Safinicraft.de SECURE ADMIN LOGIN 2.2.0 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
