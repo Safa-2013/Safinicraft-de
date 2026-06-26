@@ -432,6 +432,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de WORLD CONST ERROR FIX 1.9.1 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ONLINE ONLY FIX 2.0.1 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "1.9.1",
-  "description": "Safinicraft World Const Error Fix",
+  "version": "2.0.1",
+  "description": "Safinicraft Online Only Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
