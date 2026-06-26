@@ -1067,6 +1067,119 @@
     .adminChatLog{height:320px}
   }
 
+
+  .adminLiveNotice{
+    background:#101b14;
+    border:2px solid #00ff99;
+    color:#d7ffe8;
+    padding:10px;
+    border-radius:12px;
+    margin:8px 0;
+    font-weight:bold;
+  }
+  .adminCountBig{
+    font-size:22px;
+    color:#00ff99;
+    margin:4px 0;
+  }
+  .modAdminActions{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-top:8px;
+  }
+  .adminSearchRow{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin:8px 0 10px;
+  }
+  .adminSearchRow input{
+    flex:1;
+    min-width:220px;
+    padding:10px;
+    border-radius:10px;
+    border:2px solid #444;
+    background:#111;
+    color:#fff;
+  }
+  .adminLiveBadge{
+    display:inline-block;
+    background:#063;
+    border:1px solid #00ff99;
+    color:#00ff99;
+    border-radius:999px;
+    padding:2px 7px;
+    margin-left:4px;
+    font-size:12px;
+  }
+
+
+  .adminPlayerBigNotice{
+    background:#102016;
+    border:2px solid #00ff99;
+    color:#d7ffe8;
+    border-radius:12px;
+    padding:10px;
+    margin:8px 0;
+    font-weight:bold;
+  }
+  .adminPlayerBigCount{
+    font-size:24px;
+    color:#00ff99;
+    margin-top:4px;
+  }
+  .adminSearchRow{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin:8px 0 10px;
+  }
+  .adminSearchRow input{
+    flex:1;
+    min-width:220px;
+    padding:10px;
+    border-radius:10px;
+    border:2px solid #444;
+    background:#111;
+    color:#fff;
+  }
+  .adminLiveBadge{
+    display:inline-block;
+    background:#063;
+    border:1px solid #00ff99;
+    color:#00ff99;
+    border-radius:999px;
+    padding:2px 7px;
+    margin-left:4px;
+    font-size:12px;
+  }
+  .uploadMiniBox{
+    background:#111;
+    border:2px solid #444;
+    border-radius:12px;
+    padding:8px;
+    margin:8px 0;
+  }
+  .uploadMiniBox input{
+    width:100%;
+    box-sizing:border-box;
+    margin:5px 0;
+    padding:8px;
+    border-radius:8px;
+    border:2px solid #444;
+    background:#111;
+    color:#fff;
+  }
+  .modAdminActions{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-top:8px;
+  }
+
 </style>
 </head>
 <body class="loggedOut">
@@ -1077,7 +1190,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN CHAT LIVE FIX VERSION 2.1.1</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN PLAYER + UPLOAD FIX VERSION 2.1.3</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1248,6 +1361,10 @@
   <div class="skinUploadBox">
     <input type="file" id="skinUpload" accept="image/*">
     <button id="btnImageToSkin">Bild automatisch als Skin benutzen</button>
+  </div>
+  <div class="skinUploadBox">
+    <input id="skinTextInput" placeholder="Text auf Skin schreiben, z.B. VIP">
+    <button id="btnSkinTextDraw">Text auf Skin malen</button>
   </div>
 
   <canvas id="skinCanvas" width="320" height="640"></canvas>
@@ -1458,7 +1575,15 @@
       <div class="itemEditorWrap">
         <div>
           <div class="small">Pixel-Malfeld 16×16</div>
-          <canvas id="itemPaintCanvas" width="16" height="16"></canvas>
+          <div class="uploadMiniBox">
+        <label>Bild-Datei als Item hochladen</label>
+        <input type="file" id="adminItemImageUpload" accept="image/*">
+        <button id="btnAdminItemImageUpload">Bild ins Item laden</button>
+        <label>Text aufs Item schreiben</label>
+        <input id="adminItemTextInput" placeholder="z.B. TNT, VIP, A">
+        <button id="btnAdminItemTextDraw">Text aufs Item malen</button>
+      </div>
+      <canvas id="itemPaintCanvas" width="16" height="16"></canvas>
           <div id="itemPaintInfo" class="small">Malen: Maus gedrückt halten und über Pixel ziehen. Handy: Finger ziehen. Rechtsklick = Radierer.</div>
         </div>
         <div>
@@ -1512,6 +1637,7 @@
         <label class="small"><input type="checkbox" id="adminShowSelf"> Mich/Admin anzeigen</label>
         <button id="btnRefreshAdminPlayers">Spielerliste vom Server laden</button>
       </div>
+      <div id="adminPlayersCountBig" class="adminCountBig">0 Spieler</div>
       <div id="adminPlayerRefreshStatus" class="message"></div>
       <div id="adminPlayersList"></div>
     </div>
@@ -1722,6 +1848,7 @@ document.addEventListener("DOMContentLoaded", function(){
   // Wenn diese Datei über server.js läuft, werden Accounts, Freunde, Items, Server und Chat
   // auf dem Server gespeichert und können von anderen Geräten geladen werden.
   let onlineAccountsCache = null;
+  let adminDirectAccountsCache = null;
   let onlineServersCache = null;
   let onlineMessagesCache = null;
   let onlineAdminChatCache = null;
@@ -3332,6 +3459,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     img.src = URL.createObjectURL(file);
   }
   document.getElementById("btnImageToSkin").onclick=imageToSkinFromUpload;
+  document.getElementById("btnSkinTextDraw")?.addEventListener("click",drawTextOnSkin);
 
 
 
@@ -4041,34 +4169,36 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const box=document.getElementById("adminPlayersList");
     if(!box) return;
 
-    const accounts=getAccounts();
+    const accounts=getAdminVisibleAccounts();
     const search=(document.getElementById("adminPlayerSearch")?.value || "").trim().toLowerCase();
     const showSelf=!!document.getElementById("adminShowSelf")?.checked;
 
     box.innerHTML="";
 
-    let names=Object.keys(accounts).sort((a,b)=>a.localeCompare(b));
+    let names=Object.keys(accounts || {}).sort((a,b)=>a.localeCompare(b));
 
-    // Admin sieht sich selbst standardmäßig NICHT. Er kann es mit Checkbox einschalten.
     names=names.filter(name=>{
       const acc=accounts[name] || {};
-      if(!showSelf && name===currentUser) return false;
-      if(!showSelf && acc.role==="admin" && name.toLowerCase()==="admin") return false;
+      // Admin sieht sich selbst standardmäßig nicht.
+      if(!showSelf && (name===currentUser || (acc.role==="admin" && name.toLowerCase()==="admin"))) return false;
       if(search){
-        const hay=(name+" "+(acc.role||"")+" "+(acc.online?"online":"offline")).toLowerCase();
+        const hay=(name+" "+(acc.role||"")+" "+(acc.online?"online":"offline")+" "+(acc.banned?"gebannt":"")).toLowerCase();
         if(!hay.includes(search)) return false;
       }
       return true;
     });
 
-    const total=Object.keys(accounts).length;
+    const total=Object.keys(accounts || {}).length;
+    const countBig=document.getElementById("adminPlayersCountBig");
+    if(countBig) countBig.textContent=total+" Accounts";
+
     const status=document.getElementById("adminPlayerRefreshStatus");
     if(status){
-      status.textContent="Accounts auf Server/Cache: "+total+" | Angezeigt: "+names.length+" | Suche: "+(search||"keine");
+      status.textContent="Server/Cache Accounts: "+total+" | Angezeigt: "+names.length+" | Suche: "+(search||"keine");
     }
 
     if(names.length===0){
-      box.innerHTML="<p class='small'>Keine Spieler gefunden. Klicke „Spielerliste vom Server laden“ oder ändere die Suche.</p>";
+      box.innerHTML="<p class='small'>Keine Spieler sichtbar. Klicke „Spielerliste sofort laden“. Falls nur Admin existiert: „Mich/Admin anzeigen“ aktivieren.</p>";
       return;
     }
 
@@ -4092,7 +4222,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       const banned=isUserBanned(acc);
       const creative=hasCreativeGrant(acc);
       const lastSeen=acc.live && acc.live.lastSeen ? Date.now()-acc.live.lastSeen : 999999999;
-      const liveNow=lastSeen < 15000;
+      const liveNow=lastSeen < 20000;
       const statusHtml = banned
         ? "<span class='powerTag bad'>GEBANNT bis "+escapeHtml(adminTimeText(acc.bannedUntil))+"</span>"
         : (acc.online || liveNow ? "<span class='onlineTag'>● online</span>" : "<span class='small'>offline</span>");
@@ -4180,8 +4310,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       tools.style.display="grid";
       renderAdminItemsList();
       renderAdminPlayersList();
+      fetchAdminAccountsDirect(true).then(()=>renderAdminPlayersList());
       const refreshBtn=document.getElementById("btnRefreshAdminPlayers");
-      if(refreshBtn) refreshBtn.onclick=()=>refreshServerStateOnly(false);
+      if(refreshBtn) refreshBtn.onclick=()=>fetchAdminAccountsDirect(false).then(()=>renderAdminPlayersList());
       const searchEl=document.getElementById("adminPlayerSearch");
       if(searchEl) searchEl.oninput=()=>renderAdminPlayersList();
       const showSelfEl=document.getElementById("adminShowSelf");
@@ -4272,6 +4403,98 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       itemPaintPixels[y][x]=(itemPaintMode==="erase"||forceErase)?null:document.getElementById("adminPaintColor").value;
       drawItemPaintCanvas();
     }
+  }
+
+  function canvasToPixelArray(canvas, w=16, h=16){
+    const c=canvas.getContext("2d");
+    const data=c.getImageData(0,0,w,h).data;
+    const arr=Array.from({length:h},()=>Array(w).fill(null));
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const i=(y*w+x)*4;
+        const a=data[i+3];
+        if(a<20){arr[y][x]=null;continue;}
+        arr[y][x]="rgba("+data[i]+","+data[i+1]+","+data[i+2]+","+(a/255).toFixed(2)+")";
+      }
+    }
+    return arr;
+  }
+
+  function loadAdminItemImageFromFile(){
+    const input=document.getElementById("adminItemImageUpload");
+    const file=input && input.files && input.files[0];
+    if(!file){msg("Bitte zuerst ein Bild auswählen.");return;}
+    const img=new Image();
+    img.onload=()=>{
+      const temp=document.createElement("canvas");
+      temp.width=16;temp.height=16;
+      const t=temp.getContext("2d");
+      t.imageSmoothingEnabled=true;
+      t.clearRect(0,0,16,16);
+      t.drawImage(img,0,0,16,16);
+      itemPaintPixels=canvasToPixelArray(temp,16,16);
+      drawItemPaintCanvas();
+      msg("Bild wurde als Item geladen.");
+    };
+    img.src=URL.createObjectURL(file);
+  }
+
+  function drawTextOnAdminItem(){
+    const text=(document.getElementById("adminItemTextInput")?.value||"").trim();
+    if(!text){msg("Schreibe zuerst Text.");return;}
+    const temp=document.createElement("canvas");
+    temp.width=16;temp.height=16;
+    const t=temp.getContext("2d");
+    t.imageSmoothingEnabled=false;
+
+    // vorhandene Pixel übernehmen
+    for(let y=0;y<16;y++){
+      for(let x=0;x<16;x++){
+        if(itemPaintPixels[y] && itemPaintPixels[y][x]){
+          t.fillStyle=itemPaintPixels[y][x];
+          t.fillRect(x,y,1,1);
+        }
+      }
+    }
+
+    t.fillStyle=document.getElementById("adminPaintColor")?.value || "#ffffff";
+    t.font="8px monospace";
+    t.textAlign="center";
+    t.textBaseline="middle";
+    t.fillText(text.slice(0,4),8,8,16);
+
+    itemPaintPixels=canvasToPixelArray(temp,16,16);
+    drawItemPaintCanvas();
+    msg("Text wurde auf das Item gemalt.");
+  }
+
+  function drawTextOnSkin(){
+    const text=(document.getElementById("skinTextInput")?.value||"").trim();
+    if(!text){msg("Schreibe zuerst Text.");return;}
+    const temp=document.createElement("canvas");
+    temp.width=16;temp.height=32;
+    const t=temp.getContext("2d");
+    t.imageSmoothingEnabled=false;
+
+    skinPixels=normalizeSkinPixels(skinPixels);
+    for(let y=0;y<32;y++){
+      for(let x=0;x<16;x++){
+        if(skinPixels[y] && skinPixels[y][x]){
+          t.fillStyle=skinPixels[y][x];
+          t.fillRect(x,y,1,1);
+        }
+      }
+    }
+
+    t.fillStyle=document.getElementById("paintColor")?.value || "#ffffff";
+    t.font="6px monospace";
+    t.textAlign="center";
+    t.textBaseline="middle";
+    t.fillText(text.slice(0,6),8,15,16);
+
+    skinPixels=canvasToPixelArray(temp,16,32);
+    renderSkinCanvas();
+    msg("Text wurde auf den Skin gemalt.");
   }
 
   function setupItemPainter(){
@@ -4656,7 +4879,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function enterModTest(id){
     const mod=getMods()[id || selectedModId];
     if(!mod){msg("Wähle zuerst einen Mod aus.");return;}
-    if(mod.creator!==currentUser && currentUser){
+    if(!isAdmin() && mod.creator!==currentUser && currentUser){
       msg("Du kannst nur eigene Mods bearbeiten. Öffentliche Mods kannst du normal benutzen.");
       return;
     }
@@ -4729,10 +4952,49 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     if(count%5===0) addModAiMessage("KI","Ich habe jetzt "+count+" Bauänderungen im Mod gespeichert.");
   }
 
+  function canEditMod(mod){
+    return isAdmin() || mod.creator===currentUser || mod.creator==="System";
+  }
+
+  function deleteModById(id){
+    if(!isAdmin()){
+      const mod=getMods()[id];
+      if(!mod || mod.creator!==currentUser){
+        msg("Nur Admin oder Besitzer kann diesen Mod löschen.");
+        return;
+      }
+    }
+    const mods=getMods();
+    if(!mods[id]) return;
+    const name=mods[id].name;
+    delete mods[id];
+    if(selectedModId===id) selectedModId=null;
+    if(activeModId===id){
+      activeModId=null;
+      activeModMode="none";
+      modSkyColor=null;
+      restoreNormalWorld();
+    }
+    saveMods(mods);
+    renderModsList();
+    msg("Mod gelöscht: "+name);
+  }
+
+  function adminEditModById(id){
+    const mod=getMods()[id];
+    if(!mod) return;
+    setSelectedMod(id);
+    if(!canEditMod(mod)){
+      msg("Du kannst diesen Mod nicht bearbeiten.");
+      return;
+    }
+    enterModTest(id);
+  }
+
   function publishSelectedMod(){
     const mod=getSelectedMod();
     if(!mod){msg("Wähle zuerst einen Mod aus.");return;}
-    if(mod.creator!=="System" && mod.creator!==currentUser){msg("Du kannst nur eigene Mods veröffentlichen.");return;}
+    if(!isAdmin() && mod.creator!=="System" && mod.creator!==currentUser){msg("Du kannst nur eigene Mods veröffentlichen.");return;}
     const mods=getMods();
     mods[mod.id].published=true;
     mods[mod.id].publicRemoved=false;
@@ -4745,7 +5007,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function unpublishSelectedMod(){
     const mod=getSelectedMod();
     if(!mod){msg("Wähle zuerst einen Mod aus.");return;}
-    if(mod.creator!=="System" && mod.creator!==currentUser){msg("Du kannst nur eigene Mods rausnehmen.");return;}
+    if(!isAdmin() && mod.creator!=="System" && mod.creator!==currentUser){msg("Du kannst nur eigene Mods rausnehmen.");return;}
     const mods=getMods();
     mods[mod.id].published=false;
     mods[mod.id].publicRemoved=true;
@@ -4814,30 +5076,40 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     card.innerHTML="<b>"+escapeHtml(mod.name)+"</b><br><span class='small'>Typ: "+escapeHtml(mod.type)+" | Fähigkeit: "+escapeHtml(mod.ability)+" | Von: "+escapeHtml(mod.creator||"System")+"</span><div class='modStatusLine'>"+(mod.published?"Öffentlich":"Privat / nicht öffentlich")+" | Bauänderungen: "+(mod.blocks?mod.blocks.length:0)+"</div>";
     card.appendChild(preview);
 
+    const actions=document.createElement("div");
+    actions.className="modAdminActions";
+
     const select=document.createElement("button");
     select.textContent="Auswählen";
     select.onclick=()=>setSelectedMod(mod.id);
-    card.appendChild(select);
+    actions.appendChild(select);
 
     const play=document.createElement("button");
     play.textContent="Normal spielen";
     play.onclick=()=>playModNormal(mod.id);
-    card.appendChild(play);
+    actions.appendChild(play);
 
-    if(mod.creator===currentUser){
+    if(canEditMod(mod)){
       const test=document.createElement("button");
-      test.textContent="Testen/Bearbeiten";
-      test.onclick=()=>enterModTest(mod.id);
-      card.appendChild(test);
-    }
+      test.textContent=isAdmin() && mod.creator!==currentUser ? "Admin bearbeiten" : "Testen/Bearbeiten";
+      test.onclick=()=>adminEditModById(mod.id);
+      actions.appendChild(test);
 
-    if(mod.creator===currentUser){
       const pub=document.createElement("button");
-      pub.textContent=mod.published?"Öffentlich rausnehmen":"Online stellen";
+      pub.textContent=mod.published?"Offline stellen":"Online stellen";
       pub.onclick=()=>{setSelectedMod(mod.id); mod.published?unpublishSelectedMod():publishSelectedMod();};
-      card.appendChild(pub);
+      actions.appendChild(pub);
     }
 
+    if(isAdmin() || mod.creator===currentUser){
+      const del=document.createElement("button");
+      del.textContent="Mod löschen";
+      del.className="dangerBtn";
+      del.onclick=()=>deleteModById(mod.id);
+      actions.appendChild(del);
+    }
+
+    card.appendChild(actions);
     return card;
   }
 
@@ -4857,14 +5129,16 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     ids.forEach(id=>{
       const mod=mods[id];
       const own = mod.creator===currentUser || mod.creator==="System";
+      const adminCanSee = isAdmin();
+
       if(mod.published){
         if(publicList){publicList.appendChild(createModCard(mod,"public"));pubCount++;}
-      }else if(own){
+      }else if(own || adminCanSee){
         if(privateList){privateList.appendChild(createModCard(mod,"private"));privCount++;}
       }
     });
 
-    if(privateList && privCount===0) privateList.innerHTML="<p class='small'>Noch keine privaten Mods.</p>";
+    if(privateList && privCount===0) privateList.innerHTML="<p class='small'>Noch keine privaten Mods sichtbar.</p>";
     if(publicList && pubCount===0) publicList.innerHTML="<p class='small'>Noch keine öffentlichen Mods.</p>";
 
     const st=document.getElementById("modTestStatus");
@@ -4981,7 +5255,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("tabAI").onclick=()=>switchTab("aiPage","tabAI");
   document.getElementById("tabAdminChat").onclick=()=>{switchTab("adminChatPage","tabAdminChat");refreshAdminChatFromServer(false);};
   document.getElementById("tabOven").onclick=()=>{switchTab("ovenPage","tabOven");renderOvenPage();};
-  document.getElementById("tabAdmin").onclick=()=>{switchTab("adminPage","tabAdmin");renderAdminPage();refreshServerStateOnly(true);setupItemPainter();drawItemPaintCanvas();};
+  document.getElementById("tabAdmin").onclick=()=>{switchTab("adminPage","tabAdmin");renderAdminPage();fetchAdminAccountsDirect(false).then(()=>renderAdminPlayersList());setupItemPainter();drawItemPaintCanvas();};
   document.getElementById("btnAdminChatSend")?.addEventListener("click",()=>sendAdminChat("message"));
   document.getElementById("btnAdminWishSend")?.addEventListener("click",()=>sendAdminChat("wish"));
   document.getElementById("btnAdminChatRefresh")?.addEventListener("click",()=>{refreshServerStateOnly(true);refreshAdminChatFromServer(false);});
@@ -5056,6 +5330,8 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("adminRecipeSearch").addEventListener("input",renderAdminRecipeItemsList);
   document.getElementById("btnClearItemPaint").onclick=()=>{itemPaintPixels=Array.from({length:16},()=>Array(16).fill(null));drawItemPaintCanvas();};
   document.getElementById("btnCreatePaintedItem").onclick=()=>{createAdminItem(document.getElementById("adminItemName").value,document.getElementById("adminItemType").value,document.getElementById("adminPaintColor").value,itemPaintPixels,{effect:document.getElementById("adminWeaponEffect").value,function:document.getElementById("adminToolFunction").value});};
+  document.getElementById("btnAdminItemImageUpload")?.addEventListener("click",loadAdminItemImageFromFile);
+  document.getElementById("btnAdminItemTextDraw")?.addEventListener("click",drawTextOnAdminItem);
   document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));
 
   function holdButton(id, keyName){
@@ -5214,9 +5490,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       const state = await res.json();
 
       onlineAccountsCache = normalizeAccounts(state.accounts || {});
+      adminDirectAccountsCache = onlineAccountsCache;
       onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
-      onlineAdminChatCache = Array.isArray(state.adminChat) ? state.adminChat : [];
+      onlineAdminChatCache = setAdminChatCache(Array.isArray(state.adminChat) ? state.adminChat : [], false);
       onlineModsCache = state.mods || defaultMods();
       onlineAdminItemsCache = state.adminItems || {};
       onlineWorldSettingsCache = state.worldSettings || {};
@@ -5248,6 +5525,58 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
   }
 
+  let adminLastSeenPlayerNames = new Set();
+
+  function mergeAccountObjects(a,b){
+    return normalizeAccounts({...((a)||{}), ...((b)||{})});
+  }
+
+  function getAdminVisibleAccounts(){
+    if(isAdmin() && adminDirectAccountsCache && Object.keys(adminDirectAccountsCache).length){
+      return mergeAccountObjects(getAccounts(), adminDirectAccountsCache);
+    }
+    return getAccounts();
+  }
+
+  async function fetchAdminAccountsDirect(quiet=false){
+    if(!isRealWebsiteMode()){
+      return getAccounts();
+    }
+
+    try{
+      let data=null;
+
+      try{
+        const res = await fetch("/api/admin/accounts", {cache:"no-store"});
+        if(res.ok) data = await res.json();
+      }catch(e){}
+
+      if(!data || !data.accounts){
+        const res2 = await fetch("/api/state", {cache:"no-store"});
+        if(res2.ok){
+          const state = await res2.json();
+          data = {ok:true, accounts:state.accounts || {}};
+        }
+      }
+
+      if(data && data.accounts){
+        adminDirectAccountsCache = normalizeAccounts(data.accounts || {});
+        onlineAccountsCache = mergeAccountObjects(onlineAccountsCache || {}, adminDirectAccountsCache);
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+
+        const countBig=document.getElementById("adminPlayersCountBig");
+        if(countBig) countBig.textContent=Object.keys(adminDirectAccountsCache).length+" Accounts";
+
+        if(!quiet) msg("Admin-Spielerliste direkt vom Server geladen.");
+        return adminDirectAccountsCache;
+      }
+    }catch(e){
+      if(!quiet) msg("Admin-Spielerliste konnte nicht direkt geladen werden.");
+    }
+
+    return getAccounts();
+  }
+
   async function refreshServerStateOnly(quiet=false){
     if(!isRealWebsiteMode()){
       if(!quiet) msg("Online-Spielerliste braucht Render/server.js.");
@@ -5259,10 +5588,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       if(!res.ok) throw new Error("Server antwortet nicht");
       const state = await res.json();
 
+      const before = new Set(Object.keys(onlineAccountsCache || {}));
+
       onlineAccountsCache = normalizeAccounts(state.accounts || {});
       onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
-      onlineAdminChatCache = Array.isArray(state.adminChat) ? state.adminChat : [];
+      onlineAdminChatCache = setAdminChatCache(Array.isArray(state.adminChat) ? state.adminChat : [], false);
       onlineModsCache = state.mods || defaultMods();
       onlineAdminItemsCache = state.adminItems || {};
       onlineWorldSettingsCache = state.worldSettings || {};
@@ -5271,18 +5602,30 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
       localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
       localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
-      localStorage.setItem("safinicraft_admin_chat", JSON.stringify(onlineAdminChatCache || []));
       localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
       localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
       localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
+
+      const names = Object.keys(onlineAccountsCache || {});
+      const countBig=document.getElementById("adminPlayersCountBig");
+      if(countBig) countBig.textContent = names.length + " Accounts";
+
+      if(isAdmin()){
+        const newNames = names.filter(n=>!adminLastSeenPlayerNames.has(n) && n!==currentUser);
+        if(newNames.length && adminLastSeenPlayerNames.size>0){
+          msg("Neuer Spieler sichtbar: " + newNames.join(", "));
+        }
+        adminLastSeenPlayerNames = new Set(names);
+      }
 
       renderAdminPlayersList();
       renderFriendsPage();
       renderAdminChat();
       renderAdminItemsList();
+      renderModsList();
 
       const status=document.getElementById("adminPlayerRefreshStatus");
-      if(status) status.textContent = "Spielerliste geladen: " + Object.keys(onlineAccountsCache).length + " Accounts.";
+      if(status) status.textContent = "Spielerliste live geladen: " + names.length + " Accounts. Letztes Update: " + new Date().toLocaleTimeString("de-DE");
       if(!quiet) msg("Spielerliste vom Server geladen.");
       return true;
     }catch(e){
@@ -5307,7 +5650,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
             onlineAccountsCache = normalizeAccounts(msg.state.accounts || {});
             onlineServersCache = msg.state.servers || {};
             onlineMessagesCache = msg.state.messages || {};
-            onlineAdminChatCache = Array.isArray(msg.state.adminChat) ? msg.state.adminChat : [];
+            onlineAdminChatCache = setAdminChatCache(Array.isArray(msg.state.adminChat) ? msg.state.adminChat : [], false);
             onlineModsCache = msg.state.mods || defaultMods();
             onlineAdminItemsCache = msg.state.adminItems || {};
             onlineWorldSettingsCache = msg.state.worldSettings || {};
@@ -5942,19 +6285,57 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
   const ADMIN_CHAT_KEY = "__admin_global_chat__";
 
-  function setAdminChatCache(messages){
-    onlineAdminChatCache = Array.isArray(messages) ? messages.slice(-300) : [];
-    localStorage.setItem("safinicraft_admin_chat", JSON.stringify(onlineAdminChatCache));
+  function adminChatMessageKey(m){
+    return String(m.from||"")+"|"+String(m.time||"")+"|"+String(m.kind||"")+"|"+String(m.text||"");
   }
 
-  function getAdminChatMessages(){
-    if(Array.isArray(onlineAdminChatCache)) return onlineAdminChatCache;
+  function getLocalAdminChatMessages(){
     try{
       const local = JSON.parse(localStorage.getItem("safinicraft_admin_chat") || "[]");
       if(Array.isArray(local)) return local;
     }catch(e){}
+    return [];
+  }
 
-    // Fallback für alte Versionen, die den Chat unter messages gespeichert haben.
+  function setAdminChatCache(messages, allowEmpty=false){
+    const incoming = Array.isArray(messages) ? messages : [];
+    const local = getLocalAdminChatMessages();
+
+    // Wichtig: Wenn Server kurz leer antwortet, wird der lokale Chat NICHT sofort gelöscht.
+    // Löschen passiert nur über den Admin-Button mit allowEmpty=true.
+    if(incoming.length===0 && local.length>0 && !allowEmpty){
+      onlineAdminChatCache = local;
+      return local;
+    }
+
+    const map = new Map();
+    [...local, ...incoming].forEach(m=>{
+      if(!m || !m.text) return;
+      map.set(adminChatMessageKey(m), m);
+    });
+
+    let merged = Array.from(map.values())
+      .sort((a,b)=>(a.time||0)-(b.time||0))
+      .slice(-300);
+
+    if(allowEmpty && incoming.length===0){
+      merged = [];
+    }
+
+    onlineAdminChatCache = merged;
+    localStorage.setItem("safinicraft_admin_chat", JSON.stringify(merged));
+    return merged;
+  }
+
+  function getAdminChatMessages(){
+    if(Array.isArray(onlineAdminChatCache) && onlineAdminChatCache.length){
+      return onlineAdminChatCache;
+    }
+
+    const local = getLocalAdminChatMessages();
+    if(local.length) return local;
+
+    // Fallback für alte Versionen
     return getMessages(ADMIN_CHAT_KEY);
   }
 
@@ -5968,7 +6349,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       const res = await fetch("/api/adminChat", {cache:"no-store"});
       if(!res.ok) throw new Error("AdminChat API fehlt");
       const data = await res.json();
-      setAdminChatCache(data.messages || []);
+      setAdminChatCache(data.messages || [], false);
       renderAdminChat();
       return true;
     }catch(e){
@@ -5988,7 +6369,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     if(status){
       status.textContent = onlineMode
-        ? "Online-Admin-Chat aktiv. Nachrichten: "+messages.length
+        ? "Online-Admin-Chat aktiv. Nachrichten bleiben gespeichert. Anzahl: "+messages.length
         : "Kein Online-Server verbunden. Nachrichten bleiben nur lokal.";
     }
 
@@ -6002,7 +6383,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       return;
     }
 
-    messages.slice(-120).forEach(m=>{
+    messages.slice(-150).forEach(m=>{
       const div=document.createElement("div");
       div.className="adminChatMsg "+(m.from===currentUser?"mine ":"")+(m.from==="admin"?"admin ":"")+(m.kind==="wish"?"wish ":"");
       const time=new Date(m.time||Date.now()).toLocaleString("de-DE",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});
@@ -6038,6 +6419,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       time:Date.now()
     };
 
+    // Sofort lokal anzeigen, damit es nicht verschwindet.
+    const localMessages=getAdminChatMessages();
+    localMessages.push(message);
+    setAdminChatCache(localMessages, false);
+    input.value="";
+    renderAdminChat();
+
     if(isRealWebsiteMode() && onlineMode){
       try{
         const res = await fetch("/api/adminChat", {
@@ -6047,8 +6435,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         });
         const data = await res.json();
         if(data.ok){
-          setAdminChatCache(data.messages || []);
-          input.value="";
+          setAdminChatCache(data.messages || [], false);
           renderAdminChat();
           msg(kind==="wish" ? "Item-Wunsch an Admin gesendet." : "Nachricht an Admin gesendet.");
           return;
@@ -6056,12 +6443,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       }catch(e){}
     }
 
-    const messages=getAdminChatMessages();
-    messages.push(message);
-    setAdminChatCache(messages);
-    input.value="";
-    renderAdminChat();
-    msg(kind==="wish" ? "Item-Wunsch lokal gespeichert." : "Nachricht lokal gespeichert.");
+    msg(kind==="wish" ? "Item-Wunsch lokal gespeichert. Server wird erneut synchronisiert." : "Nachricht lokal gespeichert. Server wird erneut synchronisiert.");
   }
 
   async function clearAdminChat(){
@@ -6075,7 +6457,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         const res = await fetch("/api/adminChat", {method:"DELETE"});
         const data = await res.json();
         if(data.ok){
-          setAdminChatCache([]);
+          setAdminChatCache([], true);
           renderAdminChat();
           msg("Admin Chat wurde gelöscht.");
           return;
@@ -6083,9 +6465,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       }catch(e){}
     }
 
-    setAdminChatCache([]);
+    setAdminChatCache([], true);
     renderAdminChat();
-    msg("Admin Chat wurde lokal gelöscht.");
+    msg("Admin Chat wurde gelöscht.");
   }
 
   function renderChat(){
@@ -6235,7 +6617,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const list = document.getElementById("allPlayersList");
     if(!list) return;
 
-    const accounts = getAccounts();
+    const accounts = isAdmin() ? getAdminVisibleAccounts() : getAccounts();
     list.innerHTML = "";
 
     const names = Object.keys(accounts);
@@ -6454,7 +6836,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("btnCreateAccount").onclick = createAccount;
   document.getElementById("btnLoginAccount").onclick = loginAccount;
   document.getElementById("btnLogout").onclick = logoutAccount;
-  document.getElementById("tabFriends").onclick=()=>{switchTab("friendsPage","tabFriends");renderFriendsPage();};
+  document.getElementById("tabFriends").onclick=()=>{switchTab("friendsPage","tabFriends");if(isAdmin()) fetchAdminAccountsDirect(true).then(()=>renderFriendsPage()); else renderFriendsPage();};
   document.getElementById("btnSearchPlayer").onclick = ()=>sendFriendRequest(null);
   document.getElementById("btnSendChat").onclick = ()=>sendChat("page");
   document.getElementById("btnGameChatSend").onclick = ()=>sendChat("game");
@@ -6496,10 +6878,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
     requestAnimationFrame(loop)
   }
+  // ADMIN_ALL_CONTROL_INTERVAL
+  // ADMIN_PLAYER_UPLOAD_INTERVAL
   setInterval(()=>{if(currentUser&&isRealWebsiteMode()){
     refreshAdminChatFromServer(true);
-    if(isAdmin()) refreshServerStateOnly(true);
-  }},3000);
+    if(isAdmin()) fetchAdminAccountsDirect(true).then(()=>renderAdminPlayersList());
+  }},2000);
   init();
   loadServerState();loop();
 });

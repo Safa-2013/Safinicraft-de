@@ -235,6 +235,12 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/admin/accounts" && req.method === "GET"){
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, accounts:clean.accounts || {}, count:Object.keys(clean.accounts || {}).length});
+    return;
+  }
+
   if(req.url === "/api/login" && req.method === "POST"){
     const data = await readBody(req);
     const name = String(data.name || "").trim();
@@ -480,6 +486,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN ALL CONTROL FIX 2.1.2 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN PLAYER + UPLOAD FIX 2.1.3 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
