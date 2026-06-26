@@ -958,7 +958,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN POWER + WORLD FIX VERSION 1.9.0</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">WORLD CONST ERROR FIX VERSION 1.9.1</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1786,7 +1786,7 @@ document.addEventListener("DOMContentLoaded", function(){
       mobs = worlds[keepPlanet].mobs;
       vehicles = worlds[keepPlanet].vehicles || [];
       spawnPlayerOnGround(10);
-      msg("Welt war leer/kaputt und wurde repariert.");
+      msg("Welt war leer/kaputt und wurde repariert. Spieler wurde auf den Boden gesetzt.");
       return true;
     }
 
@@ -3246,7 +3246,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function loadAdminItemsIntoGame(){
     const items = getAdminItems();
 
-    inventoryOrder = inventoryOrder.filter(id=>!(defs[id] && defs[id].adminItem));
+    inventoryOrder.splice(0, inventoryOrder.length, ...inventoryOrder.filter(id=>!(defs[id] && defs[id].adminItem)));
     Object.keys(defs).forEach(id=>{ if(defs[id] && defs[id].adminItem) delete defs[id]; });
     for(let i=recipes.length-1;i>=0;i--){
       if(recipes[i].adminRecipe) recipes.splice(i,1);
@@ -3592,7 +3592,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     saveAdminItems(items);
 
     if(defs[id]) delete defs[id];
-    inventoryOrder = inventoryOrder.filter(x=>x!==id);
+    inventoryOrder.splice(0, inventoryOrder.length, ...inventoryOrder.filter(x=>x!==id));
     delete inv[id];
 
     for(let i=recipes.length-1;i>=0;i--){
