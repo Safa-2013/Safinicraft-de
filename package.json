@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "1.6.2",
-  "description": "Safinicraft.de neueste Version mit Admin, KI, Mods, Ofen, Explosionen und Admin 3x3 Rezept",
+  "version": "1.7.0",
+  "description": "Safinicraft.de Admin Login Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

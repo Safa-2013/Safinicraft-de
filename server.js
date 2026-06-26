@@ -11,8 +11,86 @@ let state = {
   accounts: {},
   servers: {},
   messages: {},
-  mods: {}
+  mods: {},
+  adminItems: {},
+  worldSettings: {}
 };
+
+function encodePass(pass){
+  return Buffer.from(String(pass || ""), "utf8").toString("base64");
+}
+
+function defaultSkin(){
+  return {
+    width:8,
+    height:12,
+    pixels:[
+      [null,null,"#2b1b12","#2b1b12","#2b1b12","#2b1b12",null,null],
+      [null,"#2b1b12","#f0c59a","#f0c59a","#f0c59a","#f0c59a","#2b1b12",null],
+      [null,"#2b1b12","#f0c59a","#111","#f0c59a","#111","#2b1b12",null],
+      [null,null,"#f0c59a","#f0c59a","#f0c59a","#f0c59a",null,null],
+      [null,"#111","#111","#111","#111","#111","#111",null],
+      ["#111","#111","#111","#111","#111","#111","#111","#111"],
+      ["#111","#111","#111","#111","#111","#111","#111","#111"],
+      [null,"#111","#111","#111","#111","#111","#111",null],
+      [null,"#d8c39a","#d8c39a",null,null,"#d8c39a","#d8c39a",null],
+      [null,"#d8c39a","#d8c39a",null,null,"#d8c39a","#d8c39a",null],
+      [null,"#111","#111",null,null,"#111","#111",null],
+      [null,"#111","#111",null,null,"#111","#111",null]
+    ]
+  };
+}
+
+function adminName(){
+  return (process.env.ADMIN_NAME || "admin").trim() || "admin";
+}
+
+function adminPassword(){
+  return (process.env.ADMIN_PASSWORD || "admin").trim() || "admin";
+}
+
+function ensureAdmin(){
+  state.accounts = state.accounts || {};
+  const name = adminName();
+  const pass = adminPassword();
+
+  if(!state.accounts[name]){
+    state.accounts[name] = {
+      pass: encodePass(pass),
+      role: "admin",
+      skin: defaultSkin(),
+      friends: [],
+      friendRequests: [],
+      sentRequests: [],
+      gameInvites: [],
+      unfriended: [],
+      inv: {},
+      created: Date.now(),
+      online: false
+    };
+  }
+
+  state.accounts[name].pass = encodePass(pass);
+  state.accounts[name].role = "admin";
+  if(!state.accounts[name].skin) state.accounts[name].skin = defaultSkin();
+
+  // Falls früher ein admin/admin existierte, auch diesen als Admin lassen,
+  // wenn ADMIN_NAME=admin ist.
+  if(name === "admin" && state.accounts.admin){
+    state.accounts.admin.pass = encodePass(pass);
+    state.accounts.admin.role = "admin";
+    if(!state.accounts.admin.skin) state.accounts.admin.skin = defaultSkin();
+  }
+}
+
+function sanitizeState(){
+  ensureAdmin();
+  const copy = JSON.parse(JSON.stringify(state));
+  Object.keys(copy.accounts || {}).forEach(name=>{
+    delete copy.accounts[name].pass;
+  });
+  return copy;
+}
 
 function loadState(){
   try{
@@ -22,13 +100,18 @@ function loadState(){
       state.servers = saved.servers || {};
       state.messages = saved.messages || {};
       state.mods = saved.mods || {};
+      state.adminItems = saved.adminItems || {};
+      state.worldSettings = saved.worldSettings || {};
     }
   }catch(e){
     console.error("Konnte server_data.json nicht lesen:", e.message);
   }
+  ensureAdmin();
+  saveState();
 }
 
 function saveState(){
+  ensureAdmin();
   try{
     fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2), "utf8");
   }catch(e){
@@ -90,7 +173,7 @@ function wsFrame(data){
 }
 
 function broadcastState(){
-  const frame = wsFrame({type:"state", state});
+  const frame = wsFrame({type:"state", state:sanitizeState()});
   for(const socket of Array.from(clients)){
     try{
       socket.write(frame);
@@ -98,6 +181,21 @@ function broadcastState(){
       clients.delete(socket);
     }
   }
+}
+
+function mergeAccounts(incoming){
+  ensureAdmin();
+  Object.keys(incoming || {}).forEach(name=>{
+    const inc = incoming[name] || {};
+    const cur = state.accounts[name] || {};
+    state.accounts[name] = {
+      ...cur,
+      ...inc,
+      pass: cur.pass || inc.pass,
+      role: cur.role || inc.role || "player"
+    };
+  });
+  ensureAdmin();
 }
 
 loadState();
@@ -114,18 +212,82 @@ const server = http.createServer(async (req,res)=>{
   }
 
   if(req.url === "/api/state" && req.method === "GET"){
-    sendJson(res, state);
+    sendJson(res, sanitizeState());
+    return;
+  }
+
+  if(req.url === "/api/login" && req.method === "POST"){
+    const data = await readBody(req);
+    const name = String(data.name || "").trim();
+    const pass = String(data.pass || "");
+
+    ensureAdmin();
+
+    const acc = state.accounts[name];
+
+    if(!acc || acc.pass !== encodePass(pass)){
+      sendJson(res, {ok:false, error:"Name oder Passwort ist falsch."});
+      return;
+    }
+
+    acc.online = true;
+    acc.lastLogin = Date.now();
+    state.accounts[name] = acc;
+    saveState();
+    broadcastState();
+
+    const publicAcc = JSON.parse(JSON.stringify(acc));
+    delete publicAcc.pass;
+
+    sendJson(res, {ok:true, account:publicAcc, state:sanitizeState()});
+    return;
+  }
+
+  if(req.url === "/api/createAccount" && req.method === "POST"){
+    const data = await readBody(req);
+    const name = String(data.name || "").trim();
+    const pass = String(data.pass || "");
+
+    ensureAdmin();
+
+    if(!name || !pass){
+      sendJson(res, {ok:false, error:"Name und Passwort fehlen."});
+      return;
+    }
+
+    if(state.accounts[name]){
+      sendJson(res, {ok:false, error:"Dieser Name ist schon vergeben."});
+      return;
+    }
+
+    state.accounts[name] = {
+      pass: encodePass(pass),
+      role: "player",
+      skin: data.skin || defaultSkin(),
+      friends: [],
+      friendRequests: [],
+      sentRequests: [],
+      gameInvites: [],
+      unfriended: [],
+      inv: data.inv || {},
+      created: Date.now(),
+      online: false
+    };
+
+    saveState();
+    broadcastState();
+    sendJson(res, {ok:true, state:sanitizeState()});
     return;
   }
 
   if(req.url === "/api/accounts" && req.method === "POST"){
     const data = await readBody(req);
     if(data.accounts && typeof data.accounts === "object"){
-      state.accounts = data.accounts;
+      mergeAccounts(data.accounts);
       saveState();
       broadcastState();
     }
-    sendJson(res, {ok:true});
+    sendJson(res, {ok:true, state:sanitizeState()});
     return;
   }
 
@@ -162,6 +324,28 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/adminItems" && req.method === "POST"){
+    const data = await readBody(req);
+    if(data.adminItems && typeof data.adminItems === "object"){
+      state.adminItems = data.adminItems;
+      saveState();
+      broadcastState();
+    }
+    sendJson(res, {ok:true});
+    return;
+  }
+
+  if(req.url === "/api/worldSettings" && req.method === "POST"){
+    const data = await readBody(req);
+    if(data.worldSettings && typeof data.worldSettings === "object"){
+      state.worldSettings = data.worldSettings;
+      saveState();
+      broadcastState();
+    }
+    sendJson(res, {ok:true});
+    return;
+  }
+
   let filePath = req.url.split("?")[0];
   if(filePath === "/" || filePath === "") filePath = "/index.html";
 
@@ -185,6 +369,7 @@ const server = http.createServer(async (req,res)=>{
     const type = ext === ".html" ? "text/html; charset=utf-8" :
                  ext === ".css" ? "text/css; charset=utf-8" :
                  ext === ".js" ? "application/javascript; charset=utf-8" :
+                 ext === ".json" ? "application/json; charset=utf-8" :
                  "application/octet-stream";
 
     res.writeHead(200, {"Content-Type": type, "Cache-Control":"no-store"});
@@ -219,7 +404,7 @@ server.on("upgrade", (req, socket)=>{
   clients.add(socket);
 
   try{
-    socket.write(wsFrame({type:"state", state}));
+    socket.write(wsFrame({type:"state", state:sanitizeState()}));
   }catch(e){}
 
   socket.on("close", ()=>clients.delete(socket));
@@ -227,5 +412,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de läuft auf http://localhost:" + PORT);
+  console.log("Safinicraft.de ADMIN-FIX 1.7.0 läuft auf Port " + PORT);
+  console.log("Admin Login: ADMIN_NAME=" + adminName() + " | ADMIN_PASSWORD ist in Render versteckt.");
 });
