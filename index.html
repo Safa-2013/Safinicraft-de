@@ -896,6 +896,58 @@
     .craftSlot{min-width:78px;min-height:78px;font-size:10px}
   }
 
+
+  .adminPlayerControls{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    gap:8px;
+    margin-top:8px;
+  }
+  .adminControlBox{
+    background:#101010;
+    border:2px solid #3b3b3b;
+    border-radius:12px;
+    padding:8px;
+  }
+  .adminControlBox label{
+    display:block;
+    font-size:12px;
+    color:#ccc;
+    margin:4px 0;
+  }
+  .adminControlBox input,.adminControlBox select{
+    width:100%;
+    box-sizing:border-box;
+    padding:8px;
+    border-radius:8px;
+    border:2px solid #444;
+    background:#111;
+    color:#fff;
+    margin-bottom:6px;
+  }
+  .adminControlBtns{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .adminMiniBtn{
+    padding:7px 9px!important;
+    font-size:12px!important;
+  }
+  .powerTag{
+    display:inline-block;
+    padding:3px 7px;
+    border-radius:999px;
+    background:#262626;
+    border:1px solid #555;
+    margin:2px 3px 2px 0;
+    font-size:12px;
+  }
+  .powerTag.good{border-color:#00ff99;color:#00ff99}
+  .powerTag.bad{border-color:#ff5252;color:#ff7676}
+  .powerTag.warn{border-color:#ffcc00;color:#ffcc00}
+
 </style>
 </head>
 <body class="loggedOut">
@@ -906,7 +958,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">WORLD VISIBLE FIX VERSION 1.8.2</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN POWER + WORLD FIX VERSION 1.9.0</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1514,6 +1566,7 @@ document.addEventListener("DOMContentLoaded", function(){
   let currentPlanet = "earth";
   let buildMode = true;
   let creativeMode = false;
+  let serverGrantedCreative = false;
   let selected = "hand";
   let craftGridItems = Array(9).fill(null);
   let craftSelectedItem = null;
@@ -1804,6 +1857,12 @@ document.addEventListener("DOMContentLoaded", function(){
   function draw(){
     repairWorldIfNeeded("draw");
     updateCamera();
+
+    // Wenn im Canvas nur Himmel sichtbar ist, sofort Boden/Spieler/Kamera reparieren.
+    if(visibleSolidCount() < 3){
+      forceWorldVisibleNow();
+    }
+
     const p=planets[currentPlanet];
     ctx.fillStyle=modSkyColor || p.sky;ctx.fillRect(0,0,game.width,game.height);
     ctx.fillStyle=currentPlanet==="moon"?"#f8f3aa":"#ffe066";
@@ -3028,6 +3087,105 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
 
 
+  function adminTimeText(ms){
+    if(!ms || ms<=0) return "dauerhaft";
+    const d = new Date(ms);
+    return d.toLocaleString();
+  }
+
+  function isUserBanned(acc){
+    if(!acc) return false;
+    if(!acc.banned) return false;
+    if(acc.bannedUntil && Date.now() > acc.bannedUntil){
+      acc.banned = false;
+      acc.bannedUntil = 0;
+      acc.bannedReason = "";
+      return false;
+    }
+    return true;
+  }
+
+  function hasCreativeGrant(acc){
+    if(!acc) return false;
+    if(acc.role === "admin") return true;
+    if(!acc.creativeGrant) return false;
+    if(acc.creativeUntil && Date.now() > acc.creativeUntil){
+      acc.creativeGrant = false;
+      acc.creativeUntil = 0;
+      return false;
+    }
+    return true;
+  }
+
+  function applyAccountPowers(){
+    if(!currentUser) return;
+    const accounts = getAccounts();
+    const acc = accounts[currentUser];
+    if(!acc) return;
+
+    if(isUserBanned(acc) && acc.role !== "admin"){
+      saveAccounts(accounts);
+      logoutAccount();
+      loginMessage("Du bist gebannt bis: " + adminTimeText(acc.bannedUntil));
+      return;
+    }
+
+    const shouldCreative = hasCreativeGrant(acc);
+    if(shouldCreative){
+      serverGrantedCreative = true;
+      if(!creativeMode){
+        creativeMode = true;
+        player.hp = player.maxHp;
+        player.hunger = player.maxHunger;
+        player.fuel = 9999;
+      }
+    }else if(serverGrantedCreative){
+      serverGrantedCreative = false;
+      creativeMode = false;
+    }
+
+    updateCreativeStatus();
+  }
+
+  function enforceCurrentAccountStatus(){
+    if(!currentUser) return;
+    applyAccountPowers();
+  }
+
+  function visibleSolidCount(){
+    if(!world || !world.length) return 0;
+    let count=0;
+    const sx=Math.floor(camX/cell), ex=Math.ceil((camX+game.width)/cell);
+    const sy=Math.floor(camY/cell), ey=Math.ceil((camY+game.height)/cell);
+    for(let y=sy;y<=ey;y++){
+      for(let x=sx;x<=ex;x++){
+        if(!inBounds(x,y)) continue;
+        const b=world[y][x];
+        if(b && b!=="air" && b!=="leaves") count++;
+      }
+    }
+    return count;
+  }
+
+  function forceWorldVisibleNow(){
+    repairWorldIfNeeded("force");
+    let tx = Math.floor((player.x+player.w/2)/cell);
+    if(!Number.isFinite(tx) || tx<2 || tx>worldCols-3) tx = 10;
+    tx = clamp(tx,2,worldCols-3);
+    const g = groundAt(tx);
+
+    player.x = tx*cell + 2;
+    player.y = Math.max(2*cell,(g-2)*cell);
+    player.vx = 0;
+    player.vy = 0;
+    player.inCar = null;
+    player.spawnX = player.x;
+    player.spawnY = player.y;
+
+    camX=clamp(player.x+player.w/2-game.width/2,0,worldW-game.width);
+    camY=clamp(player.y+player.h/2-game.height/2,0,worldH-game.height);
+  }
+
   function isAdmin(){
     if(!currentUser) return false;
     const accounts = getAccounts();
@@ -3515,16 +3673,93 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     });
   }
 
-  function adminToggleBan(name){
-    if(!isAdmin()) return;
-    if(name===currentUser){msg("Du kannst dich nicht selbst bannen.");return;}
-    const accounts=getAccounts();
-    if(!accounts[name]) return;
-    accounts[name].banned=!accounts[name].banned;
-    accounts[name].online=false;
+  function adminSaveAccountsAndRefresh(accounts, message){
     saveAccounts(accounts);
     renderAdminPlayersList();
-    msg(accounts[name].banned ? name+" wurde gebannt." : name+" wurde entbannt.");
+    renderFriendsPage();
+    if(message) msg(message);
+  }
+
+  function adminSetRole(name, role){
+    if(!isAdmin()) return;
+    const accounts=getAccounts();
+    if(!accounts[name]) return;
+    if(name===currentUser && role!=="admin"){
+      msg("Du kannst dir selbst den Admin-Modus nicht entfernen.");
+      return;
+    }
+    accounts[name].role = role;
+    accounts[name].adminModeGranted = role==="admin";
+    adminSaveAccountsAndRefresh(accounts, name+" ist jetzt "+(role==="admin"?"Admin":"normaler Spieler")+".");
+  }
+
+  function adminSetCreative(name, value){
+    if(!isAdmin()) return;
+    const accounts=getAccounts();
+    if(!accounts[name]) return;
+    accounts[name].creativeGrant = !!value;
+    accounts[name].creativeUntil = 0;
+    if(!value){
+      accounts[name].creativeRemovedAt = Date.now();
+    }
+    adminSaveAccountsAndRefresh(accounts, value ? name+" hat jetzt Creative Mode." : name+" hat keinen Creative Mode mehr.");
+  }
+
+  function adminToggleBan(name){
+    adminBanFor(name,0,"permanent");
+  }
+
+  function adminBanFor(name, amount, unit){
+    if(!isAdmin()) return;
+    const accounts=getAccounts();
+    if(!accounts[name]) return;
+    if(name===currentUser){
+      msg("Du kannst dich nicht selbst bannen.");
+      return;
+    }
+
+    amount = Number(amount || 0);
+    let until = 0;
+    if(amount > 0){
+      const mult = unit==="h" ? 60*60*1000 : unit==="d" ? 24*60*60*1000 : 60*1000;
+      until = Date.now() + amount * mult;
+    }
+
+    accounts[name].banned = true;
+    accounts[name].bannedUntil = until;
+    accounts[name].bannedReason = amount>0 ? ("Zeitbann: "+amount+" "+unit) : "permanent";
+    accounts[name].online = false;
+    adminSaveAccountsAndRefresh(accounts, name+" wurde gebannt bis: "+adminTimeText(until));
+  }
+
+  function adminUnban(name){
+    if(!isAdmin()) return;
+    const accounts=getAccounts();
+    if(!accounts[name]) return;
+    accounts[name].banned = false;
+    accounts[name].bannedUntil = 0;
+    accounts[name].bannedReason = "";
+    adminSaveAccountsAndRefresh(accounts, name+" wurde entbannt.");
+  }
+
+  function adminGiveItemToPlayer(name, itemId, amount){
+    if(!isAdmin()) return;
+    const accounts=getAccounts();
+    if(!accounts[name] || !defs[itemId]) return;
+    amount = Math.max(1, Math.floor(Number(amount||1)));
+    accounts[name].inv = accounts[name].inv || {};
+    accounts[name].inv[itemId] = (accounts[name].inv[itemId]||0) + amount;
+    adminSaveAccountsAndRefresh(accounts, name+" bekommt "+defs[itemId].name+" x"+amount+".");
+  }
+
+  function adminRemoveItemFromPlayer(name, itemId, amount){
+    if(!isAdmin()) return;
+    const accounts=getAccounts();
+    if(!accounts[name] || !defs[itemId]) return;
+    amount = Math.max(1, Math.floor(Number(amount||1)));
+    accounts[name].inv = accounts[name].inv || {};
+    accounts[name].inv[itemId] = Math.max(0,(accounts[name].inv[itemId]||0) - amount);
+    adminSaveAccountsAndRefresh(accounts, name+" verliert "+defs[itemId].name+" x"+amount+".");
   }
 
   function adminGhostVisit(name){
@@ -3539,10 +3774,17 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     player.x=(acc.live.x||player.x)+80;
     player.y=acc.live.y||player.y;
     creativeMode=true;
+    serverGrantedCreative=true;
     updateCreativeStatus();
-    msg("Geist-Modus: Du bist unsichtbar/als Admin bei "+name+" in der Nähe. Kreativ ist aktiv.");
+    msg("Geist-Modus: Du bist als Admin bei "+name+" in der Nähe. Kreativ ist aktiv.");
     switchTab("worldPage","tabWorld");
     renderAll();
+  }
+
+  function adminItemOptionsHtml(){
+    loadAdminItemsIntoGame();
+    const ids = getAllExistingItemIds ? getAllExistingItemIds() : Object.keys(defs);
+    return ids.filter(id=>defs[id] && id!=="air").map(id=>'<option value="'+escapeHtml(id)+'">'+escapeHtml(defs[id].name)+'</option>').join("");
   }
 
   function renderAdminPlayersList(){
@@ -3556,7 +3798,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       return;
     }
 
-    names.forEach(name=>{
+    const itemOptions = adminItemOptionsHtml();
+
+    names.forEach((name,idx)=>{
       const acc=accounts[name] || {};
       const card=document.createElement("div");
       card.className="playerCard";
@@ -3571,10 +3815,18 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       info.className="playerCardInfo";
       const invCount=acc.inv ? Object.values(acc.inv).reduce((a,b)=>a+(Number(b)||0),0) : 0;
       const role=acc.role==="admin" ? "Admin" : "Spieler";
-      const status = acc.banned ? "<span class='statusBanned'>● GEBANNT</span>" : (acc.online ? "<span class='onlineTag'>● online</span>" : "<span class='small'>offline</span>");
+      const banned=isUserBanned(acc);
+      const creative=hasCreativeGrant(acc);
+      const status = banned
+        ? "<span class='powerTag bad'>GEBANNT bis "+escapeHtml(adminTimeText(acc.bannedUntil))+"</span>"
+        : (acc.online ? "<span class='onlineTag'>● online</span>" : "<span class='small'>offline</span>");
+
       info.innerHTML =
-        "<b>"+escapeHtml(name)+"</b> <span class='badge "+(acc.role==="admin"?"pending":"")+"'>"+role+"</span><br>"+
-        status+"<br>"+
+        "<b>"+escapeHtml(name)+"</b><br>"+
+        "<span class='powerTag "+(acc.role==="admin"?"good":"")+"'>"+role+"</span>"+
+        (creative ? "<span class='powerTag good'>Creative</span>" : "<span class='powerTag'>Kein Creative</span>")+
+        (banned ? "<span class='powerTag bad'>Ban aktiv</span>" : "<span class='powerTag good'>Nicht gebannt</span>")+
+        "<br>"+status+"<br>"+
         "<span class='small'>Freunde: "+((acc.friends||[]).length)+" | Items: "+invCount+"</span><br>"+
         "<span class='small'>Erstellt: "+(acc.created?new Date(acc.created).toLocaleDateString():"unbekannt")+"</span>";
       card.appendChild(info);
@@ -3584,21 +3836,60 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
       const ghost=document.createElement("button");
       ghost.textContent="Als Geist rein";
-      ghost.className="ghostBtn";
+      ghost.className="ghostBtn adminMiniBtn";
       ghost.onclick=()=>adminGhostVisit(name);
       actions.appendChild(ghost);
 
-      if(acc.role!=="admin"){
-        const ban=document.createElement("button");
-        ban.textContent=acc.banned?"Entbannen":"Bannen";
-        ban.className=acc.banned?"":"dangerBtn";
-        ban.onclick=()=>adminToggleBan(name);
-        actions.appendChild(ban);
-      }
+      const roleBtn=document.createElement("button");
+      roleBtn.textContent=acc.role==="admin" ? "Admin entfernen" : "Admin geben";
+      roleBtn.className="adminMiniBtn";
+      roleBtn.onclick=()=>adminSetRole(name, acc.role==="admin" ? "player" : "admin");
+      actions.appendChild(roleBtn);
+
+      const creBtn=document.createElement("button");
+      creBtn.textContent=creative ? "Creative entfernen" : "Creative geben";
+      creBtn.className="adminMiniBtn";
+      creBtn.onclick=()=>adminSetCreative(name,!creative);
+      actions.appendChild(creBtn);
 
       card.appendChild(actions);
+
+      const controls=document.createElement("div");
+      controls.className="adminPlayerControls";
+
+      const banBox=document.createElement("div");
+      banBox.className="adminControlBox";
+      banBox.innerHTML =
+        "<b>Zeit-Bann</b>"+
+        "<label>Dauer</label><input id='banAmount_"+idx+"' type='number' min='1' value='10'>"+
+        "<label>Einheit</label><select id='banUnit_"+idx+"'><option value='min'>Minuten</option><option value='h'>Stunden</option><option value='d'>Tage</option></select>"+
+        "<div class='adminControlBtns'><button class='dangerBtn adminMiniBtn' id='banBtn_"+idx+"'>Zeit bannen</button><button class='adminMiniBtn' id='unbanBtn_"+idx+"'>Rein holen / Entbannen</button></div>";
+      controls.appendChild(banBox);
+
+      const itemBox=document.createElement("div");
+      itemBox.className="adminControlBox";
+      itemBox.innerHTML =
+        "<b>Inventar ändern</b>"+
+        "<label>Item</label><select id='itemSelect_"+idx+"'>"+itemOptions+"</select>"+
+        "<label>Anzahl</label><input id='itemAmount_"+idx+"' type='number' min='1' value='10'>"+
+        "<div class='adminControlBtns'><button class='adminMiniBtn' id='giveItem_"+idx+"'>Item geben</button><button class='dangerBtn adminMiniBtn' id='removeItem_"+idx+"'>Item entfernen</button></div>";
+      controls.appendChild(itemBox);
+
+      card.appendChild(controls);
       box.appendChild(card);
+
       setTimeout(()=>drawMiniSkinToCanvas(canvas, acc.skin || makeDefaultSkin("photo")),0);
+      setTimeout(()=>{
+        const banAmount=document.getElementById("banAmount_"+idx);
+        const banUnit=document.getElementById("banUnit_"+idx);
+        const itemSelect=document.getElementById("itemSelect_"+idx);
+        const itemAmount=document.getElementById("itemAmount_"+idx);
+
+        document.getElementById("banBtn_"+idx).onclick=()=>adminBanFor(name,banAmount.value,banUnit.value);
+        document.getElementById("unbanBtn_"+idx).onclick=()=>adminUnban(name);
+        document.getElementById("giveItem_"+idx).onclick=()=>adminGiveItemToPlayer(name,itemSelect.value,itemAmount.value);
+        document.getElementById("removeItem_"+idx).onclick=()=>adminRemoveItemFromPlayer(name,itemSelect.value,itemAmount.value);
+      },0);
     });
   }
 
@@ -3608,7 +3899,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const tools=document.getElementById("adminTools");
     if(!status||!locked||!tools) return;
     if(isAdmin()){
-      status.textContent="Admin aktiv. Du kannst das Spiel verändern.";
+      status.textContent="Admin aktiv. Du kannst Admin-Modus/Creative vergeben, Spieler zeitlich bannen und Inventare ändern.";
       locked.style.display="none";
       tools.style.display="grid";
       renderAdminItemsList();
@@ -4414,7 +4705,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("btnSave").onclick=()=>{worlds[currentPlanet]={world,fireLife,mobs,vehicles};localStorage.setItem("minicraft_planet_mod",JSON.stringify({worlds,currentPlanet,inv,player,activeSkin,skinPixels,creativeMode}));saveAccountState();msg("Gespeichert.")};
   document.getElementById("btnLoad").onclick=()=>{let s=localStorage.getItem("minicraft_planet_mod");if(!s){msg("Kein Speicherstand.");return}let d=JSON.parse(s);worlds=d.worlds;currentPlanet=d.currentPlanet;inv=d.inv;player=d.player;
     if(player.hunger===undefined){player.hunger=10;player.maxHunger=10;player.hungerTimer=0;} if(player.lastBreakTick===undefined){player.lastBreakTick=-99999;}activeSkin=d.activeSkin;skinPixels=d.skinPixels;creativeMode=!!d.creativeMode;updateCreativeStatus();world=worlds[currentPlanet].world;fireLife=worlds[currentPlanet].fireLife;mobs=worlds[currentPlanet].mobs;vehicles=worlds[currentPlanet].vehicles||[];ensurePlayerWorldVisible();renderAll();msg("Geladen.")};
-  document.getElementById("btnRepairWorld").onclick=()=>{repairWorldIfNeeded("button");ensurePlayerWorldVisible();renderAll();msg("Welt repariert und Spieler auf Boden gesetzt.")};
+  document.getElementById("btnRepairWorld").onclick=()=>{forceWorldVisibleNow();renderAll();msg("Welt repariert und Spieler auf Boden gesetzt.")};
   document.getElementById("btnReset").onclick=()=>{init();msg("Neue Welt erstellt.")};
 
 
@@ -4597,6 +4888,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     if(!currentUser) return;
     const accounts=getAccounts();
     if(!accounts[currentUser]) return;
+    applyAccountPowers();
     accounts[currentUser].inv=copyInventory();
     accounts[currentUser].skin=JSON.parse(JSON.stringify(activeSkin||skinPixels||makeDefaultSkin('photo')));
     accounts[currentUser].playerSave={
@@ -4653,6 +4945,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       renderModsList();
       loadAdminItemsIntoGame();
       applyWorldSettings();
+      enforceCurrentAccountStatus();
       renderAdminPage();
       renderOvenPage();
       renderChat();
@@ -4690,6 +4983,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
             renderModsList();
             loadAdminItemsIntoGame();
             applyWorldSettings();
+            enforceCurrentAccountStatus();
             renderAdminPage();
             renderOvenPage();
             renderChat();
@@ -4764,7 +5058,14 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       acc.gameInvites = Array.isArray(acc.gameInvites) ? acc.gameInvites : [];
       acc.unfriended = Array.isArray(acc.unfriended) ? acc.unfriended : [];
       acc.skin = acc.skin || makeDefaultSkin("photo");
+      acc.role = acc.role || "player";
       acc.banned = !!acc.banned;
+      acc.bannedUntil = Number(acc.bannedUntil || 0);
+      acc.bannedReason = acc.bannedReason || "";
+      acc.creativeGrant = !!acc.creativeGrant;
+      acc.creativeUntil = Number(acc.creativeUntil || 0);
+      acc.adminModeGranted = !!acc.adminModeGranted;
+      acc.inv = acc.inv || {};
 
       // alte Versionen hatten teilweise "invites" statt "friendRequests"
       if(Array.isArray(acc.invites)){
@@ -5001,6 +5302,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     currentUser = name;
 
+    if(isUserBanned(accounts[name]) && accounts[name].role !== "admin"){
+      saveAccounts(accounts);
+      currentUser = null;
+      loginMessage("Dieser Spieler ist gebannt bis: " + adminTimeText(accounts[name].bannedUntil));
+      return;
+    }
+
     if(accounts[name].inv){
       restoreInventory(accounts[name].inv);
     }
@@ -5029,6 +5337,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     accounts[name].lastLogin = Date.now();
     saveAccounts(accounts);
     ensurePlayerWorldVisible();
+    applyAccountPowers();
     saveAccountState();
 
     localStorage.setItem("safinicraft_current_user", name);

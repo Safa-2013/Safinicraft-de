@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "1.8.2",
-  "description": "Safinicraft World Visible Fix",
+  "version": "1.9.0",
+  "description": "Safinicraft Admin Power and World Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

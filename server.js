@@ -49,8 +49,21 @@ function adminPassword(){
   return (process.env.ADMIN_PASSWORD || "admin").trim() || "admin";
 }
 
+function clearExpiredBans(){
+  const now = Date.now();
+  for(const name of Object.keys(state.accounts || {})){
+    const acc = state.accounts[name];
+    if(acc && acc.banned && acc.bannedUntil && now > acc.bannedUntil){
+      acc.banned = false;
+      acc.bannedUntil = 0;
+      acc.bannedReason = "";
+    }
+  }
+}
+
 function ensureAdmin(){
   state.accounts = state.accounts || {};
+  clearExpiredBans();
   const name = adminName();
   const pass = adminPassword();
 
@@ -58,6 +71,8 @@ function ensureAdmin(){
     state.accounts[name] = {
       pass: encodePass(pass),
       role: "admin",
+      adminModeGranted: true,
+      creativeGrant: true,
       skin: defaultSkin(),
       friends: [],
       friendRequests: [],
@@ -223,8 +238,16 @@ const server = http.createServer(async (req,res)=>{
     }
 
     if(acc.banned){
-      sendJson(res, {ok:false, error:"Dieser Spieler wurde gebannt."});
-      return;
+      if(acc.bannedUntil && Date.now() > acc.bannedUntil){
+        acc.banned = false;
+        acc.bannedUntil = 0;
+        acc.bannedReason = "";
+        saveState();
+      }else{
+        const untilText = acc.bannedUntil ? new Date(acc.bannedUntil).toLocaleString("de-DE") : "dauerhaft";
+        sendJson(res, {ok:false, error:"Dieser Spieler wurde gebannt bis: " + untilText});
+        return;
+      }
     }
 
     acc.online = true;
@@ -409,6 +432,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de WORLD VISIBLE FIX 1.8.2 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN POWER + WORLD FIX 1.9.0 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
