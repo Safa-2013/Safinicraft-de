@@ -1262,7 +1262,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN ONLY HARD RESET VERSION 2.1.8</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN EMERGENCY LOGIN VERSION 2.1.9</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1273,6 +1273,7 @@
 
     <button id="btnCreateAccount">Neuen Spieler erstellen</button>
     <button id="btnLoginAccount">Einloggen</button>
+    <button id="btnAdminEmergencyLogin" class="successBtn">Admin direkt starten</button>
 
     <div id="onlineStatus" class="message">Online-Server wird geprüft...</div>
     <div id="loginMsg" class="message"></div>
@@ -6189,11 +6190,16 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   async function createAccount(){
-    const name = document.getElementById("loginName").value.trim();
-    const pass = document.getElementById("loginPass").value;
+    let name = document.getElementById("loginName").value.trim();
+    let pass = document.getElementById("loginPass").value;
+
+    if(name.toLowerCase()==="admin" && !pass){
+      pass = "2013";
+      document.getElementById("loginPass").value = "2013";
+    }
 
     if(!name || !pass){
-      loginMessage("Bitte Name und Passwort eingeben.");
+      loginMessage("Bitte Name und Passwort eingeben. Oder klicke auf „Admin direkt starten“.");
       return;
     }
 
@@ -6241,6 +6247,77 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     loginMessage("Spieler erstellt. Du kannst dich jetzt einloggen.");
   }
 
+  function enterGameAfterLogin(name, account, state){
+    currentUser = name;
+
+    if(state && state.accounts){
+      onlineMode = true;
+      onlineAccountsCache = normalizeAccounts(state.accounts || {});
+      localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      if(typeof backupAccountsLocally === "function") backupAccountsLocally(onlineAccountsCache);
+    }
+
+    const accounts = getAccounts();
+    if(!accounts[name]){
+      accounts[name] = account || {
+        role: name === "admin" ? "admin" : "player",
+        skin: skinForAccount(),
+        friends:[],
+        friendRequests:[],
+        sentRequests:[],
+        gameInvites:[],
+        unfriended:[],
+        inv:{},
+        online:true
+      };
+      saveAccounts(accounts);
+    }
+
+    if(account){
+      accounts[name] = {...accounts[name], ...account};
+      saveAccounts(accounts);
+    }
+
+    localStorage.setItem("safinicraft_current_user", name);
+    document.body.classList.remove("loggedOut");
+    document.body.classList.add("loggedIn");
+
+    if(accounts[name].skin){
+      activeSkin = normalizeSkinPixels(JSON.parse(JSON.stringify(accounts[name].skin)));
+      skinPixels = normalizeSkinPixels(JSON.parse(JSON.stringify(accounts[name].skin)));
+    }else{
+      accounts[name].skin = skinForAccount();
+      saveAccounts(accounts);
+    }
+
+    applyAccountPowers();
+    restoreInventory(accounts[name].inv || {});
+    initGameIfNeeded();
+    renderAll();
+    switchTab("worldPage","tabWorld");
+    msg("Admin gestartet. Alle alten Accounts sind gelöscht.");
+  }
+
+  async function adminEmergencyLogin(){
+    loginMessage("Admin wird direkt gestartet...");
+
+    try{
+      const res = await fetch("/api/adminEmergencyLogin", {method:"POST", cache:"no-store"});
+      const data = await res.json();
+
+      if(data && data.ok){
+        onlineMode = true;
+        enterGameAfterLogin("admin", data.account, data.state);
+        return;
+      }
+    }catch(e){}
+
+    // Fallback ohne Endpoint: normaler Login mit 2013.
+    document.getElementById("loginName").value = "admin";
+    document.getElementById("loginPass").value = "2013";
+    loginAccount();
+  }
+
   async function loginAccount(){
     const name = document.getElementById("loginName").value.trim();
     const pass = document.getElementById("loginPass").value;
@@ -6259,34 +6336,25 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         usedServerLogin = true;
         onlineMode = true;
 
-        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), normalizeAccounts((result.state && result.state.accounts) || {}));
-        if(!onlineAccountsCache[name]){
-          onlineAccountsCache[name] = result.account || {
-            role: name === "admin" ? "admin" : "player",
-            skin: skinForAccount(),
-            friends:[],
-            friendRequests:[],
-            sentRequests:[],
-            gameInvites:[],
-            unfriended:[],
-            inv:{},
-            online:true
-          };
+        if(result.state){
+          onlineAccountsCache = normalizeAccounts(result.state.accounts || {});
+          onlineServersCache = result.state.servers || {};
+          onlineMessagesCache = result.state.messages || {};
+          onlineModsCache = result.state.mods || defaultMods();
+          onlineAdminItemsCache = result.state.adminItems || {};
+          onlineWorldSettingsCache = result.state.worldSettings || {};
+
+          localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+          if(typeof backupAccountsLocally === "function") backupAccountsLocally(onlineAccountsCache);
+          localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
+          localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
+          localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
+          localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
+          localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
         }
 
-        onlineServersCache = (result.state && result.state.servers) || {};
-        onlineMessagesCache = (result.state && result.state.messages) || {};
-        onlineModsCache = (result.state && result.state.mods) || defaultMods();
-        onlineAdminItemsCache = (result.state && result.state.adminItems) || {};
-        onlineWorldSettingsCache = (result.state && result.state.worldSettings) || {};
-
-        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
-      backupAccountsLocally(onlineAccountsCache);
-        localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
-        localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
-        localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
-        localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
-        localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
+        enterGameAfterLogin(name, result.account, result.state);
+        return;
       }else if(onlineMode){
         loginMessage((result && result.error) || "Name oder Passwort ist falsch. Nach Reset bitte neue Spieler erstellen. Admin-Login: Name admin, Passwort 2013 oder admin.");
         return;
@@ -7164,6 +7232,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
   document.getElementById("btnCreateAccount").onclick = createAccount;
   document.getElementById("btnLoginAccount").onclick = loginAccount;
+  document.getElementById("btnAdminEmergencyLogin")?.addEventListener("click", adminEmergencyLogin);
+  document.getElementById("loginName")?.addEventListener("keydown",e=>{if(e.key==="Enter") loginAccount();});
+  document.getElementById("loginPass")?.addEventListener("keydown",e=>{if(e.key==="Enter") loginAccount();});
   document.getElementById("btnLogout").onclick = logoutAccount;
   document.getElementById("tabFriends").onclick=()=>{switchTab("friendsPage","tabFriends");if(isAdmin()) fetchAdminAccountsDirect(true).then(()=>renderFriendsPage()); else renderFriendsPage();};
   document.getElementById("btnSearchPlayer").onclick = ()=>sendFriendRequest(null);
@@ -7182,7 +7253,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }, 1200);
 
 
-  const CLIENT_ACCOUNT_RESET_VERSION = "2.1.8";
+  const CLIENT_ACCOUNT_RESET_VERSION = "2.1.9";
 
   function resetOldLocalAccountsOnce(){
     try{

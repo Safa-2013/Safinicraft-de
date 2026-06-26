@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.1.8",
-  "description": "Safinicraft Admin Only Hard Reset",
+  "version": "2.1.9",
+  "description": "Safinicraft Admin Emergency Login",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
