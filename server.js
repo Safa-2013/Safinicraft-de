@@ -13,7 +13,8 @@ let state = {
   messages: {},
   mods: {},
   adminItems: {},
-  worldSettings: {}
+  worldSettings: {},
+  adminChat: []
 };
 
 function encodePass(pass){
@@ -109,6 +110,7 @@ function loadState(){
       state.mods = saved.mods || {};
       state.adminItems = saved.adminItems || {};
       state.worldSettings = saved.worldSettings || {};
+      state.adminChat = Array.isArray(saved.adminChat) ? saved.adminChat : [];
     }
   }catch(e){
     console.error("Konnte server_data.json nicht lesen:", e.message);
@@ -322,6 +324,42 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/adminChat" && req.method === "GET"){
+    state.adminChat = Array.isArray(state.adminChat) ? state.adminChat : [];
+    sendJson(res, {ok:true, messages:state.adminChat});
+    return;
+  }
+
+  if(req.url === "/api/adminChat" && req.method === "POST"){
+    const data = await readBody(req);
+    state.adminChat = Array.isArray(state.adminChat) ? state.adminChat : [];
+
+    const msg = {
+      from:String(data.from || "Spieler").slice(0,40),
+      text:String(data.text || "").slice(0,800),
+      kind:data.kind === "wish" ? "wish" : "message",
+      time:Number(data.time || Date.now())
+    };
+
+    if(msg.text.trim()){
+      state.adminChat.push(msg);
+      state.adminChat = state.adminChat.slice(-300);
+      saveState();
+      broadcastState();
+    }
+
+    sendJson(res, {ok:true, messages:state.adminChat});
+    return;
+  }
+
+  if(req.url === "/api/adminChat" && req.method === "DELETE"){
+    state.adminChat = [];
+    saveState();
+    broadcastState();
+    sendJson(res, {ok:true, messages:[]});
+    return;
+  }
+
   if(req.url === "/api/messages" && req.method === "POST"){
     const data = await readBody(req);
     if(data.messages && typeof data.messages === "object"){
@@ -432,6 +470,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN CHAT + PLAYER LIST FIX 2.1.0 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN CHAT LIVE FIX 2.1.1 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

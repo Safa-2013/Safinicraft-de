@@ -1077,7 +1077,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN CHAT + PLAYER LIST FIX VERSION 2.1.0</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN CHAT LIVE FIX VERSION 2.1.1</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1507,7 +1507,11 @@
     <div class="adminPanel">
       <h3>Alle Spieler</h3>
       <p class="small">Hier sieht der Admin alle Accounts, Skins, Online-Status und Item-Anzahl.</p>
-      <button id="btnRefreshAdminPlayers">Spielerliste vom Server laden</button>
+      <div class="adminSearchRow">
+        <input id="adminPlayerSearch" placeholder="Spieler suchen...">
+        <label class="small"><input type="checkbox" id="adminShowSelf"> Mich/Admin anzeigen</label>
+        <button id="btnRefreshAdminPlayers">Spielerliste vom Server laden</button>
+      </div>
       <div id="adminPlayerRefreshStatus" class="message"></div>
       <div id="adminPlayersList"></div>
     </div>
@@ -1720,6 +1724,7 @@ document.addEventListener("DOMContentLoaded", function(){
   let onlineAccountsCache = null;
   let onlineServersCache = null;
   let onlineMessagesCache = null;
+  let onlineAdminChatCache = null;
   let onlineModsCache = null;
   let onlineAdminItemsCache = null;
   let onlineWorldSettingsCache = null;
@@ -4035,11 +4040,35 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function renderAdminPlayersList(){
     const box=document.getElementById("adminPlayersList");
     if(!box) return;
+
     const accounts=getAccounts();
+    const search=(document.getElementById("adminPlayerSearch")?.value || "").trim().toLowerCase();
+    const showSelf=!!document.getElementById("adminShowSelf")?.checked;
+
     box.innerHTML="";
-    const names=Object.keys(accounts).sort((a,b)=>a.localeCompare(b));
+
+    let names=Object.keys(accounts).sort((a,b)=>a.localeCompare(b));
+
+    // Admin sieht sich selbst standardmäßig NICHT. Er kann es mit Checkbox einschalten.
+    names=names.filter(name=>{
+      const acc=accounts[name] || {};
+      if(!showSelf && name===currentUser) return false;
+      if(!showSelf && acc.role==="admin" && name.toLowerCase()==="admin") return false;
+      if(search){
+        const hay=(name+" "+(acc.role||"")+" "+(acc.online?"online":"offline")).toLowerCase();
+        if(!hay.includes(search)) return false;
+      }
+      return true;
+    });
+
+    const total=Object.keys(accounts).length;
+    const status=document.getElementById("adminPlayerRefreshStatus");
+    if(status){
+      status.textContent="Accounts auf Server/Cache: "+total+" | Angezeigt: "+names.length+" | Suche: "+(search||"keine");
+    }
+
     if(names.length===0){
-      box.innerHTML="<p class='small'>Noch keine Spieler.</p>";
+      box.innerHTML="<p class='small'>Keine Spieler gefunden. Klicke „Spielerliste vom Server laden“ oder ändere die Suche.</p>";
       return;
     }
 
@@ -4062,16 +4091,18 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       const role=acc.role==="admin" ? "Admin" : "Spieler";
       const banned=isUserBanned(acc);
       const creative=hasCreativeGrant(acc);
-      const status = banned
+      const lastSeen=acc.live && acc.live.lastSeen ? Date.now()-acc.live.lastSeen : 999999999;
+      const liveNow=lastSeen < 15000;
+      const statusHtml = banned
         ? "<span class='powerTag bad'>GEBANNT bis "+escapeHtml(adminTimeText(acc.bannedUntil))+"</span>"
-        : (acc.online ? "<span class='onlineTag'>● online</span>" : "<span class='small'>offline</span>");
+        : (acc.online || liveNow ? "<span class='onlineTag'>● online</span>" : "<span class='small'>offline</span>");
 
       info.innerHTML =
-        "<b>"+escapeHtml(name)+"</b><br>"+
+        "<b>"+escapeHtml(name)+"</b>"+(liveNow?"<span class='adminLiveBadge'>LIVE</span>":"")+"<br>"+
         "<span class='powerTag "+(acc.role==="admin"?"good":"")+"'>"+role+"</span>"+
         (creative ? "<span class='powerTag good'>Creative</span>" : "<span class='powerTag'>Kein Creative</span>")+
         (banned ? "<span class='powerTag bad'>Ban aktiv</span>" : "<span class='powerTag good'>Nicht gebannt</span>")+
-        "<br>"+status+"<br>"+
+        "<br>"+statusHtml+"<br>"+
         "<span class='small'>Freunde: "+((acc.friends||[]).length)+" | Items: "+invCount+"</span><br>"+
         "<span class='small'>Erstellt: "+(acc.created?new Date(acc.created).toLocaleDateString():"unbekannt")+"</span>";
       card.appendChild(info);
@@ -4151,6 +4182,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       renderAdminPlayersList();
       const refreshBtn=document.getElementById("btnRefreshAdminPlayers");
       if(refreshBtn) refreshBtn.onclick=()=>refreshServerStateOnly(false);
+      const searchEl=document.getElementById("adminPlayerSearch");
+      if(searchEl) searchEl.oninput=()=>renderAdminPlayersList();
+      const showSelfEl=document.getElementById("adminShowSelf");
+      if(showSelfEl) showSelfEl.onchange=()=>renderAdminPlayersList();
       renderAdminRecipeGrid();
       setupItemPainter();
       drawItemPaintCanvas();
@@ -4944,12 +4979,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("craftItemSearch")?.addEventListener("input",renderAllCraftItems);
   document.getElementById("tabMods").onclick=openModsPage;
   document.getElementById("tabAI").onclick=()=>switchTab("aiPage","tabAI");
-  document.getElementById("tabAdminChat").onclick=()=>{switchTab("adminChatPage","tabAdminChat");renderAdminChat();};
+  document.getElementById("tabAdminChat").onclick=()=>{switchTab("adminChatPage","tabAdminChat");refreshAdminChatFromServer(false);};
   document.getElementById("tabOven").onclick=()=>{switchTab("ovenPage","tabOven");renderOvenPage();};
   document.getElementById("tabAdmin").onclick=()=>{switchTab("adminPage","tabAdmin");renderAdminPage();refreshServerStateOnly(true);setupItemPainter();drawItemPaintCanvas();};
   document.getElementById("btnAdminChatSend")?.addEventListener("click",()=>sendAdminChat("message"));
   document.getElementById("btnAdminWishSend")?.addEventListener("click",()=>sendAdminChat("wish"));
-  document.getElementById("btnAdminChatRefresh")?.addEventListener("click",()=>{refreshServerStateOnly(false);renderAdminChat();});
+  document.getElementById("btnAdminChatRefresh")?.addEventListener("click",()=>{refreshServerStateOnly(true);refreshAdminChatFromServer(false);});
   document.getElementById("btnAdminChatClear")?.addEventListener("click",clearAdminChat);
   document.getElementById("adminChatInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();sendAdminChat("message");}});
   document.getElementById("adminWishInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();sendAdminChat("wish");}});
@@ -5181,6 +5216,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       onlineAccountsCache = normalizeAccounts(state.accounts || {});
       onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
+      onlineAdminChatCache = Array.isArray(state.adminChat) ? state.adminChat : [];
       onlineModsCache = state.mods || defaultMods();
       onlineAdminItemsCache = state.adminItems || {};
       onlineWorldSettingsCache = state.worldSettings || {};
@@ -5189,6 +5225,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
       localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
       localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
+      localStorage.setItem("safinicraft_admin_chat", JSON.stringify(onlineAdminChatCache || []));
             localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
       localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
 
@@ -5225,6 +5262,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       onlineAccountsCache = normalizeAccounts(state.accounts || {});
       onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
+      onlineAdminChatCache = Array.isArray(state.adminChat) ? state.adminChat : [];
       onlineModsCache = state.mods || defaultMods();
       onlineAdminItemsCache = state.adminItems || {};
       onlineWorldSettingsCache = state.worldSettings || {};
@@ -5233,6 +5271,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
       localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
       localStorage.setItem("safinicraft_messages", JSON.stringify(onlineMessagesCache));
+      localStorage.setItem("safinicraft_admin_chat", JSON.stringify(onlineAdminChatCache || []));
       localStorage.setItem("safinicraft_mods", JSON.stringify(onlineModsCache));
       localStorage.setItem("safinicraft_admin_items", JSON.stringify(onlineAdminItemsCache));
       localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
@@ -5268,6 +5307,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
             onlineAccountsCache = normalizeAccounts(msg.state.accounts || {});
             onlineServersCache = msg.state.servers || {};
             onlineMessagesCache = msg.state.messages || {};
+            onlineAdminChatCache = Array.isArray(msg.state.adminChat) ? msg.state.adminChat : [];
             onlineModsCache = msg.state.mods || defaultMods();
             onlineAdminItemsCache = msg.state.adminItems || {};
             onlineWorldSettingsCache = msg.state.worldSettings || {};
@@ -5902,12 +5942,40 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
   const ADMIN_CHAT_KEY = "__admin_global_chat__";
 
+  function setAdminChatCache(messages){
+    onlineAdminChatCache = Array.isArray(messages) ? messages.slice(-300) : [];
+    localStorage.setItem("safinicraft_admin_chat", JSON.stringify(onlineAdminChatCache));
+  }
+
   function getAdminChatMessages(){
+    if(Array.isArray(onlineAdminChatCache)) return onlineAdminChatCache;
+    try{
+      const local = JSON.parse(localStorage.getItem("safinicraft_admin_chat") || "[]");
+      if(Array.isArray(local)) return local;
+    }catch(e){}
+
+    // Fallback für alte Versionen, die den Chat unter messages gespeichert haben.
     return getMessages(ADMIN_CHAT_KEY);
   }
 
-  function saveAdminChatMessages(messages){
-    saveMessages(ADMIN_CHAT_KEY, messages.slice(-300));
+  async function refreshAdminChatFromServer(quiet=false){
+    if(!isRealWebsiteMode()){
+      renderAdminChat();
+      return false;
+    }
+
+    try{
+      const res = await fetch("/api/adminChat", {cache:"no-store"});
+      if(!res.ok) throw new Error("AdminChat API fehlt");
+      const data = await res.json();
+      setAdminChatCache(data.messages || []);
+      renderAdminChat();
+      return true;
+    }catch(e){
+      if(!quiet) msg("Admin Chat konnte nicht vom Server geladen werden.");
+      renderAdminChat();
+      return false;
+    }
   }
 
   function renderAdminChat(){
@@ -5920,7 +5988,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     if(status){
       status.textContent = onlineMode
-        ? "Online-Admin-Chat aktiv. Nachrichten werden für alle gespeichert."
+        ? "Online-Admin-Chat aktiv. Nachrichten: "+messages.length
         : "Kein Online-Server verbunden. Nachrichten bleiben nur lokal.";
     }
 
@@ -5948,7 +6016,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     log.scrollTop=log.scrollHeight;
   }
 
-  function sendAdminChat(kind="message"){
+  async function sendAdminChat(kind="message"){
     if(!currentUser){
       loginMessage("Bitte zuerst einloggen.");
       return;
@@ -5963,28 +6031,61 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       return;
     }
 
-    const messages=getAdminChatMessages();
-    messages.push({
+    const message = {
       from:currentUser,
       text,
       kind,
       time:Date.now()
-    });
+    };
 
-    saveAdminChatMessages(messages);
+    if(isRealWebsiteMode() && onlineMode){
+      try{
+        const res = await fetch("/api/adminChat", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify(message)
+        });
+        const data = await res.json();
+        if(data.ok){
+          setAdminChatCache(data.messages || []);
+          input.value="";
+          renderAdminChat();
+          msg(kind==="wish" ? "Item-Wunsch an Admin gesendet." : "Nachricht an Admin gesendet.");
+          return;
+        }
+      }catch(e){}
+    }
+
+    const messages=getAdminChatMessages();
+    messages.push(message);
+    setAdminChatCache(messages);
     input.value="";
     renderAdminChat();
-    msg(kind==="wish" ? "Item-Wunsch an Admin gesendet." : "Nachricht an Admin gesendet.");
+    msg(kind==="wish" ? "Item-Wunsch lokal gespeichert." : "Nachricht lokal gespeichert.");
   }
 
-  function clearAdminChat(){
+  async function clearAdminChat(){
     if(!isAdmin()){
       msg("Nur der Admin kann den Admin Chat löschen.");
       return;
     }
-    saveAdminChatMessages([]);
+
+    if(isRealWebsiteMode() && onlineMode){
+      try{
+        const res = await fetch("/api/adminChat", {method:"DELETE"});
+        const data = await res.json();
+        if(data.ok){
+          setAdminChatCache([]);
+          renderAdminChat();
+          msg("Admin Chat wurde gelöscht.");
+          return;
+        }
+      }catch(e){}
+    }
+
+    setAdminChatCache([]);
     renderAdminChat();
-    msg("Admin Chat wurde gelöscht.");
+    msg("Admin Chat wurde lokal gelöscht.");
   }
 
   function renderChat(){
@@ -6395,6 +6496,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
     requestAnimationFrame(loop)
   }
+  setInterval(()=>{if(currentUser&&isRealWebsiteMode()){
+    refreshAdminChatFromServer(true);
+    if(isAdmin()) refreshServerStateOnly(true);
+  }},3000);
   init();
   loadServerState();loop();
 });

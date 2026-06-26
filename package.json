@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.1.0",
-  "description": "Safinicraft Admin Chat and Player List Fix",
+  "version": "2.1.1",
+  "description": "Safinicraft Admin Chat Live and Player Search Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
