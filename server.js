@@ -755,6 +755,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de REAL HOLD + INVENTORY PREVIEW FIX 2.2.3 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ITEM BUG STABLE FIX 2.2.4 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

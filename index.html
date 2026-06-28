@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Safinicraft.de</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23202020'/%3E%3Ctext x='32' y='43' font-size='42' text-anchor='middle' fill='%23ffd84d'%3ES%3C/text%3E%3C/svg%3E">
 <style>
   *{box-sizing:border-box}
   body{margin:0;background:#0e0e0e;color:white;font-family:Arial,sans-serif;text-align:center}
@@ -1340,7 +1341,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">REAL HOLD + INVENTORY PREVIEW FIX VERSION 2.2.3</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ITEM BUG STABLE FIX VERSION 2.2.4</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -2456,6 +2457,7 @@
   function oreDot(b){return b==="coal_ore"?"#111":b==="iron_ore"?"#e2a47a":b==="gold_ore"?"#ffd84d":"#62f3ff"}
 
 
+
   function createPixelGrid(fill=null){
     return Array.from({length:16},()=>Array(16).fill(fill));
   }
@@ -2502,76 +2504,27 @@
       }else if(id==="planks"){
         for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#b77739";
         [4,9,14].forEach(y=>{for(let x=0;x<16;x++) set(x,y,"#885422");});
-      }else if(id==="leaves"){
-        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#2e8b57";
-        for(let y=1;y<16;y+=4){ for(let x=1;x<16;x+=4) set(x,y,light); }
-      }else if(id==="water"){
-        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#2388ff";
-        for(let y=2;y<16;y+=4){ for(let x=0;x<16;x++) if((x+y)%4===0) set(x,y,"#7fd2ff"); }
-      }else if(id==="lava"){
-        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#ff5b16";
-        for(let y=1;y<16;y+=3){ for(let x=0;x<16;x++) if((x+y)%3===0) set(x,y,"#ffd84d"); }
-      }else if(id==="glass"){
-        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="rgba(191,246,255,0.65)";
-        [0,15].forEach(v=>{for(let i=0;i<16;i++){set(v,i,"#dffbff"); set(i,v,"#dffbff");}});
       }
       return px;
     }
 
     const hold=d.holdStyle||d.itemFunction||d.tool||"item";
-
     if(hold==="pistol"){
-      fillRect(2,5,10,4,base);
-      fillRect(10,4,4,2,light);
-      fillRect(9,9,3,5,dark);
-      fillRect(5,9,2,2,"#111");
-      return px;
+      fillRect(2,5,10,4,base); fillRect(10,4,4,2,light); fillRect(9,9,3,5,dark); fillRect(5,9,2,2,"#111"); return px;
     }
     if(hold==="rifle"){
-      fillRect(1,6,13,3,base);
-      fillRect(12,5,2,2,light);
-      fillRect(4,9,3,5,dark);
-      fillRect(8,9,2,3,dark);
-      fillRect(0,7,3,2,shadeColor(base,-50));
-      return px;
+      fillRect(1,6,13,3,base); fillRect(12,5,2,2,light); fillRect(4,9,3,5,dark); fillRect(8,9,2,3,dark); fillRect(0,7,3,2,shadeColor(base,-50)); return px;
     }
     if(hold==="minigun"){
-      fillRect(1,6,12,4,base);
-      fillRect(11,5,2,2,light);
-      fillRect(4,10,3,4,dark);
-      fillRect(7,4,1,8,"#999");
-      fillRect(9,4,1,8,"#777");
-      fillRect(11,4,1,8,"#555");
-      return px;
+      fillRect(1,6,12,4,base); fillRect(11,5,2,2,light); fillRect(4,10,3,4,dark); fillRect(7,4,1,8,"#999"); fillRect(9,4,1,8,"#777"); fillRect(11,4,1,8,"#555"); return px;
     }
     if(hold==="bazooka"){
-      fillRect(1,5,13,5,base);
-      fillRect(13,6,2,3,light);
-      fillRect(0,6,2,3,dark);
-      fillRect(3,10,3,3,dark);
-      return px;
+      fillRect(1,5,13,5,base); fillRect(13,6,2,3,light); fillRect(0,6,2,3,dark); fillRect(3,10,3,3,dark); return px;
     }
-    if(hold==="sword"){
-      fillRect(7,2,2,9,light);
-      fillRect(5,9,6,2,dark);
-      fillRect(7,11,2,3,"#8b5a2b");
-      return px;
-    }
-    if(hold==="pickaxe"){
-      fillRect(7,3,2,10,"#8b5a2b");
-      fillRect(3,3,9,3,base);
-      return px;
-    }
-    if(hold==="axe"){
-      fillRect(7,3,2,10,"#8b5a2b");
-      fillRect(4,2,5,5,base);
-      return px;
-    }
-    if(hold==="shovel"){
-      fillRect(7,3,2,10,"#8b5a2b");
-      fillRect(5,2,5,4,base);
-      return px;
-    }
+    if(hold==="sword"){ fillRect(7,2,2,9,light); fillRect(5,9,6,2,dark); fillRect(7,11,2,3,"#8b5a2b"); return px; }
+    if(hold==="pickaxe"){ fillRect(7,3,2,10,"#8b5a2b"); fillRect(3,3,9,3,base); return px; }
+    if(hold==="axe"){ fillRect(7,3,2,10,"#8b5a2b"); fillRect(4,2,5,5,base); return px; }
+    if(hold==="shovel"){ fillRect(7,3,2,10,"#8b5a2b"); fillRect(5,2,5,4,base); return px; }
 
     fillRect(3,3,10,10,base);
     fillRect(5,5,6,6,light);
@@ -2615,11 +2568,8 @@
     const m=heldItemMetrics(itemId);
     const x = facing>=0 ? baseX + m.x : baseX + 16 - m.x - m.w;
     const y = baseY + m.y;
-
-    // kleine Hand davor, damit es aussieht, als würde der Spieler das Item halten
     context.fillStyle="rgba(0,0,0,.25)";
     context.fillRect(x+(facing>=0?1:m.w-5),y+Math.max(2,m.h-6),5,5);
-
     drawPixelMatrixScaled(context,icon,x,y,m.w,m.h,facing<0);
     context.strokeStyle="rgba(0,0,0,.45)";
     context.strokeRect(x,y,m.w,m.h);
@@ -2633,6 +2583,7 @@
     const icon=itemIconPixels(itemId);
     drawPixelMatrixScaled(c,icon,0,0,16,16,false);
   }
+
 
 
   function drawOtherPlayers(){
@@ -2809,7 +2760,7 @@
   }
 
   function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderCraftingTable();renderAllCraftItems();renderRecipes();renderSkinCanvas();draw()}  function renderInventory(targetId){
-    loadAdminItemsIntoGame();
+    loadAdminItemsIntoGame(true);
 
     const box=document.getElementById(targetId);
     if(!box) return;
@@ -2850,6 +2801,7 @@
       setTimeout(()=>{
         if(id==="hand"){
           const c=canvas.getContext("2d");
+          c.imageSmoothingEnabled=false;
           c.clearRect(0,0,16,16);
           c.fillStyle="#fff";
           c.fillRect(5,3,6,10);
@@ -2883,6 +2835,7 @@
         if(!canvas) return;
         if(selected==="hand"){
           const c=canvas.getContext("2d");
+          c.imageSmoothingEnabled=false;
           c.clearRect(0,0,16,16);
           c.fillStyle="#fff"; c.fillRect(5,3,6,10);
           c.fillStyle="#d8b38a"; c.fillRect(4,7,8,7);
@@ -4066,7 +4019,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     return undefined;
   }
 
-  function loadAdminItemsIntoGame(){
+  function loadAdminItemsIntoGame(skipRenderRecipes=false){
     const items = getAdminItems();
 
     inventoryOrder.splice(0, inventoryOrder.length, ...inventoryOrder.filter(id=>!(defs[id] && defs[id].adminItem)));
@@ -4114,7 +4067,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       }
     });
 
-    renderRecipes();
+    if(!skipRenderRecipes) renderRecipes();
   }
 
   function makeSafeId(name,prefix="admin_item"){
