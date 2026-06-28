@@ -1330,6 +1330,19 @@
     padding:4px 7px;
   }
 
+
+  .guidePageBox{max-width:980px;margin:18px auto 40px;background:#202020;border:3px solid #444;border-radius:18px;padding:18px;text-align:left;line-height:1.55}
+  .guideHero{text-align:center;background:#151515;border:2px solid #3a3a3a;border-radius:14px;padding:14px;margin-bottom:14px}
+  .guideHero h2{margin:6px 0;color:#ffd84d;font-size:32px}
+  .guideSection{background:#171717;border:2px solid #333;border-radius:14px;padding:13px;margin:12px 0}
+  .guideSection h3{margin:0 0 8px;color:#00ff99}
+  .guideSection h4{margin:10px 0 5px;color:#ffd84d}
+  .guideStep{background:#101010;border-left:5px solid #ffd84d;border-radius:10px;padding:10px;margin:8px 0}
+  .guideCode{display:inline-block;background:#0b0b0b;border:1px solid #555;color:#ffd84d;border-radius:6px;padding:2px 7px;font-weight:bold}
+  .guideButtonRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+  .guideList{margin:6px 0 6px 22px;padding:0}
+  .guideList li{margin:5px 0}
+
 </style>
 </head>
 <body class="loggedOut">
@@ -1341,7 +1354,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ITEM BUG STABLE FIX VERSION 2.2.4</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ANLEITUNG PAGE FIX VERSION 2.2.5</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1352,6 +1365,7 @@
 
     <button id="btnCreateAccount">Neuen Spieler erstellen</button>
     <button id="btnLoginAccount">Einloggen</button>
+    <button id="btnOpenGuideLogin" class="successBtn">Anleitung lesen</button>
     <button id="btnAdminSecureReset" class="dangerBtn">Alle Accounts löschen außer Admin</button>
 
     <div id="onlineStatus" class="message">Online-Server wird geprüft...</div>
@@ -1359,6 +1373,155 @@
   </div>
 </div>
 
+
+
+<section id="guidePage" class="page" style="display:none">
+  <div class="guidePageBox">
+    <div class="guideHero">
+      <h2>Safinicraft.de Anleitung</h2>
+      <p class="small">Hier steht alles, damit man versteht, wie man sich einloggt und wie das Spiel funktioniert.</p>
+      <div class="guideButtonRow">
+        <button id="btnGuideBackLogin">Zur Startseite</button>
+        <button id="btnGuideStartLogin" class="successBtn">Einloggen / Spieler erstellen</button>
+      </div>
+    </div>
+
+    <div class="guideSection">
+      <h3>1. Startseite und Login</h3>
+      <div class="guideStep">
+        <b>Neuen Spieler erstellen:</b><br>
+        1. Schreibe oben deinen Spielernamen rein.<br>
+        2. Schreibe unten dein Passwort rein.<br>
+        3. Klicke auf <span class="guideCode">Neuen Spieler erstellen</span>.<br>
+        4. Danach kannst du dich mit diesem Namen und Passwort einloggen.
+      </div>
+      <div class="guideStep">
+        <b>Einloggen:</b><br>
+        1. Name eingeben.<br>
+        2. Passwort eingeben.<br>
+        3. Auf <span class="guideCode">Einloggen</span> klicken.<br>
+        Wenn dein Account gelöscht wurde, musst du wieder <span class="guideCode">Neuen Spieler erstellen</span> drücken. Du kannst dann deinen alten Namen und dein altes Passwort wieder benutzen.
+      </div>
+      <div class="guideStep">
+        <b>Admin Login:</b><br>
+        Der Admin heißt normalerweise <span class="guideCode">admin</span>.<br>
+        Das Passwort ist das <span class="guideCode">ADMIN_PASSWORD</span> aus Render. Dieses Passwort soll nicht jeder kennen.
+      </div>
+    </div>
+
+    <div class="guideSection">
+      <h3>2. Spielwelt</h3>
+      <ul class="guideList">
+        <li>In der Spielwelt kannst du laufen, springen, Blöcke abbauen und Blöcke platzieren.</li>
+        <li>Oben sieht man Leben, Hunger, Planet, Server und welches Item in der Hand ist.</li>
+        <li>Wenn du ein Item auswählst, hält dein Spieler es sichtbar in der Hand.</li>
+        <li>Selbst gemalte Items und Blöcke sollen 1:1 so aussehen, wie du sie erstellt hast.</li>
+      </ul>
+      <h4>PC Steuerung</h4>
+      <ul class="guideList">
+        <li><span class="guideCode">A</span> oder Pfeil links: nach links laufen.</li>
+        <li><span class="guideCode">D</span> oder Pfeil rechts: nach rechts laufen.</li>
+        <li><span class="guideCode">W</span>, Pfeil hoch oder Leertaste: springen.</li>
+        <li><span class="guideCode">Linksklick</span>: abbauen, angreifen oder schießen.</li>
+        <li><span class="guideCode">Rechtsklick</span>: Block platzieren.</li>
+      </ul>
+      <h4>Handy Steuerung</h4>
+      <ul class="guideList">
+        <li>Mit <span class="guideCode">Links</span> und <span class="guideCode">Rechts</span> bewegst du dich.</li>
+        <li>Mit <span class="guideCode">Springen</span> springst du.</li>
+        <li>Mit <span class="guideCode">Bauen</span> platzierst du Blöcke.</li>
+        <li>Mit <span class="guideCode">Abbauen</span> baust du Blöcke ab.</li>
+        <li>Danach tippst du auf den Block in der Welt.</li>
+      </ul>
+    </div>
+
+    <div class="guideSection">
+      <h3>3. Inventar und Items</h3>
+      <ul class="guideList">
+        <li>Klicke im Inventar auf ein Item, damit du es auswählst.</li>
+        <li>Das ausgewählte Item steht oben bei <span class="guideCode">In der Hand</span>.</li>
+        <li>Blöcke kannst du platzieren.</li>
+        <li>Werkzeuge helfen beim Abbauen.</li>
+        <li>Waffen wie Pistole, Sturmgewehr, Mini Gun oder Bazooka werden anders gehalten.</li>
+        <li>Essen kannst du benutzen, wenn dein Hunger runtergeht.</li>
+      </ul>
+    </div>
+
+    <div class="guideSection">
+      <h3>4. Crafting</h3>
+      <ul class="guideList">
+        <li>Öffne den Tab <span class="guideCode">Crafting</span>.</li>
+        <li>Dort siehst du Rezepte.</li>
+        <li>Wenn du die nötigen Items hast, kannst du neue Items herstellen.</li>
+        <li>Admin-Items können eigene Rezepte bekommen.</li>
+      </ul>
+    </div>
+
+    <div class="guideSection">
+      <h3>5. Skin malen</h3>
+      <ul class="guideList">
+        <li>Im Tab <span class="guideCode">Skin malen</span> kannst du deinen Spieler anmalen.</li>
+        <li>Du kannst Pixel malen, radieren und speichern.</li>
+        <li>Andere Spieler sehen deinen Skin, wenn du online bist.</li>
+      </ul>
+    </div>
+
+    <div class="guideSection">
+      <h3>6. Freunde und Online</h3>
+      <ul class="guideList">
+        <li>Im Bereich <span class="guideCode">Freunde / Online</span> siehst du andere Spieler.</li>
+        <li>Du kannst Freundschaftsanfragen senden.</li>
+        <li>Wenn Spieler online sind, können sie zusammen auf einem Server spielen.</li>
+        <li>Wenn ein Spieler gelöscht wurde, verschwindet er aus den Listen.</li>
+      </ul>
+    </div>
+
+    <div class="guideSection">
+      <h3>7. Admin Bereich</h3>
+      <ul class="guideList">
+        <li>Nur der Admin darf den Admin-Bereich benutzen.</li>
+        <li>Der Admin kann Spieler bannen, Creative geben, Admin geben oder entfernen.</li>
+        <li>Der Admin kann Spieler löschen.</li>
+        <li>Der Admin kann Items geben oder entfernen.</li>
+      </ul>
+      <div class="guideStep">
+        <b>Spieler löschen:</b><br>
+        Admin → Spieler suchen → <span class="guideCode">Spieler löschen</span> drücken.<br>
+        Danach kann sich der Spieler nicht mehr einloggen. Er muss wieder <span class="guideCode">Neuen Spieler erstellen</span> drücken und kann seinen alten Namen + Passwort wieder benutzen.
+      </div>
+    </div>
+
+    <div class="guideSection">
+      <h3>8. Admin Items erstellen</h3>
+      <ul class="guideList">
+        <li>Im Admin-Bereich kannst du ein Item malen.</li>
+        <li>Wähle den Item-Typ: Waffe, Werkzeug, Block, Essen oder Material.</li>
+        <li>Wähle, wie es gehalten wird: Block, Pistole, Sturmgewehr, Mini Gun, Bazooka usw.</li>
+        <li>Wenn du einen Block malst, wird er beim Platzieren 1:1 angezeigt.</li>
+        <li>Wenn du eine Waffe malst, wird sie passend in der Hand gehalten.</li>
+      </ul>
+    </div>
+
+    <div class="guideSection">
+      <h3>9. Wenn etwas nicht klappt</h3>
+      <ul class="guideList">
+        <li>Auf iMac neu laden ohne Cache: <span class="guideCode">Cmd + Shift + R</span>.</li>
+        <li>Console öffnen: <span class="guideCode">Cmd + Option + I</span> und dann <span class="guideCode">Console</span>.</li>
+        <li>Wenn die neue Version nicht auf der Login-Seite steht, wurden die Dateien falsch hochgeladen oder Render ist noch nicht fertig.</li>
+        <li>Für GitHub immer nur diese 3 Dateien ersetzen: <span class="guideCode">index.html</span>, <span class="guideCode">server.js</span>, <span class="guideCode">package.json</span>.</li>
+      </ul>
+    </div>
+
+    <div class="guideHero">
+      <h3>Kurze Zusammenfassung</h3>
+      <p>Erst Spieler erstellen, dann einloggen. Im Spiel Item auswählen, laufen, bauen und abbauen. Admin kann Spieler löschen, Items erstellen und Items geben.</p>
+      <div class="guideButtonRow">
+        <button id="btnGuideBackLogin2">Zur Startseite</button>
+        <button id="btnGuideTop">Nach oben</button>
+      </div>
+    </div>
+  </div>
+</section>
 
 <div class="topbar">
   <button id="tabWorld" class="active">Spielwelt</button>
@@ -6782,6 +6945,33 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
   }
 
+
+  function openGuidePage(){
+    const login=document.getElementById("loginPage");
+    const guide=document.getElementById("guidePage");
+    if(login) login.style.display="none";
+    if(guide){
+      document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+      guide.classList.add("active");
+      guide.style.display="block";
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+  }
+
+  function closeGuidePage(){
+    const guide=document.getElementById("guidePage");
+    const login=document.getElementById("loginPage");
+    if(guide){
+      guide.classList.remove("active");
+      guide.style.display="none";
+    }
+    if(login){
+      login.style.display="";
+      login.classList.add("active");
+    }
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
   async function loginAccount(){
     const name = document.getElementById("loginName").value.trim();
     const pass = document.getElementById("loginPass").value;
@@ -7698,6 +7888,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
   document.getElementById("btnCreateAccount").onclick = createAccount;
   document.getElementById("btnLoginAccount").onclick = loginAccount;
+
+  document.getElementById("btnOpenGuideLogin")?.addEventListener("click", openGuidePage);
+  document.getElementById("btnGuideBackLogin")?.addEventListener("click", closeGuidePage);
+  document.getElementById("btnGuideStartLogin")?.addEventListener("click", closeGuidePage);
+  document.getElementById("btnGuideBackLogin2")?.addEventListener("click", closeGuidePage);
+  document.getElementById("btnGuideTop")?.addEventListener("click", ()=>window.scrollTo({top:0,behavior:"smooth"}));
+
   document.getElementById("btnAdminSecureReset")?.addEventListener("click", adminSecureReset);
   document.getElementById("loginName")?.addEventListener("keydown",e=>{if(e.key==="Enter") loginAccount();});
   document.getElementById("loginPass")?.addEventListener("keydown",e=>{if(e.key==="Enter") loginAccount();});

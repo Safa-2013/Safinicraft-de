@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.2.4",
-  "description": "Safinicraft Item Bug Stable Fix",
+  "version": "2.2.5",
+  "description": "Safinicraft Anleitung Page Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
