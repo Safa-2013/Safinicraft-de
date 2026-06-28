@@ -1252,6 +1252,48 @@
     margin:5px 0;
   }
 
+
+  .mobileDpadButtons{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:6px;
+  }
+  .mobileSmallBtn{
+    min-width:62px;
+    min-height:48px;
+    border-radius:12px;
+    border:3px solid #666;
+    background:#2a2a2a;
+    color:#fff;
+    font-weight:bold;
+    font-size:16px;
+    touch-action:none;
+    user-select:none;
+  }
+  .mobileSmallBtn:active{
+    transform:scale(.96);
+    background:#ffd84d;
+    color:#111;
+  }
+  .mobileActionBtn{
+    background:#17456b;
+    border-color:#5ab2ff;
+  }
+  .mobileBreakBtn{
+    background:#5a1f1f;
+    border-color:#ff7777;
+  }
+  @media (hover:none), (pointer:coarse), (max-width:1100px){
+    body.loggedIn #worldPage.active .mobileControls{
+      display:flex !important;
+    }
+    #game{
+      touch-action:none;
+    }
+  }
+
 </style>
 </head>
 <body class="loggedOut">
@@ -1262,7 +1304,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">SECURE ADMIN LOGIN VERSION 2.2.0</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">MOBILE CONTROL + DELETE PLAYER FIX VERSION 2.2.1</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1361,9 +1403,15 @@
 
     <div class="mobileMiddleHint">
       Handy-Steuerung:<br>
-      kurzer Tipp mit Block = platzieren<br>
-      gedrückt halten mit Hand/Werkzeug = abbauen<br>
+      <b>Links/Rechts</b> mit Buttons oder Joystick<br>
+      <b>Bauen</b> = tippen/platzieren · <b>Abbauen</b> = tippen/abbauen<br>
       Modus: <span id="mobileModeDisplay" class="mobileModeDisplay">Tippen/Bauen</span>
+      <div class="mobileDpadButtons">
+        <button id="mobileLeftBtn" class="mobileSmallBtn">⬅</button>
+        <button id="mobileRightBtn" class="mobileSmallBtn">➡</button>
+        <button id="mobilePlaceBtn" class="mobileSmallBtn mobileActionBtn">Bauen</button>
+        <button id="mobileBreakBtn" class="mobileSmallBtn mobileBreakBtn">Abbauen</button>
+      </div>
     </div>
 
     <button id="mobileJumpBtn" class="mobileJumpBig">⬆<br>Springen</button>
@@ -1899,6 +1947,7 @@
 <script>
   const game = document.getElementById("game");
   const ctx = game.getContext("2d");
+  game.style.touchAction = "none";
   const skinCanvas = document.getElementById("skinCanvas");
   const sctx = skinCanvas.getContext("2d");
 
@@ -1913,6 +1962,7 @@
   let selectedChatFriend = null;
   let voiceStream = null;
   let currentServerId = null;
+  let adminSessionPassword = "";
   let mobileActionMode = "place";
   let joystickState = {moveTouch:null,actionTouch:null};
   let canvasHold = {active:false,broke:false,timer:null,interval:null,event:null,target:null};
@@ -3061,11 +3111,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const r=game.getBoundingClientRect(),sx=game.width/r.width,sy=game.height/r.height;
     return {x:Math.floor((camX+(e.clientX-r.left)*sx)/cell),y:Math.floor((camY+(e.clientY-r.top)*sy)/cell)};
   }
-  game.addEventListener("contextmenu",e=>e.preventDefault());
-  function handleCanvasAction(e){
-    if(e.preventDefault) e.preventDefault();
+  game.addEventListener("contextmenu",e=>e.preventDefault());  function handleCanvasAction(e){
+    if(e && e.preventDefault) e.preventDefault();
 
-    const isMobileAction = !!e.mobileAction || (typeof touchMode!=="undefined" && touchMode);
+    const isMobileAction = !!(e && e.mobileAction);
     const p=pointerCell(e);
     if(!inBounds(p.x,p.y))return;
 
@@ -3088,10 +3137,21 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       return;
     }
 
-    // HANDY:
-    // kurzer Tap mit Block = platzieren
-    // Halten mit Hand/Werkzeug = abbauen
+    // HANDY: Bauen/Abbauen Modus über Buttons
     if(isMobileAction){
+      if(e.mobileAction==="break"){
+        if(mob){
+          attackMob(mob);
+          renderAll();
+          return;
+        }
+
+        if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
+        breakBlock(p.x,p.y);
+        renderAll();
+        return;
+      }
+
       if(e.mobileAction==="attack"){
         if(defs[selected]&&defs[selected].tool==="pistol"&&(creativeMode||(inv[selected]||0)>0)){
           shoot(clickX,clickY);
@@ -3106,6 +3166,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         return;
       }
 
+      // place/default
       if(defs[selected] && defs[selected].place){
         if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
         placeBlock(p.x,p.y);
@@ -3119,7 +3180,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         return;
       }
 
-      msg("Handy: kurz mit Block tippen = platzieren. Gedrückt halten mit Hand/Werkzeug = abbauen.");
+      if(dist>8&&!creativeMode){msg("Zu weit weg. Geh näher ran.");return}
+      breakBlock(p.x,p.y);
+      renderAll();
       return;
     }
 
@@ -4358,6 +4421,62 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     return ids.filter(id=>defs[id] && id!=="air").map(id=>'<option value="'+escapeHtml(id)+'">'+escapeHtml(defs[id].name)+'</option>').join("");
   }
 
+  async function adminDeletePlayerAccount(name){
+    if(!isAdmin()) return;
+
+    if(!name || name==="admin" || name===currentUser){
+      msg("Admin kann sich selbst nicht löschen.");
+      return;
+    }
+
+    const ok = confirm("Spieler '"+name+"' wirklich löschen? Danach kann der Name wieder neu erstellt werden.");
+    if(!ok) return;
+
+    let pass = adminSessionPassword || "";
+    if(!pass){
+      pass = prompt("Admin-Passwort eingeben, um Spieler zu löschen:") || "";
+    }
+
+    try{
+      const res = await fetch("/api/admin/deleteAccount",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({target:name, pass})
+      });
+      const data = await res.json();
+
+      if(!data.ok){
+        msg(data.error || "Spieler konnte nicht gelöscht werden.");
+        return;
+      }
+
+      const removeFrom = (obj)=>{
+        if(obj && obj[name]) delete obj[name];
+        return obj || {};
+      };
+
+      onlineAccountsCache = removeFrom(onlineAccountsCache || {});
+      adminDirectAccountsCache = removeFrom(adminDirectAccountsCache || {});
+      const local = getAccounts();
+      delete local[name];
+      saveAccounts(local);
+      backupAccountsLocally(local);
+
+      if(data.accounts){
+        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), data.accounts || {});
+        adminDirectAccountsCache = onlineAccountsCache;
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+        backupAccountsLocally(onlineAccountsCache);
+      }
+
+      renderAdminPlayersList();
+      renderFriendsPage();
+      msg("Spieler gelöscht: "+name+". Der Name kann neu erstellt werden.");
+    }catch(e){
+      msg("Server-Fehler beim Löschen.");
+    }
+  }
+
   function renderAdminPlayersList(){
     const box=document.getElementById("adminPlayersList");
     if(!box) return;
@@ -4450,6 +4569,15 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       creBtn.className="adminMiniBtn";
       creBtn.onclick=()=>adminSetCreative(name,!creative);
       actions.appendChild(creBtn);
+
+      if(name !== "admin" && name !== currentUser){
+        const delBtn=document.createElement("button");
+        delBtn.textContent="Spieler löschen";
+        delBtn.className="dangerBtn adminMiniBtn";
+        delBtn.id="deletePlayer_"+idx;
+        delBtn.onclick=()=>adminDeletePlayerAccount(name);
+        actions.appendChild(delBtn);
+      }
 
       card.appendChild(actions);
 
@@ -5538,21 +5666,61 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("btnAdminItemTextDraw")?.addEventListener("click",drawTextOnAdminItem);
   document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));
 
-  function holdButton(id, keyName){
+  function bindMobileHoldKey(id, keyName){
+    const el=document.getElementById(id);
+    if(!el) return;
+
+    const start=(e)=>{
+      if(e && e.preventDefault) e.preventDefault();
+      keys[keyName]=true;
+      if(game && game.focus) game.focus();
+    };
+
+    const end=(e)=>{
+      if(e && e.preventDefault) e.preventDefault();
+      keys[keyName]=false;
+    };
+
+    el.addEventListener("pointerdown",start,{passive:false});
+    el.addEventListener("pointerup",end,{passive:false});
+    el.addEventListener("pointercancel",end,{passive:false});
+    el.addEventListener("pointerleave",end,{passive:false});
+    el.addEventListener("touchstart",start,{passive:false});
+    el.addEventListener("touchend",end,{passive:false});
+    el.addEventListener("touchcancel",end,{passive:false});
+  }
+
+  function bindMobileTap(id, fn){
+    const el=document.getElementById(id);
+    if(!el) return;
+    const run=(e)=>{
+      if(e && e.preventDefault) e.preventDefault();
+      if(game && game.focus) game.focus();
+      fn();
+    };
+    el.addEventListener("pointerdown",run,{passive:false});
+    el.addEventListener("touchstart",run,{passive:false});
+    el.addEventListener("click",run);
+  }  function holdButton(id, keyName){
     const el = document.getElementById(id);
     if(!el) return;
-    const start = (e)=>{e.preventDefault(); keys[keyName]=true;};
-    const end = (e)=>{e.preventDefault(); keys[keyName]=false;};
+    const start = (e)=>{if(e&&e.preventDefault)e.preventDefault(); keys[keyName]=true; if(game&&game.focus)game.focus();};
+    const end = (e)=>{if(e&&e.preventDefault)e.preventDefault(); keys[keyName]=false;};
+    el.addEventListener("pointerdown", start, {passive:false});
+    el.addEventListener("pointerup", end, {passive:false});
+    el.addEventListener("pointercancel", end, {passive:false});
+    el.addEventListener("pointerleave", end, {passive:false});
     el.addEventListener("touchstart", start, {passive:false});
     el.addEventListener("touchend", end, {passive:false});
+    el.addEventListener("touchcancel", end, {passive:false});
     el.addEventListener("mousedown", start);
     el.addEventListener("mouseup", end);
     el.addEventListener("mouseleave", end);
-  }
-  function setMobileAction(mode){
+  }  function setMobileAction(mode){
     mobileActionMode = mode;
     const display = document.getElementById("mobileModeDisplay");
-    if(display) display.textContent = mode==="break" ? "Gedrückt halten = Abbauen" : "Tippen/Bauen";
+    if(display) display.textContent = mode==="break" ? "Tippen = Abbauen" : "Tippen = Bauen/Platzieren";
+    msg(mode==="break" ? "Handy-Modus: Abbauen aktiv." : "Handy-Modus: Bauen aktiv.");
   }
 
   function resetMoveKeys(){
@@ -5638,6 +5806,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   holdButton("mobileJumpBtn","jump");
+  bindMobileHoldKey("mobileLeftBtn","left");
+  bindMobileHoldKey("mobileRightBtn","right");
+  bindMobileTap("mobilePlaceBtn",()=>setMobileAction("place"));
+  bindMobileTap("mobileBreakBtn",()=>setMobileAction("break"));
   setupJoystick("moveJoystick","moveKnob");  function copyInventory(){
     const data={};
     Object.keys(inv || {}).forEach(id=>{
@@ -6359,6 +6531,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
           localStorage.setItem("safinicraft_world_settings", JSON.stringify(onlineWorldSettingsCache));
         }
 
+        if(name.toLowerCase()==="admin") adminSessionPassword = pass;
         enterGameAfterLogin(name, result.account, result.state);
         return;
       }else if(onlineMode){
@@ -6448,6 +6621,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
 
     currentUser = null;
+    adminSessionPassword = "";
     selectedChatFriend = null;
     document.body.classList.remove("loggedIn");
     document.body.classList.add("loggedOut");

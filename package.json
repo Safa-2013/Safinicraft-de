@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.2.0",
-  "description": "Safinicraft Secure Admin Login",
+  "version": "2.2.1",
+  "description": "Safinicraft Mobile Control and Delete Player Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -359,6 +359,54 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/admin/deleteAccount" && req.method === "POST"){
+    const data = await readBody(req);
+    const target = String(data.target || "").trim();
+    const pass = String(data.pass || "");
+
+    ensureAdmin();
+
+    if(pass !== adminPassword()){
+      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+      return;
+    }
+
+    if(!target || target === "admin"){
+      sendJson(res, {ok:false, error:"Admin kann nicht gelöscht werden."});
+      return;
+    }
+
+    if(state.accounts && state.accounts[target]){
+      delete state.accounts[target];
+    }
+
+    Object.keys(state.accounts || {}).forEach(name=>{
+      const acc = state.accounts[name];
+      ["friends","friendRequests","sentRequests","gameInvites","unfriended"].forEach(key=>{
+        if(Array.isArray(acc[key])){
+          acc[key] = acc[key].filter(x=>{
+            if(typeof x === "string") return x !== target;
+            if(x && typeof x === "object") return x.from !== target && x.to !== target && x.name !== target;
+            return true;
+          });
+        }
+      });
+    });
+
+    Object.keys(state.messages || {}).forEach(key=>{
+      if(key.includes(target)){
+        delete state.messages[key];
+      }
+    });
+
+    saveState();
+    broadcastState();
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, accounts:clean.accounts || {}, deleted:target});
+    return;
+  }
+
   if(req.url === "/api/admin/giveItem" && req.method === "POST"){
     const data = await readBody(req);
     const target = String(data.target || "").trim();
@@ -404,6 +452,12 @@ const server = http.createServer(async (req,res)=>{
 
       // WICHTIG: Ping darf KEINEN neuen Account ohne Passwort erstellen.
       // Neue Spieler müssen über /api/createAccount erstellt werden.
+      if(name !== "admin" && !state.accounts[name]){
+        const cleanMissing = sanitizeState();
+        sendJson(res, {ok:false, deleted:true, error:"Account wurde gelöscht. Bitte neuen Spieler erstellen.", accounts:cleanMissing.accounts || {}});
+        return;
+      }
+
       if(state.accounts[name]){
         const cur = state.accounts[name] || {};
         const oldPass = cur.pass || inc.pass || "";
@@ -701,6 +755,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de SECURE ADMIN LOGIN 2.2.0 läuft auf Port " + PORT);
+  console.log("Safinicraft.de MOBILE CONTROL + DELETE PLAYER FIX 2.2.1 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
