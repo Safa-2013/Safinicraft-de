@@ -1343,6 +1343,39 @@
   .guideList{margin:6px 0 6px 22px;padding:0}
   .guideList li{margin:5px 0}
 
+
+  .ghostPanel{
+    display:none;
+    background:#101820;
+    border:3px solid #4dd0ff;
+    border-radius:14px;
+    padding:10px;
+    margin:10px auto;
+    max-width:960px;
+    text-align:left;
+  }
+  .ghostPanel b{color:#4dd0ff}
+  .ghostPanel .ghostButtons{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .ghostActivity{
+    max-height:150px;
+    overflow:auto;
+    background:#080b0f;
+    border:2px solid #263a4a;
+    border-radius:10px;
+    padding:8px;
+    font-size:13px;
+  }
+  .adminItemGiveSelect{
+    width:100%;
+    box-sizing:border-box;
+    padding:9px;
+    margin:7px 0;
+    border-radius:8px;
+    border:2px solid #444;
+    background:#0b0b0b;
+    color:#fff;
+  }
+
 </style>
 </head>
 <body class="loggedOut">
@@ -1354,7 +1387,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ANLEITUNG PAGE FIX VERSION 2.2.5</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN CONTROLS + GHOST FIX VERSION 2.2.6</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1593,6 +1626,19 @@
     </div>
   </div>
   <div id="msg" class="message"></div>
+
+  <div id="ghostPanel" class="ghostPanel">
+    <b>Admin Geist-Modus</b>
+    <div id="ghostStatusText" class="small">Nicht aktiv.</div>
+    <div class="ghostButtons">
+      <button id="btnGhostVisibleToggle">Sichtbar machen</button>
+      <button id="btnGhostHitTarget" class="dangerBtn">Spieler schlagen</button>
+      <button id="btnGhostExit">Geist-Modus verlassen</button>
+    </div>
+    <div class="small">Unsichtbar = normale Spieler sehen dich nicht. Du siehst ihre Live-Aktivität und ihre Block-Aktionen.</div>
+    <div id="ghostActivityBox" class="ghostActivity">Noch keine Aktivität.</div>
+  </div>
+
   <div class="mobileControls">
     <div id="moveJoystick" class="joystickWrap">
       <div class="joystickLabel">Bewegung</div>
@@ -2181,6 +2227,10 @@
   let voiceStream = null;
   let currentServerId = null;
   let adminSessionPassword = "";
+  let adminGhostMode = false;
+  let adminGhostTarget = null;
+  let adminGhostVisible = false;
+  let lastAdminGhostEventTime = 0;
   let mobileActionMode = "place";
   let joystickState = {moveTouch:null,actionTouch:null};
   let canvasHold = {active:false,broke:false,timer:null,interval:null,event:null,target:null};
@@ -2576,6 +2626,7 @@
       drawBlock(x*cell-camX,y*cell-camY,b);
     }
     drawBlockEvents();
+    if(adminGhostMode) renderGhostActivityPanel();
     vehicles.forEach(drawVehicle);
     mobs.forEach(drawMob);
     bullets.forEach(drawBullet);
@@ -2595,7 +2646,9 @@
     if(b==="fire")return tick%12<4?"#ff2b00":tick%12<8?"#ff9800":"#ffeb3b";
     if(b==="glass")return"rgba(191,246,255,.72)";
     return defs[b].color;
-  }  function drawBlock(px,py,b){
+  }
+
+  function drawBlock(px,py,b){
     const def=defs[b];
     if(def && Array.isArray(def.icon)){
       drawPixelMatrixScaled(ctx,def.icon,px,py,cell,cell,false);
@@ -2758,6 +2811,7 @@
       if(name===currentUser) return;
       const acc = accounts[name];
       if(!acc || !acc.live) return;
+      if(acc.live.ghostInvisible && !isAdmin()) return;
       if(acc.live.serverId !== currentServerId) return;
       if(acc.live.planet !== currentPlanet) return;
       if(Date.now() - (acc.live.lastSeen||0) > 35000) return;
@@ -2922,7 +2976,9 @@
     }
   }
 
-  function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderCraftingTable();renderAllCraftItems();renderRecipes();renderSkinCanvas();draw()}  function renderInventory(targetId){
+  function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderCraftingTable();renderAllCraftItems();renderRecipes();renderSkinCanvas();draw()}
+
+  function renderInventory(targetId){
     loadAdminItemsIntoGame(true);
 
     const box=document.getElementById(targetId);
@@ -3079,7 +3135,7 @@
   }
 
   function getAllExistingItemIds(){
-    loadAdminItemsIntoGame();
+    loadAdminItemsIntoGame(true);
     const ids=new Set();
     inventoryOrder.forEach(id=>{if(defs[id])ids.add(id);});
     Object.keys(defs).forEach(id=>ids.add(id));
@@ -3493,6 +3549,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       inv[drop]=(inv[drop]||0)+1;
       mobs=mobs.filter(mm=>mm!==m);
       msg(md.name+" besiegt → "+defs[drop].name);
+      if(adminGhostMode) adminGhostAction("mobkill",0,"Der Admin-Geist hat einen Mob in deiner Nähe besiegt.");
     }
   }
 
@@ -3856,6 +3913,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     setBlock(px,py,selected);
     if(!creativeMode)inv[selected]--;
     addServerBlockEvent('place',selected,px,py);
+    if(adminGhostMode) adminGhostAction('place',0,'Der Admin-Geist hat in deiner Welt '+defs[selected].name+' platziert.');
     recordModBlockChange('place', selected, px, py);
     saveAccountState();
     msg(defs[selected].name+(target==="water"?" als Brücke über Wasser":"")+" gesetzt.");
@@ -3864,7 +3922,8 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     let b=world[y][x];if(b==="air")return;
     if(b==="secret_code"){msg("Geheimer Code gefunden: 2013");return;}
     let check=creativeMode ? {ok:true} : canBreak(b,selected);if(!check.ok){msg(check.reason);return}
-    let drop=getDrop(b);if(drop)inv[drop]=(inv[drop]||0)+1;player.lastBreakTick=tick;addServerBlockEvent('break',b,x,y);recordModBlockChange('break',b,x,y);setBlock(x,y,"air");saveAccountState();msg(defs[b].name+" abgebaut"+(drop?" → "+defs[drop].name:"")+".")
+    let drop=getDrop(b);if(drop)inv[drop]=(inv[drop]||0)+1;player.lastBreakTick=tick;addServerBlockEvent('break',b,x,y);
+    if(adminGhostMode) adminGhostAction('break',1,'Der Admin-Geist hat in deiner Nähe '+defs[b].name+' abgebaut.');recordModBlockChange('break',b,x,y);setBlock(x,y,"air");saveAccountState();msg(defs[b].name+" abgebaut"+(drop?" → "+defs[drop].name:"")+".")
   }
   function canBreak(b,tool){
     if(b==="bedrock")return{ok:false,reason:"Bedrock kann man nicht abbauen."};
@@ -4171,7 +4230,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     if(s.gravity && planets.earth){
       Object.keys(planets).forEach(p=>planets[p].gravity = s.gravity);
     }
-  }  function adminItemToolFromFunction(fn,type){
+  }
+
+  function adminItemToolFromFunction(fn,type){
     if(fn==="pickaxe") return "pickaxe";
     if(fn==="axe") return "axe";
     if(fn==="shovel") return "shovel";
@@ -4356,7 +4417,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
 
     renderAdminRecipeGrid();
-  }  function createAdminItem(name,type,color,icon,options={}){
+  }
+
+  function createAdminItem(name,type,color,icon,options={}){
     if(!isAdmin()){msg("Nur Admin darf Items erstellen.");return null;}
     if(!name || !name.trim()){msg("Item braucht einen Namen.");return null;}
 
@@ -4630,11 +4693,17 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   async function adminSyncInventoryChangeToServer(name,itemId,amount,mode){
     if(!isAdmin() || !isRealWebsiteMode()) return false;
 
+    const pass = getAdminActionPassword();
+    if(!pass){
+      msg("Admin-Passwort fehlt.");
+      return false;
+    }
+
     try{
       const res=await fetch("/api/admin/giveItem",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({target:name,itemId,amount,mode})
+        body:JSON.stringify({target:name,itemId,amount,mode,pass})
       });
       const data=await res.json();
 
@@ -4645,6 +4714,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         backupAccountsLocally(onlineAccountsCache);
         renderAdminPlayersList();
         renderFriendsPage();
+        msg((mode==="remove"?"Entfernt: ":"Gegeben: ")+defs[itemId].name+" x"+amount+" → "+name);
+      }else{
+        msg((data && data.error) || "Item konnte nicht gegeben werden.");
       }
 
       return !!(data && data.ok);
@@ -4652,7 +4724,54 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       msg("Item wurde lokal geändert, aber Server-Sync ist fehlgeschlagen.");
       return false;
     }
-  }  function adminSaveAccountsAndRefresh(accounts, message){
+  }
+  function getAdminActionPassword(){
+    if(adminSessionPassword) return adminSessionPassword;
+    const p = prompt("Admin-Passwort eingeben:") || "";
+    if(p) adminSessionPassword = p;
+    return p;
+  }
+
+  async function adminPatchAccountOnServer(name, patch, message){
+    if(!isAdmin()) return false;
+
+    const pass = getAdminActionPassword();
+    if(!pass){
+      msg("Admin-Passwort fehlt.");
+      return false;
+    }
+
+    try{
+      const res = await fetch("/api/admin/updateAccount",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({target:name, pass, patch})
+      });
+      const data = await res.json();
+
+      if(!data.ok){
+        msg(data.error || "Admin-Aktion fehlgeschlagen.");
+        return false;
+      }
+
+      if(data.accounts){
+        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), data.accounts || {});
+        adminDirectAccountsCache = onlineAccountsCache;
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+        backupAccountsLocally(onlineAccountsCache);
+      }
+
+      renderAdminPlayersList();
+      renderFriendsPage();
+      if(message) msg(message);
+      return true;
+    }catch(e){
+      msg("Server-Fehler bei Admin-Aktion.");
+      return false;
+    }
+  }
+
+  function adminSaveAccountsAndRefresh(accounts, message){
     const merged = mergeAccountObjects(getAllKnownAccounts(), accounts || {});
     onlineAccountsCache = merged;
     adminDirectAccountsCache = merged;
@@ -4663,39 +4782,50 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     if(message) msg(message);
   }
 
-  function adminSetRole(name, role){
+  async function adminSetRole(name, role){
     if(!isAdmin()) return;
-    const accounts=getAccounts();
-    if(!accounts[name]) return;
+    const accounts=getAdminVisibleAccounts();
+    if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
     if(name===currentUser && role!=="admin"){
       msg("Du kannst dir selbst den Admin-Modus nicht entfernen.");
       return;
     }
+
     accounts[name].role = role;
     accounts[name].adminModeGranted = role==="admin";
-    adminSaveAccountsAndRefresh(accounts, name+" ist jetzt "+(role==="admin"?"Admin":"normaler Spieler")+".");
+    adminSaveAccountsAndRefresh(accounts, name+" wird aktualisiert...");
+
+    await adminPatchAccountOnServer(name,{
+      role,
+      adminModeGranted: role==="admin"
+    }, name+" ist jetzt "+(role==="admin"?"Admin":"normaler Spieler")+".");
   }
 
-  function adminSetCreative(name, value){
+  async function adminSetCreative(name, value){
     if(!isAdmin()) return;
-    const accounts=getAccounts();
-    if(!accounts[name]) return;
+    const accounts=getAdminVisibleAccounts();
+    if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
+
     accounts[name].creativeGrant = !!value;
     accounts[name].creativeUntil = 0;
-    if(!value){
-      accounts[name].creativeRemovedAt = Date.now();
-    }
-    adminSaveAccountsAndRefresh(accounts, value ? name+" hat jetzt Creative Mode." : name+" hat keinen Creative Mode mehr.");
+    if(!value) accounts[name].creativeRemovedAt = Date.now();
+    adminSaveAccountsAndRefresh(accounts, name+" wird aktualisiert...");
+
+    await adminPatchAccountOnServer(name,{
+      creativeGrant: !!value,
+      creativeUntil: 0,
+      creativeRemovedAt: !value ? Date.now() : 0
+    }, value ? name+" hat jetzt Creative Mode." : name+" hat keinen Creative Mode mehr.");
   }
 
   function adminToggleBan(name){
     adminBanFor(name,0,"permanent");
   }
 
-  function adminBanFor(name, amount, unit){
+  async function adminBanFor(name, amount, unit){
     if(!isAdmin()) return;
-    const accounts=getAccounts();
-    if(!accounts[name]) return;
+    const accounts=getAdminVisibleAccounts();
+    if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
     if(name===currentUser){
       msg("Du kannst dich nicht selbst bannen.");
       return;
@@ -4710,25 +4840,39 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     accounts[name].banned = true;
     accounts[name].bannedUntil = until;
-    accounts[name].bannedReason = amount>0 ? ("Zeitbann: "+amount+" "+unit) : "permanent";
-    accounts[name].online = false;
-    adminSaveAccountsAndRefresh(accounts, name+" wurde gebannt bis: "+adminTimeText(until));
+    accounts[name].bannedReason = until ? "Zeit-Bann" : "Permanent-Bann";
+    adminSaveAccountsAndRefresh(accounts, name+" wird gebannt...");
+
+    await adminPatchAccountOnServer(name,{
+      banned:true,
+      bannedUntil:until,
+      bannedReason:until ? "Zeit-Bann" : "Permanent-Bann"
+    }, name+" wurde gebannt bis: "+adminTimeText(until));
   }
 
-  function adminUnban(name){
+  async function adminUnban(name){
     if(!isAdmin()) return;
-    const accounts=getAccounts();
-    if(!accounts[name]) return;
-    accounts[name].banned = false;
-    accounts[name].bannedUntil = 0;
-    accounts[name].bannedReason = "";
-    adminSaveAccountsAndRefresh(accounts, name+" wurde entbannt.");
-  }  function adminGiveItemToPlayer(name, itemValue, amount){
+    const accounts=getAdminVisibleAccounts();
+    if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
+
+    accounts[name].banned=false;
+    accounts[name].bannedUntil=0;
+    accounts[name].bannedReason="";
+    adminSaveAccountsAndRefresh(accounts, name+" wird entbannt...");
+
+    await adminPatchAccountOnServer(name,{
+      banned:false,
+      bannedUntil:0,
+      bannedReason:""
+    }, name+" wurde entbannt.");
+  }
+
+  function adminGiveItemToPlayer(name, itemValue, amount){
     if(!isAdmin()) return;
 
     const itemId=adminResolveItemInput(itemValue);
     if(!itemId || !defs[itemId]){
-      msg("Item nicht gefunden. Schreibe die Item-ID oder wähle es aus dem Menü.");
+      msg("Item nicht gefunden. Wähle es aus der Liste oder schreibe die Item-ID.");
       return;
     }
 
@@ -4744,12 +4888,14 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     adminSaveAccountsAndRefresh(accounts, name+" bekommt "+defs[itemId].name+" x"+amount+".");
     adminSyncInventoryChangeToServer(name,itemId,amount,"give");
-  }  function adminRemoveItemFromPlayer(name, itemValue, amount){
+  }
+
+  function adminRemoveItemFromPlayer(name, itemValue, amount){
     if(!isAdmin()) return;
 
     const itemId=adminResolveItemInput(itemValue);
     if(!itemId || !defs[itemId]){
-      msg("Item nicht gefunden. Schreibe die Item-ID oder wähle es aus dem Menü.");
+      msg("Item nicht gefunden. Wähle es aus der Liste oder schreibe die Item-ID.");
       return;
     }
 
@@ -4767,27 +4913,143 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     adminSyncInventoryChangeToServer(name,itemId,amount,"remove");
   }
 
-  function adminGhostVisit(name){
-    if(!isAdmin()) return;
-    const accounts=getAccounts();
-    const acc=accounts[name];
-    if(!acc || !acc.live){
-      msg("Keine Live-Welt von "+name+" gefunden.");
+
+  function updateGhostPanel(){
+    const panel=document.getElementById("ghostPanel");
+    if(!panel) return;
+    panel.style.display = adminGhostMode ? "block" : "none";
+
+    const text=document.getElementById("ghostStatusText");
+    if(text){
+      text.textContent = adminGhostMode
+        ? ("Du beobachtest "+adminGhostTarget+" | "+(adminGhostVisible?"SICHTBAR für Spieler":"UNSICHTBAR für Spieler"))
+        : "Nicht aktiv.";
+    }
+
+    const btn=document.getElementById("btnGhostVisibleToggle");
+    if(btn) btn.textContent = adminGhostVisible ? "Unsichtbar machen" : "Sichtbar machen";
+
+    renderGhostActivityPanel();
+  }
+
+  function renderGhostActivityPanel(){
+    const box=document.getElementById("ghostActivityBox");
+    if(!box) return;
+    if(!adminGhostMode || !adminGhostTarget){
+      box.textContent="Noch keine Aktivität.";
       return;
     }
+
+    const server=getActiveServer();
+    const events=(server && server.blockEvents ? server.blockEvents : [])
+      .filter(ev=>ev.from===adminGhostTarget || ev.from==="admin")
+      .slice(-12)
+      .reverse();
+
+    if(events.length===0){
+      box.innerHTML="<span class='small'>Noch keine Block-Aktivität sichtbar.</span>";
+      return;
+    }
+
+    box.innerHTML=events.map(ev=>{
+      const verb=ev.action==="break"?"abgebaut":"platziert";
+      const from=ev.from===currentUser?"Du":ev.from;
+      return "<div>• "+escapeHtml(from)+" hat "+escapeHtml(ev.blockName||ev.block)+" "+verb+" bei X:"+ev.x+" Y:"+ev.y+"</div>";
+    }).join("");
+  }
+
+  function setGhostVisible(value){
+    adminGhostVisible=!!value;
+    updateGhostPanel();
+    saveAccountState();
+    msg(adminGhostVisible ? "Geist ist jetzt sichtbar für Spieler." : "Geist ist jetzt unsichtbar.");
+  }
+
+  function exitGhostMode(){
+    adminGhostMode=false;
+    adminGhostTarget=null;
+    adminGhostVisible=false;
+    updateGhostPanel();
+    saveAccountState();
+    msg("Geist-Modus verlassen.");
+  }
+
+  async function adminGhostAction(action, damage=0, text=""){
+    if(!isAdmin() || !adminGhostMode || !adminGhostTarget) return false;
+
+    const pass=getAdminActionPassword();
+    if(!pass) return false;
+
+    try{
+      const res=await fetch("/api/admin/ghostAction",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({target:adminGhostTarget,pass,action,damage,text})
+      });
+      const data=await res.json();
+      if(data.ok && data.accounts){
+        onlineAccountsCache=mergeAccountObjects(getAllKnownAccounts(), data.accounts || {});
+        adminDirectAccountsCache=onlineAccountsCache;
+        localStorage.setItem("safinicraft_accounts",JSON.stringify(onlineAccountsCache));
+        backupAccountsLocally(onlineAccountsCache);
+        renderGhostActivityPanel();
+        return true;
+      }
+      msg((data&&data.error)||"Geist-Aktion fehlgeschlagen.");
+    }catch(e){
+      msg("Geist-Aktion Server-Fehler.");
+    }
+    return false;
+  }
+
+  function applyIncomingGhostEvent(){
+    if(!currentUser || isAdmin()) return;
+    const accounts=getAccounts();
+    const acc=accounts[currentUser];
+    const ev=acc && acc.adminGhostEvent;
+    if(!ev || !ev.time || ev.time<=lastAdminGhostEventTime) return;
+
+    lastAdminGhostEventTime=ev.time;
+    if(ev.damage){
+      player.hp=Math.max(0, player.hp-Number(ev.damage||0));
+      player.hurt=25;
+    }
+    msg(ev.message || "Ein unsichtbarer Geist hat etwas gemacht.");
+    saveAccountState();
+  }
+
+  function adminGhostVisit(name){
+    if(!isAdmin()) return;
+    const accounts=getAdminVisibleAccounts();
+    const acc=accounts[name];
+    if(!acc || !acc.live){
+      msg("Keine Live-Welt von "+name+" gefunden. Der Spieler muss online sein.");
+      return;
+    }
+
+    adminGhostMode=true;
+    adminGhostTarget=name;
+    adminGhostVisible=false;
+
+    if(acc.live.serverId) currentServerId=acc.live.serverId;
     if(acc.live.planet && worlds[acc.live.planet]) switchPlanet(acc.live.planet);
+    else if(acc.live.planet) currentPlanet=acc.live.planet;
+
     player.x=(acc.live.x||player.x)+80;
     player.y=acc.live.y||player.y;
     creativeMode=true;
     serverGrantedCreative=true;
     updateCreativeStatus();
-    msg("Geist-Modus: Du bist als Admin bei "+name+" in der Nähe. Kreativ ist aktiv.");
+    updateGhostPanel();
+    saveAccountState();
+
+    msg("Geist-Modus: Du beobachtest "+name+" unsichtbar. Du kannst dich sichtbar machen.");
     switchTab("worldPage","tabWorld");
     renderAll();
   }
 
   function adminResolveItemInput(value){
-    loadAdminItemsIntoGame();
+    loadAdminItemsIntoGame(true);
 
     const raw=String(value||"").trim();
     if(!raw) return "";
@@ -4810,7 +5072,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   function adminItemDatalistHtml(){
-    loadAdminItemsIntoGame();
+    loadAdminItemsIntoGame(true);
     const ids=getAllExistingItemIds ? getAllExistingItemIds() : Object.keys(defs);
     return ids.filter(id=>defs[id] && id!=="air").map(id=>{
       return '<option value="'+escapeHtml(id)+'">'+escapeHtml(defs[id].name)+' / '+escapeHtml(id)+'</option>';
@@ -4818,7 +5080,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   function adminItemButtonsHtml(idx){
-    loadAdminItemsIntoGame();
+    loadAdminItemsIntoGame(true);
     const ids=getAllExistingItemIds ? getAllExistingItemIds() : Object.keys(defs);
     return ids.filter(id=>defs[id] && id!=="air").map(id=>{
       const name=defs[id].name || id;
@@ -4848,7 +5110,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   function adminItemOptionsHtml(){
-    loadAdminItemsIntoGame();
+    loadAdminItemsIntoGame(true);
     const ids = getAllExistingItemIds ? getAllExistingItemIds() : Object.keys(defs);
     return ids.filter(id=>defs[id] && id!=="air").map(id=>'<option value="'+escapeHtml(id)+'">'+escapeHtml(defs[id].name)+'</option>').join("");
   }
@@ -4900,10 +5162,8 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const ok = confirm("Spieler '"+name+"' wirklich löschen? Danach kann der Name wieder neu erstellt werden.");
     if(!ok) return;
 
-    let pass = adminSessionPassword || "";
-    if(!pass){
-      pass = prompt("Admin-Passwort eingeben, um Spieler zu löschen:") || "";
-    }
+    const pass = getAdminActionPassword();
+    if(!pass){msg("Admin-Passwort fehlt.");return;}
 
     try{
       const res = await fetch("/api/admin/deleteAccount",{
@@ -4919,6 +5179,16 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       }
 
       removeDeletedPlayerFromAllLocalMenus(name);
+
+      if(data.accounts){
+        onlineAccountsCache = normalizeAccounts(data.accounts || {});
+        adminDirectAccountsCache = onlineAccountsCache;
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+        backupAccountsLocally(onlineAccountsCache);
+      }
+
+      renderAdminPlayersList();
+      renderFriendsPage();
       msg("Spieler gelöscht: "+name+". Der Name kann neu erstellt werden.");
     }catch(e){
       msg("Server-Fehler beim Löschen.");
@@ -5046,11 +5316,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       itemBox.className="adminControlBox";
       itemBox.innerHTML =
         "<b>Inventar ändern</b>"+
-        "<label>Item schreiben oder auswählen</label>"+
+        "<label>Item direkt auswählen</label>"+
+        "<select id='itemSelect_"+idx+"' class='adminItemGiveSelect'>"+adminItemOptionsHtml()+"</select>"+
+        "<label>Oder Item schreiben/suchen</label>"+
         "<input id='itemSearch_"+idx+"' class='adminItemGiveSearch' list='itemDatalist_"+idx+"' placeholder='z.B. diamond, Apfel, Schwert'>"+
         "<datalist id='itemDatalist_"+idx+"'>"+adminItemDatalistHtml()+"</datalist>"+
         "<div id='selectedItemLabel_"+idx+"' class='adminSelectedItemText'>Noch kein Item ausgewählt</div>"+
-        "<details class='adminItemGiveMenu'><summary>⬇ Alle Items öffnen</summary><div class='adminItemGiveList' id='adminItemGiveList_"+idx+"'>"+adminItemButtonsHtml(idx)+"</div></details>"+
+        "<details class='adminItemGiveMenu' open><summary>⬇ Alle Items öffnen/schließen</summary><div class='adminItemGiveList' id='adminItemGiveList_"+idx+"'>"+adminItemButtonsHtml(idx)+"</div></details>"+
         "<label>Anzahl</label><input id='itemAmount_"+idx+"' type='number' min='1' value='10'>"+
         "<div class='adminControlBtns'><button class='adminMiniBtn' id='giveItem_"+idx+"'>Item geben</button><button class='dangerBtn adminMiniBtn' id='removeItem_"+idx+"'>Item entfernen</button></div>";
       controls.appendChild(itemBox);
@@ -5063,19 +5335,31 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         const banAmount=document.getElementById("banAmount_"+idx);
         const banUnit=document.getElementById("banUnit_"+idx);
         const itemSearch=document.getElementById("itemSearch_"+idx);
+        const itemSelect=document.getElementById("itemSelect_"+idx);
         const itemAmount=document.getElementById("itemAmount_"+idx);
 
         document.getElementById("banBtn_"+idx).onclick=()=>adminBanFor(name,banAmount.value,banUnit.value);
         document.getElementById("unbanBtn_"+idx).onclick=()=>adminUnban(name);
+        if(itemSelect){
+          itemSelect.onchange=()=>{
+            setAdminGiveItemInput(idx,itemSelect.value);
+            if(itemSearch) itemSearch.value=itemSelect.value;
+          };
+          setAdminGiveItemInput(idx,itemSelect.value);
+        }
         if(itemSearch){
           itemSearch.oninput=()=>filterAdminItemButtons(idx);
           itemSearch.onchange=()=>setAdminGiveItemInput(idx, adminResolveItemInput(itemSearch.value) || itemSearch.value);
         }
         document.querySelectorAll('[data-admin-item-target="'+idx+'"]').forEach(btn=>{
-          btn.onclick=()=>setAdminGiveItemInput(idx, btn.getAttribute("data-admin-item-id"));
+          btn.onclick=()=>{
+            const id=btn.getAttribute("data-admin-item-id");
+            setAdminGiveItemInput(idx, id);
+            if(itemSelect) itemSelect.value=id;
+          };
         });
-        document.getElementById("giveItem_"+idx).onclick=()=>adminGiveItemToPlayer(name,itemSearch.value,itemAmount.value);
-        document.getElementById("removeItem_"+idx).onclick=()=>adminRemoveItemFromPlayer(name,itemSearch.value,itemAmount.value);
+        document.getElementById("giveItem_"+idx).onclick=()=>adminGiveItemToPlayer(name,(itemSearch.value||itemSelect.value),itemAmount.value);
+        document.getElementById("removeItem_"+idx).onclick=()=>adminRemoveItemFromPlayer(name,(itemSearch.value||itemSelect.value),itemAmount.value);
       },0);
     });
   }
@@ -6113,14 +6397,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("btnCreatePaintedItem").onclick=()=>{createAdminItem(document.getElementById("adminItemName").value,document.getElementById("adminItemType").value,document.getElementById("adminPaintColor").value,itemPaintPixels,{effect:document.getElementById("adminWeaponEffect").value,function:document.getElementById("adminToolFunction").value,holdStyle:document.getElementById("adminHoldStyle")?.value||"auto"});};
   document.getElementById("btnAdminItemImageUpload")?.addEventListener("click",loadAdminItemImageFromFile);
   document.getElementById("btnAdminItemTextDraw")?.addEventListener("click",drawTextOnAdminItem);
-  document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));
-
-  function bindMobileHoldKey(id, keyName){
+  document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));  function bindMobileHoldKey(id, keyName){
     const el=document.getElementById(id);
     if(!el) return;
 
     const start=(e)=>{
       if(e && e.preventDefault) e.preventDefault();
+      try{ if(e.pointerId!==undefined) el.setPointerCapture(e.pointerId); }catch(err){}
       keys[keyName]=true;
       if(game && game.focus) game.focus();
     };
@@ -6137,20 +6420,29 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     el.addEventListener("touchstart",start,{passive:false});
     el.addEventListener("touchend",end,{passive:false});
     el.addEventListener("touchcancel",end,{passive:false});
+    el.addEventListener("mousedown",start);
+    el.addEventListener("mouseup",end);
+    el.addEventListener("mouseleave",end);
   }
 
   function bindMobileTap(id, fn){
     const el=document.getElementById(id);
     if(!el) return;
+    let last=0;
     const run=(e)=>{
       if(e && e.preventDefault) e.preventDefault();
+      const now=Date.now();
+      if(now-last<180) return;
+      last=now;
       if(game && game.focus) game.focus();
       fn();
     };
     el.addEventListener("pointerdown",run,{passive:false});
     el.addEventListener("touchstart",run,{passive:false});
     el.addEventListener("click",run);
-  }  function holdButton(id, keyName){
+  }
+
+  function holdButton(id, keyName){
     const el = document.getElementById(id);
     if(!el) return;
     const start = (e)=>{if(e&&e.preventDefault)e.preventDefault(); keys[keyName]=true; if(game&&game.focus)game.focus();};
@@ -6165,7 +6457,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     el.addEventListener("mousedown", start);
     el.addEventListener("mouseup", end);
     el.addEventListener("mouseleave", end);
-  }  function setMobileAction(mode){
+  }
+
+  function setMobileAction(mode){
     mobileActionMode = mode;
     const display = document.getElementById("mobileModeDisplay");
     if(display) display.textContent = mode==="break" ? "Tippen = Abbauen" : "Tippen = Bauen/Platzieren";
@@ -6268,7 +6562,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       if((inv[id]||0)>0) data[id]=inv[id]||0;
     });
     return data;
-  }  function restoreInventory(saved){
+  }
+
+  function restoreInventory(saved){
     if(!saved) return;
     loadAdminItemsIntoGame();
 
@@ -6314,7 +6610,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     };
     accounts[currentUser].live={
       x:player.x,y:player.y,planet:currentPlanet,hp:player.hp,hunger:player.hunger,
-      held:selected,serverId:currentServerId,lastSeen:Date.now()
+      held:selected,serverId:currentServerId,lastSeen:Date.now(),ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),ghostTarget:adminGhostTarget,ghostMode:adminGhostMode
     };
     accounts[currentUser].online=true;
     saveAccounts(accounts);
@@ -6433,7 +6729,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
             hunger: player.hunger,
             held: selected,
             serverId: currentServerId,
-            lastSeen: Date.now()
+            lastSeen: Date.now(),
+            ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),
+            ghostTarget:adminGhostTarget,
+            ghostMode:adminGhostMode
           }
         }
       };
@@ -6455,6 +6754,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
           accountsNow[currentUser]=mergeAccountObjects({[currentUser]:accountsNow[currentUser]||{}},{[currentUser]:data.accounts[currentUser]})[currentUser];
           saveAccounts(accountsNow);
           applyServerInventoryForCurrentUser();
+          applyIncomingGhostEvent();
         }
         if(isAdmin()) renderAdminPlayersList();
         renderFriendsPage();

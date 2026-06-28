@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.2.5",
-  "description": "Safinicraft Anleitung Page Fix",
+  "version": "2.2.6",
+  "description": "Safinicraft Admin Controls Ghost Mobile Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

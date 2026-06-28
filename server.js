@@ -260,9 +260,9 @@ function mergeAccounts(incoming){
       ...cur,
       ...inc,
       pass: oldPass,
-      role: cur.role === "admin" ? "admin" : (inc.role || cur.role || "player"),
+      role: cur.role || inc.role || "player",
       skin: inc.skin || cur.skin || defaultSkin(),
-      inv: mergeInventoryMax(cur.inv || {}, inc.inv || {}),
+      inv: mergeInventoryMax(inc.inv || {}, cur.inv || {}),
       friends: Array.isArray(inc.friends) ? inc.friends : (cur.friends || []),
       friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : (cur.friendRequests || []),
       sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : (cur.sentRequests || []),
@@ -359,6 +359,55 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/admin/updateAccount" && req.method === "POST"){
+    const data = await readBody(req);
+    const target = String(data.target || "").trim();
+    const pass = String(data.pass || "");
+    const patch = data.patch && typeof data.patch === "object" ? data.patch : {};
+
+    ensureAdmin();
+
+    if(pass !== adminPassword()){
+      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+      return;
+    }
+
+    if(!target || !state.accounts[target]){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Spieler nicht gefunden.", accounts:clean.accounts || {}});
+      return;
+    }
+
+    if(target === "admin" && patch.role && patch.role !== "admin"){
+      sendJson(res, {ok:false, error:"Admin kann sich nicht selbst entfernen."});
+      return;
+    }
+
+    const acc = state.accounts[target];
+
+    ["role","adminModeGranted","creativeGrant","creativeUntil","creativeRemovedAt","banned","bannedUntil","bannedReason"].forEach(key=>{
+      if(Object.prototype.hasOwnProperty.call(patch,key)){
+        acc[key] = patch[key];
+      }
+    });
+
+    if(acc.role === "admin"){
+      acc.adminModeGranted = true;
+      acc.banned = false;
+      acc.bannedUntil = 0;
+      acc.bannedReason = "";
+    }
+
+    acc.lastAdminChange = Date.now();
+    state.accounts[target] = acc;
+    saveState();
+    broadcastState();
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, accounts:clean.accounts || {}, target});
+    return;
+  }
+
   if(req.url === "/api/admin/deleteAccount" && req.method === "POST"){
     const data = await readBody(req);
     const target = String(data.target || "").trim();
@@ -413,8 +462,14 @@ const server = http.createServer(async (req,res)=>{
     const itemId = String(data.itemId || "").trim();
     const amount = Math.max(1, Math.floor(Number(data.amount || 1)));
     const mode = data.mode === "remove" ? "remove" : "give";
+    const pass = String(data.pass || "");
 
     ensureAdmin();
+
+    if(pass !== adminPassword()){
+      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+      return;
+    }
 
     if(!target || !itemId || !state.accounts[target]){
       const clean = sanitizeState();
@@ -442,6 +497,46 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+  if(req.url === "/api/admin/ghostAction" && req.method === "POST"){
+    const data = await readBody(req);
+    const target = String(data.target || "").trim();
+    const pass = String(data.pass || "");
+    const action = String(data.action || "ghost");
+    const damage = Math.max(0, Math.min(10, Number(data.damage || 0)));
+    const text = String(data.text || "Der Admin-Geist hat etwas gemacht.");
+
+    ensureAdmin();
+
+    if(pass !== adminPassword()){
+      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+      return;
+    }
+
+    if(!target || !state.accounts[target]){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Spieler nicht gefunden.", accounts:clean.accounts || {}});
+      return;
+    }
+
+    const acc = state.accounts[target];
+    acc.adminGhostEvent = {
+      time: Date.now(),
+      action,
+      damage,
+      message: text
+    };
+    if(acc.live){
+      acc.live.hp = Math.max(0, Number(acc.live.hp || 10) - damage);
+    }
+    state.accounts[target] = acc;
+    saveState();
+    broadcastState();
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, accounts:clean.accounts || {}, target});
+    return;
+  }
+
   if(req.url === "/api/accountPing" && req.method === "POST"){
     const data = await readBody(req);
     const name = String(data.name || "").trim();
@@ -466,15 +561,22 @@ const server = http.createServer(async (req,res)=>{
           ...cur,
           ...inc,
           pass: oldPass,
-          role: cur.role === "admin" ? "admin" : (inc.role || cur.role || "player"),
+          role: cur.role || inc.role || "player",
           skin: inc.skin || cur.skin || defaultSkin(),
-          inv: mergeInventoryMax(cur.inv || {}, inc.inv || {}),
+          inv: mergeInventoryMax(inc.inv || {}, cur.inv || {}),
           friends: Array.isArray(inc.friends) ? inc.friends : (cur.friends || []),
           friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : (cur.friendRequests || []),
           sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : (cur.sentRequests || []),
           gameInvites: Array.isArray(inc.gameInvites) ? inc.gameInvites : (cur.gameInvites || []),
           unfriended: Array.isArray(inc.unfriended) ? inc.unfriended : (cur.unfriended || []),
           online: true,
+          adminModeGranted: cur.adminModeGranted !== undefined ? cur.adminModeGranted : inc.adminModeGranted,
+          creativeGrant: cur.creativeGrant !== undefined ? cur.creativeGrant : inc.creativeGrant,
+          creativeUntil: cur.creativeUntil !== undefined ? cur.creativeUntil : inc.creativeUntil,
+          banned: cur.banned !== undefined ? cur.banned : inc.banned,
+          bannedUntil: cur.bannedUntil !== undefined ? cur.bannedUntil : inc.bannedUntil,
+          bannedReason: cur.bannedReason !== undefined ? cur.bannedReason : inc.bannedReason,
+          adminGhostEvent: cur.adminGhostEvent || inc.adminGhostEvent,
           lastSeen: Date.now()
         };
 
@@ -755,6 +857,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ANLEITUNG PAGE FIX 2.2.5 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ADMIN CONTROLS + GHOST FIX 2.2.6 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
