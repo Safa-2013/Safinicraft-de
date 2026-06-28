@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.2.1",
-  "description": "Safinicraft Mobile Control and Delete Player Fix",
+  "version": "2.2.3",
+  "description": "Safinicraft Real Hold Inventory Preview Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

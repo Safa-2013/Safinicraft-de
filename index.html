@@ -33,6 +33,7 @@
   .small{font-size:13px;color:#bdbdbd}
   .title{color:#ffd84d;margin:12px 0 6px}
   .skinTools{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:8px auto}
+  .safaSignature{position:fixed;top:8px;right:10px;z-index:5000;background:rgba(0,0,0,.72);color:#ffd84d;border:2px solid #444;border-radius:999px;padding:6px 12px;font-weight:bold;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,.35);pointer-events:none}
 
   .secretInput{
     padding:10px;
@@ -1294,9 +1295,44 @@
     }
   }
 
+
+  .invIconCanvas{
+    width:28px;
+    height:28px;
+    border:2px solid rgba(255,255,255,.28);
+    border-radius:6px;
+    background:#111;
+    vertical-align:middle;
+    margin-right:6px;
+    image-rendering:pixelated;
+  }
+  .itemBtn .invName{
+    display:inline-block;
+    vertical-align:middle;
+    max-width:82px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .itemBtn .invCount{
+    display:block;
+    color:#ffd84d;
+    margin-top:3px;
+  }
+  .heldPreviewBig{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:#171717;
+    border:2px solid #444;
+    border-radius:10px;
+    padding:4px 7px;
+  }
+
 </style>
 </head>
 <body class="loggedOut">
+<div class="safaSignature">by Safa Yildiz</div>
 
 <h1>Safinicraft.de</h1>
 <p class="small" style="text-align:center">Für echtes Spielen auf anderen Geräten muss diese Website über <b>server.js</b> laufen, nicht als einzelne Datei.</p>
@@ -1304,7 +1340,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">MOBILE CONTROL + DELETE PLAYER FIX VERSION 2.2.1</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">REAL HOLD + INVENTORY PREVIEW FIX VERSION 2.2.3</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1651,8 +1687,10 @@
       <div class="adminTemplateBox">
         <label>Funktion / Vorlage</label>
         <select id="adminToolFunction">
-          <option value="rocket">Raketenwerfer: Explosion + Flächenschaden</option>
-          <option value="pistol">Pixel-Pistole: Schuss</option>
+          <option value="bazooka">Bazooka / Raketenwerfer</option>
+          <option value="pistol">Pistole</option>
+          <option value="rifle">Sturmgewehr</option>
+          <option value="minigun">Mini Gun</option>
           <option value="strong">Starke Waffe: viel Einzelschaden</option>
           <option value="pickaxe">Werkzeug: Spitzhacke für Stein/Erz</option>
           <option value="axe">Werkzeug: Axt für Holz</option>
@@ -1672,6 +1710,22 @@
         <option value="explosive">Explodiert und macht Flächenschaden</option>
         <option value="strong">Starker Einzelschuss</option>
       </select>
+
+      <label>Wie soll das Item gehalten werden?</label>
+      <select id="adminHoldStyle">
+        <option value="auto">Automatisch</option>
+        <option value="block">Block / Würfel</option>
+        <option value="item">Normales Item</option>
+        <option value="pistol">Pistole</option>
+        <option value="rifle">Sturmgewehr</option>
+        <option value="minigun">Mini Gun</option>
+        <option value="bazooka">Bazooka / Raketenwerfer</option>
+        <option value="sword">Schwert</option>
+        <option value="pickaxe">Spitzhacke</option>
+        <option value="axe">Axt</option>
+        <option value="shovel">Schaufel</option>
+      </select>
+      <div class="small">So kannst du festlegen, wie das Item in der Hand aussieht. Eigene gemalte Items werden 1:1 angezeigt.</div>
 
       <label>Farbe</label>
       <input type="color" id="adminPaintColor" value="#ffcc00">
@@ -2377,8 +2431,15 @@
     if(b==="fire")return tick%12<4?"#ff2b00":tick%12<8?"#ff9800":"#ffeb3b";
     if(b==="glass")return"rgba(191,246,255,.72)";
     return defs[b].color;
-  }
-  function drawBlock(px,py,b){
+  }  function drawBlock(px,py,b){
+    const def=defs[b];
+    if(def && Array.isArray(def.icon)){
+      drawPixelMatrixScaled(ctx,def.icon,px,py,cell,cell,false);
+      ctx.strokeStyle="rgba(0,0,0,.25)";
+      ctx.strokeRect(px,py,cell,cell);
+      return;
+    }
+
     ctx.fillStyle=blockColor(b);ctx.fillRect(px,py,cell,cell);
     ctx.strokeStyle="rgba(0,0,0,.25)";ctx.strokeRect(px,py,cell,cell);
     if(b==="grass"){ctx.fillStyle="#2e7d32";ctx.fillRect(px,py,cell,5)}
@@ -2393,6 +2454,185 @@
     if(b==="planet_portal"){ctx.fillStyle="#2b003b";ctx.fillRect(px+3,py+2,14,18);ctx.fillStyle=tick%30<15?"#b441ff":"#4dd0ff";ctx.fillRect(px+6,py+5,8,12)}
   }
   function oreDot(b){return b==="coal_ore"?"#111":b==="iron_ore"?"#e2a47a":b==="gold_ore"?"#ffd84d":"#62f3ff"}
+
+
+  function createPixelGrid(fill=null){
+    return Array.from({length:16},()=>Array(16).fill(fill));
+  }
+
+  function shadeColor(color,amount){
+    if(!color || typeof color!=="string" || color[0]!=="#" || (color.length!==7 && color.length!==4)) return color || "#888888";
+    let hex=color;
+    if(hex.length===4){ hex="#"+hex[1]+hex[1]+hex[2]+hex[2]+hex[3]+hex[3]; }
+    const num=parseInt(hex.slice(1),16);
+    let r=(num>>16)+amount, g=((num>>8)&0xff)+amount, b=(num&0xff)+amount;
+    r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
+    return "#"+[r,g,b].map(v=>v.toString(16).padStart(2,"0")).join("");
+  }
+
+  function itemIconPixels(id){
+    const d=defs[id];
+    if(!d) return null;
+    if(Array.isArray(d.icon)) return d.icon;
+
+    const px=createPixelGrid(null);
+    const base=d.color || "#cccccc";
+    const dark=shadeColor(base,-34);
+    const light=shadeColor(base,28);
+    const set=(x,y,c)=>{ if(px[y] && x>=0 && x<16) px[y][x]=c; };
+    const fillRect=(x1,y1,w,h,c)=>{for(let yy=y1;yy<y1+h;yy++)for(let xx=x1;xx<x1+w;xx++)set(xx,yy,c);};
+
+    if(d.place || d.holdStyle==="block"){
+      for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]=base;
+
+      if(id==="grass"){
+        for(let y=0;y<5;y++) for(let x=0;x<16;x++) px[y][x]="#45ad48";
+        for(let y=5;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#8b5a2b";
+        for(let x=1;x<16;x+=4) set(x,2,"#69d45e");
+        for(let x=2;x<16;x+=5) set(x,10,"#5f371e");
+      }else if(id==="dirt"){
+        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#8b5a2b";
+        for(let y=2;y<16;y+=4){ set(3,y,dark); set(10,Math.min(15,y+1),dark); }
+      }else if(id==="stone" || id==="cobblestone"){
+        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]=base;
+        for(let y=1;y<16;y+=5){ for(let x=(y%2?2:5);x<16;x+=6) set(x,y,light); }
+      }else if(id==="wood"){
+        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#8b4a20";
+        [4,8,12].forEach(x=>{for(let y=0;y<16;y++) set(x,y,"#603515");});
+      }else if(id==="planks"){
+        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#b77739";
+        [4,9,14].forEach(y=>{for(let x=0;x<16;x++) set(x,y,"#885422");});
+      }else if(id==="leaves"){
+        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#2e8b57";
+        for(let y=1;y<16;y+=4){ for(let x=1;x<16;x+=4) set(x,y,light); }
+      }else if(id==="water"){
+        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#2388ff";
+        for(let y=2;y<16;y+=4){ for(let x=0;x<16;x++) if((x+y)%4===0) set(x,y,"#7fd2ff"); }
+      }else if(id==="lava"){
+        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="#ff5b16";
+        for(let y=1;y<16;y+=3){ for(let x=0;x<16;x++) if((x+y)%3===0) set(x,y,"#ffd84d"); }
+      }else if(id==="glass"){
+        for(let y=0;y<16;y++) for(let x=0;x<16;x++) px[y][x]="rgba(191,246,255,0.65)";
+        [0,15].forEach(v=>{for(let i=0;i<16;i++){set(v,i,"#dffbff"); set(i,v,"#dffbff");}});
+      }
+      return px;
+    }
+
+    const hold=d.holdStyle||d.itemFunction||d.tool||"item";
+
+    if(hold==="pistol"){
+      fillRect(2,5,10,4,base);
+      fillRect(10,4,4,2,light);
+      fillRect(9,9,3,5,dark);
+      fillRect(5,9,2,2,"#111");
+      return px;
+    }
+    if(hold==="rifle"){
+      fillRect(1,6,13,3,base);
+      fillRect(12,5,2,2,light);
+      fillRect(4,9,3,5,dark);
+      fillRect(8,9,2,3,dark);
+      fillRect(0,7,3,2,shadeColor(base,-50));
+      return px;
+    }
+    if(hold==="minigun"){
+      fillRect(1,6,12,4,base);
+      fillRect(11,5,2,2,light);
+      fillRect(4,10,3,4,dark);
+      fillRect(7,4,1,8,"#999");
+      fillRect(9,4,1,8,"#777");
+      fillRect(11,4,1,8,"#555");
+      return px;
+    }
+    if(hold==="bazooka"){
+      fillRect(1,5,13,5,base);
+      fillRect(13,6,2,3,light);
+      fillRect(0,6,2,3,dark);
+      fillRect(3,10,3,3,dark);
+      return px;
+    }
+    if(hold==="sword"){
+      fillRect(7,2,2,9,light);
+      fillRect(5,9,6,2,dark);
+      fillRect(7,11,2,3,"#8b5a2b");
+      return px;
+    }
+    if(hold==="pickaxe"){
+      fillRect(7,3,2,10,"#8b5a2b");
+      fillRect(3,3,9,3,base);
+      return px;
+    }
+    if(hold==="axe"){
+      fillRect(7,3,2,10,"#8b5a2b");
+      fillRect(4,2,5,5,base);
+      return px;
+    }
+    if(hold==="shovel"){
+      fillRect(7,3,2,10,"#8b5a2b");
+      fillRect(5,2,5,4,base);
+      return px;
+    }
+
+    fillRect(3,3,10,10,base);
+    fillRect(5,5,6,6,light);
+    return px;
+  }
+
+  function drawPixelMatrixScaled(context,pixels,x,y,w,h,flipX=false){
+    if(!pixels) return;
+    const ph=pixels.length || 16;
+    const pw=Math.max(1,...pixels.map(r=>Array.isArray(r)?r.length:0),16);
+    const sx=w/pw, sy=h/ph;
+    for(let py=0;py<ph;py++){
+      const row=pixels[py]||[];
+      for(let px=0;px<pw;px++){
+        const srcX=flipX ? (pw-1-px) : px;
+        const c=row[srcX];
+        if(!c) continue;
+        context.fillStyle=c;
+        context.fillRect(x+px*sx,y+py*sy,Math.ceil(sx),Math.ceil(sy));
+      }
+    }
+  }
+
+  function heldItemMetrics(id){
+    const d=defs[id]||{};
+    const hold=d.holdStyle||d.itemFunction||(d.place?"block":d.tool)||"item";
+    if(hold==="block") return {hold,x:15,y:18,w:18,h:18};
+    if(hold==="pistol") return {hold,x:17,y:21,w:20,h:11};
+    if(hold==="rifle") return {hold,x:11,y:17,w:29,h:13};
+    if(hold==="minigun") return {hold,x:8,y:16,w:31,h:15};
+    if(hold==="bazooka") return {hold,x:6,y:14,w:33,h:16};
+    if(hold==="sword") return {hold,x:18,y:7,w:10,h:24};
+    if(hold==="pickaxe" || hold==="axe" || hold==="shovel") return {hold,x:17,y:9,w:13,h:23};
+    return {hold,x:17,y:18,w:16,h:16};
+  }
+
+  function drawHeldItemSprite(context,itemId,baseX,baseY,facing){
+    const d=defs[itemId];
+    if(!d || itemId==="hand") return;
+    const icon=itemIconPixels(itemId);
+    const m=heldItemMetrics(itemId);
+    const x = facing>=0 ? baseX + m.x : baseX + 16 - m.x - m.w;
+    const y = baseY + m.y;
+
+    // kleine Hand davor, damit es aussieht, als würde der Spieler das Item halten
+    context.fillStyle="rgba(0,0,0,.25)";
+    context.fillRect(x+(facing>=0?1:m.w-5),y+Math.max(2,m.h-6),5,5);
+
+    drawPixelMatrixScaled(context,icon,x,y,m.w,m.h,facing<0);
+    context.strokeStyle="rgba(0,0,0,.45)";
+    context.strokeRect(x,y,m.w,m.h);
+  }
+
+  function drawInventoryIcon(canvas,itemId){
+    if(!canvas || !itemId || !defs[itemId]) return;
+    const c=canvas.getContext("2d");
+    c.imageSmoothingEnabled=false;
+    c.clearRect(0,0,16,16);
+    const icon=itemIconPixels(itemId);
+    drawPixelMatrixScaled(c,icon,0,0,16,16,false);
+  }
 
 
   function drawOtherPlayers(){
@@ -2417,9 +2657,7 @@
       ctx.fillText(name, px-2, py-12);
       drawSkinAt(ctx, acc.skin || makeDefaultSkin('photo'), px, py, 2);
       if(acc.live.held && acc.live.held!=='hand' && defs[acc.live.held]){
-        ctx.fillStyle=defs[acc.live.held].color;
-        ctx.fillRect(px+28,py+22,10,6);
-        ctx.strokeStyle='#111';ctx.strokeRect(px+28,py+22,10,6);
+        drawHeldItemSprite(ctx,acc.live.held,px,py,acc.live.facing || 1);
       }
     });
   }
@@ -2483,12 +2721,7 @@
 
     // sichtbares Item in der Hand
     if(selected!=="hand" && defs[selected]){
-      ctx.fillStyle=defs[selected].color;
-      const hx=player.facing>=0?px+28:px-10;
-      const hy=py+22;
-      ctx.fillRect(hx,hy,10,6);
-      ctx.strokeStyle="#111";ctx.strokeRect(hx,hy,10,6);
-      if(defs[selected]&&defs[selected].tool==="pistol"){ctx.fillStyle="#111";ctx.fillRect(hx+(player.facing>=0?8:-4),hy+2,6,2)}
+      drawHeldItemSprite(ctx,selected,px,py,player.facing || 1);
     }
     ctx.globalAlpha=1;
   }
@@ -2575,19 +2808,89 @@
     }
   }
 
-  function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderCraftingTable();renderAllCraftItems();renderRecipes();renderSkinCanvas();draw()}
-  function renderInventory(id,craft){
-    const box=document.getElementById(id);box.innerHTML="";
-    if(!craft){
-      const h=document.createElement("button");h.className="itemBtn";if(selected==="hand")h.classList.add("selected");h.innerHTML='<span class="dot" style="background:#fff"></span>Hand';h.onclick=()=>{selected="hand";renderInventory("gameInventory")};box.appendChild(h);
-    }
-    inventoryOrder.forEach(item=>{
-      const amount=creativeMode ? "∞" : (inv[item]||0);if(!creativeMode && amount<=0)return;
-      const btn=document.createElement("button");btn.className="itemBtn";if(!craft&&selected===item)btn.classList.add("selected");
-      btn.innerHTML=`<span class="dot" style="background:${defs[item].color}"></span>${defs[item].name} x${amount}`;
-      btn.onclick=()=>{if(!craft){selected=item;msg("Ausgewählt: "+defs[item].name);renderInventory("gameInventory")}};
-      box.appendChild(btn);
+  function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderCraftingTable();renderAllCraftItems();renderRecipes();renderSkinCanvas();draw()}  function renderInventory(targetId){
+    loadAdminItemsIntoGame();
+
+    const box=document.getElementById(targetId);
+    if(!box) return;
+    box.innerHTML="";
+
+    const makeBtn=(id)=>{
+      const d=defs[id];
+      if(!d) return null;
+
+      const btn=document.createElement("button");
+      btn.className="itemBtn";
+      if(selected===id) btn.classList.add("selected");
+
+      const canvas=document.createElement("canvas");
+      canvas.width=16;
+      canvas.height=16;
+      canvas.className="invIconCanvas";
+
+      const name=document.createElement("span");
+      name.className="invName";
+      name.textContent=d.name || id;
+
+      const count=document.createElement("span");
+      count.className="invCount";
+      count.textContent=(id==="hand") ? "" : "x"+(creativeMode ? "∞" : (inv[id]||0));
+
+      btn.appendChild(canvas);
+      btn.appendChild(name);
+      btn.appendChild(count);
+
+      btn.onclick=()=>{
+        selected=id;
+        renderInventory("gameInventory");
+        renderInventory("creativeInventory");
+        renderAll();
+      };
+
+      setTimeout(()=>{
+        if(id==="hand"){
+          const c=canvas.getContext("2d");
+          c.clearRect(0,0,16,16);
+          c.fillStyle="#fff";
+          c.fillRect(5,3,6,10);
+          c.fillStyle="#d8b38a";
+          c.fillRect(4,7,8,7);
+        }else{
+          drawInventoryIcon(canvas,id);
+        }
+      },0);
+
+      return btn;
+    };
+
+    const handBtn=makeBtn("hand");
+    if(handBtn) box.appendChild(handBtn);
+
+    const ids=[];
+    inventoryOrder.forEach(id=>{ if(defs[id] && (creativeMode || (inv[id]||0)>0) && !ids.includes(id)) ids.push(id); });
+    Object.keys(defs).forEach(id=>{ if(defs[id] && (creativeMode || (inv[id]||0)>0) && id!=="air" && id!=="hand" && !ids.includes(id)) ids.push(id); });
+
+    ids.forEach(id=>{
+      const btn=makeBtn(id);
+      if(btn) box.appendChild(btn);
     });
+
+    const held=document.getElementById("heldText");
+    if(held && defs[selected]){
+      held.innerHTML = '<span class="heldPreviewBig"><canvas id="heldPreviewCanvas" width="16" height="16" class="invIconCanvas"></canvas>'+escapeHtml(selected==="hand"?"Hand":defs[selected].name)+'</span>';
+      setTimeout(()=>{
+        const canvas=document.getElementById("heldPreviewCanvas");
+        if(!canvas) return;
+        if(selected==="hand"){
+          const c=canvas.getContext("2d");
+          c.clearRect(0,0,16,16);
+          c.fillStyle="#fff"; c.fillRect(5,3,6,10);
+          c.fillStyle="#d8b38a"; c.fillRect(4,7,8,7);
+        }else{
+          drawInventoryIcon(canvas,selected);
+        }
+      },0);
+    }
   }
 
   const recipes = [
@@ -3752,14 +4055,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     if(s.gravity && planets.earth){
       Object.keys(planets).forEach(p=>planets[p].gravity = s.gravity);
     }
-  }
-
-  function adminItemToolFromFunction(fn,type){
+  }  function adminItemToolFromFunction(fn,type){
     if(fn==="pickaxe") return "pickaxe";
     if(fn==="axe") return "axe";
     if(fn==="shovel") return "shovel";
     if(fn==="sword") return "sword";
-    if(fn==="pistol" || fn==="rocket" || fn==="strong") return "pistol";
+    if(fn==="pistol" || fn==="rocket" || fn==="strong" || fn==="bazooka" || fn==="rifle" || fn==="minigun") return "pistol";
     if(type==="weapon") return "pistol";
     if(type==="tool") return "pickaxe";
     return undefined;
@@ -3791,11 +4092,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         foodValue:(type==="food" || fn==="food5") ? 5 : undefined,
         adminItem:true,
         icon:item.icon || null,
-        effect:(fn==="rocket" || item.effect==="explosive") ? "explosive" : (item.effect || (fn==="strong"?"strong":"normal")),
+        effect:(fn==="rocket" || fn==="bazooka" || item.effect==="explosive") ? "explosive" : (item.effect || (fn==="strong"?"strong":"normal")),
         damage:item.damage || (fn==="rocket"?9:fn==="strong"?6:item.effect==="explosive"?8:3),
-        radius:item.radius || (fn==="rocket"?95:item.effect==="explosive"?85:0),
+        radius:item.radius || ((fn==="rocket" || fn==="bazooka")?95:item.effect==="explosive"?85:0),
         published:!!item.published,
-        itemFunction:fn
+        itemFunction:fn,
+        holdStyle:item.holdStyle || ((type==="block"||fn==="placeable")?"block":(fn==="bazooka"||fn==="rocket")?"bazooka":fn==="rifle"?"rifle":fn==="minigun"?"minigun":fn==="pistol"?"pistol":fn==="sword"?"sword":fn==="pickaxe"?"pickaxe":fn==="axe"?"axe":fn==="shovel"?"shovel":"item")
       };
 
       if(!inventoryOrder.includes(id)) inventoryOrder.push(id);
@@ -3938,26 +4240,39 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
 
     renderAdminRecipeGrid();
-  }
-
-  function createAdminItem(name,type,color,icon,options={}){
+  }  function createAdminItem(name,type,color,icon,options={}){
     if(!isAdmin()){msg("Nur Admin darf Items erstellen.");return null;}
     if(!name || !name.trim()){msg("Item braucht einen Namen.");return null;}
 
     const items = getAdminItems();
     const fn = options.function || document.getElementById("adminToolFunction")?.value || "material";
     let effect = options.effect || document.getElementById("adminWeaponEffect")?.value || "normal";
+    const requestedHoldStyle = options.holdStyle || document.getElementById("adminHoldStyle")?.value || "auto";
 
-    if(fn==="rocket") effect="explosive";
+    if(fn==="rocket" || fn==="bazooka") effect="explosive";
     if(fn==="strong") effect="strong";
+    if(fn==="rifle" && effect==="normal") effect="strong";
     if(fn==="food5") type="food";
     if(fn==="placeable") type="block";
 
     const id = makeSafeId(name, type==="weapon"?"weapon":type==="block"?"block":type==="tool"?"tool":"item");
     const recipe = options.recipe || getAdminRecipeFromGrid();
 
-    const damage = type==="weapon" || fn==="rocket" || fn==="pistol" || fn==="strong"
-      ? (effect==="explosive"?9:effect==="strong"?6:3)
+    const holdStyle = requestedHoldStyle!=="auto"
+      ? requestedHoldStyle
+      : (type==="block" || fn==="placeable") ? "block"
+      : (fn==="bazooka" || fn==="rocket") ? "bazooka"
+      : fn==="rifle" ? "rifle"
+      : fn==="minigun" ? "minigun"
+      : fn==="pistol" ? "pistol"
+      : fn==="sword" ? "sword"
+      : fn==="pickaxe" ? "pickaxe"
+      : fn==="axe" ? "axe"
+      : fn==="shovel" ? "shovel"
+      : type==="weapon" ? "pistol" : "item";
+
+    const damage = type==="weapon" || fn==="rocket" || fn==="bazooka" || fn==="pistol" || fn==="strong" || fn==="rifle" || fn==="minigun"
+      ? (effect==="explosive"?9:effect==="strong"?6:fn==="minigun"?2:fn==="rifle"?4:3)
       : 1;
 
     const radius = effect==="explosive" ? 95 : 0;
@@ -3977,7 +4292,8 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       toolFunction:fn,
       damage,
       radius,
-      recipe
+      recipe,
+      holdStyle
     };
 
     saveAdminItems(items);
@@ -3992,7 +4308,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     const notice=document.getElementById("adminCreatedItemNotice");
     if(notice) notice.textContent="Erstellt: "+name+" | Status: OFFLINE/PRIVAT | 20x im Inventar";
-    msg("Item erstellt und ins Inventar gelegt: "+name+" | Status: offline/privat.");
+    msg("Item erstellt und 1:1 ins Inventar gelegt: "+name);
     return id;
   }
 
@@ -4421,6 +4737,42 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     return ids.filter(id=>defs[id] && id!=="air").map(id=>'<option value="'+escapeHtml(id)+'">'+escapeHtml(defs[id].name)+'</option>').join("");
   }
 
+  function removeDeletedPlayerFromAllLocalMenus(name){
+    const removeFrom=(obj)=>{
+      if(obj && obj[name]) delete obj[name];
+      return obj || {};
+    };
+
+    onlineAccountsCache=removeFrom(onlineAccountsCache||{});
+    adminDirectAccountsCache=removeFrom(adminDirectAccountsCache||{});
+
+    const local=getAccounts();
+    delete local[name];
+
+    Object.keys(local||{}).forEach(n=>{
+      const acc=local[n];
+      ["friends","friendRequests","sentRequests","gameInvites","unfriended"].forEach(key=>{
+        if(Array.isArray(acc[key])){
+          acc[key]=acc[key].filter(x=>{
+            if(typeof x==="string") return x!==name;
+            if(x && typeof x==="object") return x.from!==name && x.to!==name && x.name!==name;
+            return true;
+          });
+        }
+      });
+    });
+
+    saveAccounts(local);
+    backupAccountsLocally(local);
+
+    const card=document.getElementById("playerCard_"+name);
+    if(card) card.remove();
+
+    renderAdminPlayersList();
+    renderFriendsPage();
+    renderAll();
+  }
+
   async function adminDeletePlayerAccount(name){
     if(!isAdmin()) return;
 
@@ -4450,27 +4802,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         return;
       }
 
-      const removeFrom = (obj)=>{
-        if(obj && obj[name]) delete obj[name];
-        return obj || {};
-      };
-
-      onlineAccountsCache = removeFrom(onlineAccountsCache || {});
-      adminDirectAccountsCache = removeFrom(adminDirectAccountsCache || {});
-      const local = getAccounts();
-      delete local[name];
-      saveAccounts(local);
-      backupAccountsLocally(local);
-
-      if(data.accounts){
-        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), data.accounts || {});
-        adminDirectAccountsCache = onlineAccountsCache;
-        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
-        backupAccountsLocally(onlineAccountsCache);
-      }
-
-      renderAdminPlayersList();
-      renderFriendsPage();
+      removeDeletedPlayerFromAllLocalMenus(name);
       msg("Spieler gelöscht: "+name+". Der Name kann neu erstellt werden.");
     }catch(e){
       msg("Server-Fehler beim Löschen.");
@@ -4520,6 +4852,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       const acc=accounts[name] || {};
       const card=document.createElement("div");
       card.className="playerCard";
+      card.id="playerCard_"+name;
 
       const canvas=document.createElement("canvas");
       canvas.width=40;
@@ -5655,13 +5988,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("mainAiInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendMainAI();});
   document.getElementById("btnAdminAiRun").onclick=runAdminAI;
   document.getElementById("adminItemType").addEventListener("change",()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value));
-  document.getElementById("adminToolFunction")?.addEventListener("change",()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value));
+  document.getElementById("adminToolFunction")?.addEventListener("change",()=>{const fn=document.getElementById("adminToolFunction").value; const hs=document.getElementById("adminHoldStyle"); if(hs && (hs.value==="auto" || !hs.value)){ if(["bazooka","rocket"].includes(fn)) hs.value="bazooka"; else if(fn==="rifle") hs.value="rifle"; else if(fn==="minigun") hs.value="minigun"; else if(fn==="pistol") hs.value="pistol"; else if(fn==="sword") hs.value="sword"; else if(fn==="pickaxe") hs.value="pickaxe"; else if(fn==="axe") hs.value="axe"; else if(fn==="shovel") hs.value="shovel"; else if(fn==="placeable") hs.value="block"; else hs.value="auto"; } setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value);});
   document.getElementById("adminWeaponEffect").addEventListener("change",()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value));
   document.getElementById("btnClearAdminRecipe").onclick=clearAdminRecipeGrid;
   document.getElementById("btnAutoAdminRecipe").onclick=()=>setAdminRecipeAuto(document.getElementById("adminItemType").value,document.getElementById("adminWeaponEffect").value);
   document.getElementById("adminRecipeSearch").addEventListener("input",renderAdminRecipeItemsList);
   document.getElementById("btnClearItemPaint").onclick=()=>{itemPaintPixels=Array.from({length:16},()=>Array(16).fill(null));drawItemPaintCanvas();};
-  document.getElementById("btnCreatePaintedItem").onclick=()=>{createAdminItem(document.getElementById("adminItemName").value,document.getElementById("adminItemType").value,document.getElementById("adminPaintColor").value,itemPaintPixels,{effect:document.getElementById("adminWeaponEffect").value,function:document.getElementById("adminToolFunction").value});};
+  document.getElementById("btnCreatePaintedItem").onclick=()=>{createAdminItem(document.getElementById("adminItemName").value,document.getElementById("adminItemType").value,document.getElementById("adminPaintColor").value,itemPaintPixels,{effect:document.getElementById("adminWeaponEffect").value,function:document.getElementById("adminToolFunction").value,holdStyle:document.getElementById("adminHoldStyle")?.value||"auto"});};
   document.getElementById("btnAdminItemImageUpload")?.addEventListener("click",loadAdminItemImageFromFile);
   document.getElementById("btnAdminItemTextDraw")?.addEventListener("click",drawTextOnAdminItem);
   document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));
