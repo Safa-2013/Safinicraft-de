@@ -364,48 +364,15 @@ const server = http.createServer(async (req,res)=>{
     const target = String(data.target || "").trim();
     const pass = String(data.pass || "");
     const patch = data.patch && typeof data.patch === "object" ? data.patch : {};
-
     ensureAdmin();
-
-    if(pass !== adminPassword()){
-      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
-      return;
-    }
-
-    if(!target || !state.accounts[target]){
-      const clean = sanitizeState();
-      sendJson(res, {ok:false, error:"Spieler nicht gefunden.", accounts:clean.accounts || {}});
-      return;
-    }
-
-    if(target === "admin" && patch.role && patch.role !== "admin"){
-      sendJson(res, {ok:false, error:"Admin kann sich nicht selbst entfernen."});
-      return;
-    }
-
-    const acc = state.accounts[target];
-
-    ["role","adminModeGranted","creativeGrant","creativeUntil","creativeRemovedAt","banned","bannedUntil","bannedReason"].forEach(key=>{
-      if(Object.prototype.hasOwnProperty.call(patch,key)){
-        acc[key] = patch[key];
-      }
-    });
-
-    if(acc.role === "admin"){
-      acc.adminModeGranted = true;
-      acc.banned = false;
-      acc.bannedUntil = 0;
-      acc.bannedReason = "";
-    }
-
-    acc.lastAdminChange = Date.now();
-    state.accounts[target] = acc;
-    saveState();
-    broadcastState();
-
-    const clean = sanitizeState();
-    sendJson(res, {ok:true, accounts:clean.accounts || {}, target});
-    return;
+    if(pass !== adminPassword()){sendJson(res,{ok:false,error:"Admin-Passwort falsch."});return;}
+    if(!target || !state.accounts[target]){const clean=sanitizeState();sendJson(res,{ok:false,error:"Spieler nicht gefunden.",accounts:clean.accounts||{}});return;}
+    if(target==="admin" && patch.role && patch.role!=="admin"){sendJson(res,{ok:false,error:"Admin kann nicht entfernt werden."});return;}
+    const acc=state.accounts[target];
+    ["role","adminModeGranted","creativeGrant","creativeUntil","creativeRemovedAt","banned","bannedUntil","bannedReason"].forEach(k=>{if(Object.prototype.hasOwnProperty.call(patch,k))acc[k]=patch[k];});
+    if(acc.role==="admin"){acc.adminModeGranted=true;acc.banned=false;acc.bannedUntil=0;acc.bannedReason="";}
+    acc.lastAdminChange=Date.now();state.accounts[target]=acc;saveState();broadcastState();
+    const clean=sanitizeState();sendJson(res,{ok:true,accounts:clean.accounts||{},target});return;
   }
 
   if(req.url === "/api/admin/deleteAccount" && req.method === "POST"){
@@ -465,11 +432,7 @@ const server = http.createServer(async (req,res)=>{
     const pass = String(data.pass || "");
 
     ensureAdmin();
-
-    if(pass !== adminPassword()){
-      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
-      return;
-    }
+    if(pass !== adminPassword()){sendJson(res,{ok:false,error:"Admin-Passwort falsch."});return;}
 
     if(!target || !itemId || !state.accounts[target]){
       const clean = sanitizeState();
@@ -498,43 +461,11 @@ const server = http.createServer(async (req,res)=>{
   }
 
   if(req.url === "/api/admin/ghostAction" && req.method === "POST"){
-    const data = await readBody(req);
-    const target = String(data.target || "").trim();
-    const pass = String(data.pass || "");
-    const action = String(data.action || "ghost");
-    const damage = Math.max(0, Math.min(10, Number(data.damage || 0)));
-    const text = String(data.text || "Der Admin-Geist hat etwas gemacht.");
-
-    ensureAdmin();
-
-    if(pass !== adminPassword()){
-      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
-      return;
-    }
-
-    if(!target || !state.accounts[target]){
-      const clean = sanitizeState();
-      sendJson(res, {ok:false, error:"Spieler nicht gefunden.", accounts:clean.accounts || {}});
-      return;
-    }
-
-    const acc = state.accounts[target];
-    acc.adminGhostEvent = {
-      time: Date.now(),
-      action,
-      damage,
-      message: text
-    };
-    if(acc.live){
-      acc.live.hp = Math.max(0, Number(acc.live.hp || 10) - damage);
-    }
-    state.accounts[target] = acc;
-    saveState();
-    broadcastState();
-
-    const clean = sanitizeState();
-    sendJson(res, {ok:true, accounts:clean.accounts || {}, target});
-    return;
+    const data=await readBody(req);const target=String(data.target||"").trim();const pass=String(data.pass||"");const action=String(data.action||"ghost");const damage=Math.max(0,Math.min(10,Number(data.damage||0)));const text=String(data.text||"Der Admin-Geist hat etwas gemacht.");
+    ensureAdmin();if(pass!==adminPassword()){sendJson(res,{ok:false,error:"Admin-Passwort falsch."});return;}
+    if(!target||!state.accounts[target]){const clean=sanitizeState();sendJson(res,{ok:false,error:"Spieler nicht gefunden.",accounts:clean.accounts||{}});return;}
+    const acc=state.accounts[target];acc.adminGhostEvent={time:Date.now(),action,damage,message:text};if(acc.live)acc.live.hp=Math.max(0,Number(acc.live.hp||10)-damage);state.accounts[target]=acc;saveState();broadcastState();
+    const clean=sanitizeState();sendJson(res,{ok:true,accounts:clean.accounts||{},target});return;
   }
 
   if(req.url === "/api/accountPing" && req.method === "POST"){
@@ -857,6 +788,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de ADMIN CONTROLS + GHOST FIX 2.2.6 läuft auf Port " + PORT);
+  console.log("Safinicraft.de BIG ADMIN MOBILE ITEM FIX 2.2.7 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

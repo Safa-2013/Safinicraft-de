@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.2.6",
-  "description": "Safinicraft Admin Controls Ghost Mobile Fix",
+  "version": "2.2.7",
+  "description": "Safinicraft Big Admin Mobile Item Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -1344,38 +1344,16 @@
   .guideList li{margin:5px 0}
 
 
-  .ghostPanel{
-    display:none;
-    background:#101820;
-    border:3px solid #4dd0ff;
-    border-radius:14px;
-    padding:10px;
-    margin:10px auto;
-    max-width:960px;
-    text-align:left;
-  }
+  .mobileControls{display:none;position:fixed;left:0;right:0;bottom:0;z-index:9000;background:rgba(10,10,10,.98);border-top:4px solid #ffd84d;padding:10px;touch-action:none;user-select:none;gap:10px;justify-content:space-between;align-items:center}
+  .mobilePadLeft,.mobilePadRight{display:flex;gap:10px;align-items:center}
+  .mobileBigBtn{min-width:78px;min-height:70px;border-radius:16px;border:4px solid #777;background:#242424;color:#fff;font-size:19px;font-weight:bold;touch-action:none;user-select:none}
+  .mobileBigBtn:active,.mobileBigBtn.activeTouch{background:#ffd84d!important;color:#111!important;transform:scale(.95)}
+  .mobileModeBtn{background:#17456b;border-color:#5ab2ff}.mobileBreakModeBtn{background:#5a1f1f;border-color:#ff7777}
+  .mobileHintCompact{color:#ddd;font-size:12px;line-height:1.25;max-width:280px;text-align:center}
+  .adminItemGiveSelect{width:100%;box-sizing:border-box;padding:9px;margin:7px 0;border-radius:8px;border:2px solid #444;background:#0b0b0b;color:#fff}
+  .ghostPanel{background:#101820;border:3px solid #4dd0ff;border-radius:14px;padding:10px;margin:10px auto;max-width:960px;text-align:left}
   .ghostPanel b{color:#4dd0ff}
-  .ghostPanel .ghostButtons{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-  .ghostActivity{
-    max-height:150px;
-    overflow:auto;
-    background:#080b0f;
-    border:2px solid #263a4a;
-    border-radius:10px;
-    padding:8px;
-    font-size:13px;
-  }
-  .adminItemGiveSelect{
-    width:100%;
-    box-sizing:border-box;
-    padding:9px;
-    margin:7px 0;
-    border-radius:8px;
-    border:2px solid #444;
-    background:#0b0b0b;
-    color:#fff;
-  }
-
+  @media (hover:none),(pointer:coarse),(max-width:1100px){body.loggedIn #worldPage.active .mobileControls{display:flex!important}body{padding-bottom:112px}#game{touch-action:none;width:100vw;border-left:none;border-right:none}}
 </style>
 </head>
 <body class="loggedOut">
@@ -1387,7 +1365,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">ADMIN CONTROLS + GHOST FIX VERSION 2.2.6</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">BIG ADMIN MOBILE ITEM FIX VERSION 2.2.7</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -1625,42 +1603,20 @@
       <button id="btnGameChatSend">Senden</button>
     </div>
   </div>
-  <div id="msg" class="message"></div>
-
-  <div id="ghostPanel" class="ghostPanel">
-    <b>Admin Geist-Modus</b>
-    <div id="ghostStatusText" class="small">Nicht aktiv.</div>
-    <div class="ghostButtons">
-      <button id="btnGhostVisibleToggle">Sichtbar machen</button>
-      <button id="btnGhostHitTarget" class="dangerBtn">Spieler schlagen</button>
-      <button id="btnGhostExit">Geist-Modus verlassen</button>
-    </div>
-    <div class="small">Unsichtbar = normale Spieler sehen dich nicht. Du siehst ihre Live-Aktivität und ihre Block-Aktionen.</div>
-    <div id="ghostActivityBox" class="ghostActivity">Noch keine Aktivität.</div>
-  </div>
-
+  <div id="msg" class="message"></div><div id="ghostPanel" class="ghostPanel" style="display:none"><b>Admin Geist-Modus</b><div id="ghostStatusText" class="small">Nicht aktiv.</div><button id="btnGhostVisibleToggle">Sichtbar machen</button><button id="btnGhostHitTarget" class="dangerBtn">Spieler schlagen</button><button id="btnGhostExit">Geist verlassen</button></div>
   <div class="mobileControls">
-    <div id="moveJoystick" class="joystickWrap">
-      <div class="joystickLabel">Bewegung</div>
-      <div class="joystickBase"></div>
-      <div id="moveKnob" class="joystickKnob"></div>
-      <div class="joystickHint">links / rechts</div>
+    <div class="mobilePadLeft">
+      <button id="mobileLeftBtn" class="mobileBigBtn">⬅</button>
+      <button id="mobileRightBtn" class="mobileBigBtn">➡</button>
     </div>
-
-    <div class="mobileMiddleHint">
-      Handy-Steuerung:<br>
-      <b>Links/Rechts</b> mit Buttons oder Joystick<br>
-      <b>Bauen</b> = tippen/platzieren · <b>Abbauen</b> = tippen/abbauen<br>
-      Modus: <span id="mobileModeDisplay" class="mobileModeDisplay">Tippen/Bauen</span>
-      <div class="mobileDpadButtons">
-        <button id="mobileLeftBtn" class="mobileSmallBtn">⬅</button>
-        <button id="mobileRightBtn" class="mobileSmallBtn">➡</button>
-        <button id="mobilePlaceBtn" class="mobileSmallBtn mobileActionBtn">Bauen</button>
-        <button id="mobileBreakBtn" class="mobileSmallBtn mobileBreakBtn">Abbauen</button>
-      </div>
+    <div class="mobileHintCompact">
+      Handy:<br>Links/Rechts halten · Springen drücken<br>Modus wählen und im Feld tippen<br><b id="mobileModeDisplay">Tippen = Bauen</b>
     </div>
-
-    <button id="mobileJumpBtn" class="mobileJumpBig">⬆<br>Springen</button>
+    <div class="mobilePadRight">
+      <button id="mobileJumpBtn" class="mobileBigBtn">⬆</button>
+      <button id="mobilePlaceBtn" class="mobileBigBtn mobileModeBtn">Bauen</button>
+      <button id="mobileBreakBtn" class="mobileBigBtn mobileBreakModeBtn">Abbauen</button>
+    </div>
   </div>
 </div>
 
@@ -2227,10 +2183,7 @@
   let voiceStream = null;
   let currentServerId = null;
   let adminSessionPassword = "";
-  let adminGhostMode = false;
-  let adminGhostTarget = null;
-  let adminGhostVisible = false;
-  let lastAdminGhostEventTime = 0;
+  let adminGhostMode=false, adminGhostTarget=null, adminGhostVisible=false, lastAdminGhostEventTime=0;
   let mobileActionMode = "place";
   let joystickState = {moveTouch:null,actionTouch:null};
   let canvasHold = {active:false,broke:false,timer:null,interval:null,event:null,target:null};
@@ -2626,7 +2579,6 @@
       drawBlock(x*cell-camX,y*cell-camY,b);
     }
     drawBlockEvents();
-    if(adminGhostMode) renderGhostActivityPanel();
     vehicles.forEach(drawVehicle);
     mobs.forEach(drawMob);
     bullets.forEach(drawBullet);
@@ -3913,7 +3865,6 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     setBlock(px,py,selected);
     if(!creativeMode)inv[selected]--;
     addServerBlockEvent('place',selected,px,py);
-    if(adminGhostMode) adminGhostAction('place',0,'Der Admin-Geist hat in deiner Welt '+defs[selected].name+' platziert.');
     recordModBlockChange('place', selected, px, py);
     saveAccountState();
     msg(defs[selected].name+(target==="water"?" als Brücke über Wasser":"")+" gesetzt.");
@@ -4422,73 +4373,27 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function createAdminItem(name,type,color,icon,options={}){
     if(!isAdmin()){msg("Nur Admin darf Items erstellen.");return null;}
     if(!name || !name.trim()){msg("Item braucht einen Namen.");return null;}
-
-    const items = getAdminItems();
-    const fn = options.function || document.getElementById("adminToolFunction")?.value || "material";
-    let effect = options.effect || document.getElementById("adminWeaponEffect")?.value || "normal";
-    const requestedHoldStyle = options.holdStyle || document.getElementById("adminHoldStyle")?.value || "auto";
-
-    if(fn==="rocket" || fn==="bazooka") effect="explosive";
-    if(fn==="strong") effect="strong";
-    if(fn==="rifle" && effect==="normal") effect="strong";
-    if(fn==="food5") type="food";
-    if(fn==="placeable") type="block";
-
-    const id = makeSafeId(name, type==="weapon"?"weapon":type==="block"?"block":type==="tool"?"tool":"item");
-    const recipe = options.recipe || getAdminRecipeFromGrid();
-
-    const holdStyle = requestedHoldStyle!=="auto"
-      ? requestedHoldStyle
-      : (type==="block" || fn==="placeable") ? "block"
-      : (fn==="bazooka" || fn==="rocket") ? "bazooka"
-      : fn==="rifle" ? "rifle"
-      : fn==="minigun" ? "minigun"
-      : fn==="pistol" ? "pistol"
-      : fn==="sword" ? "sword"
-      : fn==="pickaxe" ? "pickaxe"
-      : fn==="axe" ? "axe"
-      : fn==="shovel" ? "shovel"
-      : type==="weapon" ? "pistol" : "item";
-
-    const damage = type==="weapon" || fn==="rocket" || fn==="bazooka" || fn==="pistol" || fn==="strong" || fn==="rifle" || fn==="minigun"
-      ? (effect==="explosive"?9:effect==="strong"?6:fn==="minigun"?2:fn==="rifle"?4:3)
-      : 1;
-
-    const radius = effect==="explosive" ? 95 : 0;
-
-    items[id] = {
-      id,
-      name:name.trim(),
-      type,
-      color:color || "#ffcc00",
-      icon:icon ? JSON.parse(JSON.stringify(icon)) : null,
-      creator:"admin",
-      created:Date.now(),
-      updated:Date.now(),
-      published:false,
-      effect,
-      function:fn,
-      toolFunction:fn,
-      damage,
-      radius,
-      recipe,
-      holdStyle
-    };
-
-    saveAdminItems(items);
-    loadAdminItemsIntoGame();
-
-    inv[id] = Math.max(inv[id]||0, 20);
-    selected = id;
-    saveAccountState();
-
-    renderAll();
-    renderAdminItemsList();
-
-    const notice=document.getElementById("adminCreatedItemNotice");
-    if(notice) notice.textContent="Erstellt: "+name+" | Status: OFFLINE/PRIVAT | 20x im Inventar";
-    msg("Item erstellt und 1:1 ins Inventar gelegt: "+name);
-    return id;
+    try{
+      const items=getAdminItems();
+      const fn=options.function || document.getElementById("adminToolFunction")?.value || "material";
+      let effect=options.effect || document.getElementById("adminWeaponEffect")?.value || "normal";
+      const holdSel=document.getElementById("adminHoldStyle");
+      const requestedHoldStyle=options.holdStyle || (holdSel?holdSel.value:"auto") || "auto";
+      if(fn==="rocket"||fn==="bazooka") effect="explosive";
+      if(fn==="strong") effect="strong";
+      if(fn==="food5") type="food";
+      if(fn==="placeable") type="block";
+      const id=makeSafeId(name,type==="weapon"?"weapon":type==="block"?"block":type==="tool"?"tool":"item");
+      const holdStyle=requestedHoldStyle!=="auto"?requestedHoldStyle:(type==="block"||fn==="placeable")?"block":(fn==="bazooka"||fn==="rocket")?"bazooka":fn==="rifle"?"rifle":fn==="minigun"?"minigun":fn==="pistol"?"pistol":fn==="sword"?"sword":fn==="pickaxe"?"pickaxe":fn==="axe"?"axe":fn==="shovel"?"shovel":type==="weapon"?"pistol":"item";
+      const damage=(type==="weapon"||["rocket","bazooka","pistol","strong","rifle","minigun"].includes(fn))?(effect==="explosive"?9:effect==="strong"?6:fn==="minigun"?2:fn==="rifle"?4:3):1;
+      const radius=effect==="explosive"?95:0;
+      items[id]={id,name:name.trim(),type,color:color||"#ffcc00",icon:Array.isArray(icon)?JSON.parse(JSON.stringify(icon)):null,creator:"admin",created:Date.now(),updated:Date.now(),published:true,effect,function:fn,toolFunction:fn,damage,radius,recipe:options.recipe||getAdminRecipeFromGrid(),holdStyle};
+      saveAdminItems(items);loadAdminItemsIntoGame(true);
+      inv[id]=Math.max(inv[id]||0,99);selected=id;saveAccountState();
+      renderInventory("gameInventory");renderInventory("creativeInventory");renderAdminItemsList();renderAll();
+      const notice=document.getElementById("adminCreatedItemNotice");if(notice)notice.textContent="Erstellt: "+name+" | ONLINE | 99x im Inventar";
+      msg("Item erstellt und dir 99x gegeben: "+name);return id;
+    }catch(e){console.error(e);msg("Item konnte nicht erstellt werden: "+e.message);return null;}
   }
 
   function addAdminAiMessage(from,text){
@@ -4691,86 +4596,31 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   async function adminSyncInventoryChangeToServer(name,itemId,amount,mode){
-    if(!isAdmin() || !isRealWebsiteMode()) return false;
-
-    const pass = getAdminActionPassword();
-    if(!pass){
-      msg("Admin-Passwort fehlt.");
-      return false;
-    }
-
+    const pass=getAdminActionPassword();if(!pass){msg("Admin-Passwort fehlt.");return false;}
     try{
-      const res=await fetch("/api/admin/giveItem",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({target:name,itemId,amount,mode,pass})
-      });
+      const res=await fetch("/api/admin/giveItem",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({target:name,itemId,amount,mode,pass})});
       const data=await res.json();
-
-      if(data && data.ok && data.accounts){
-        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), data.accounts || {});
-        adminDirectAccountsCache = onlineAccountsCache;
-        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
-        backupAccountsLocally(onlineAccountsCache);
-        renderAdminPlayersList();
-        renderFriendsPage();
-        msg((mode==="remove"?"Entfernt: ":"Gegeben: ")+defs[itemId].name+" x"+amount+" → "+name);
-      }else{
-        msg((data && data.error) || "Item konnte nicht gegeben werden.");
-      }
-
-      return !!(data && data.ok);
-    }catch(e){
-      msg("Item wurde lokal geändert, aber Server-Sync ist fehlgeschlagen.");
-      return false;
-    }
+      if(data&&data.ok&&data.accounts){onlineAccountsCache=normalizeAccounts(data.accounts||{});adminDirectAccountsCache=onlineAccountsCache;localStorage.setItem("safinicraft_accounts",JSON.stringify(onlineAccountsCache));backupAccountsLocally(onlineAccountsCache);renderAdminPlayersList();renderFriendsPage();msg((mode==="remove"?"Entfernt: ":"Gegeben: ")+defs[itemId].name+" x"+amount+" → "+name);}
+      else msg((data&&data.error)||"Item konnte nicht gegeben werden.");
+      return !!(data&&data.ok);
+    }catch(e){msg("Server-Sync beim Item-Geben fehlgeschlagen.");return false;}
   }
   function getAdminActionPassword(){
     if(adminSessionPassword) return adminSessionPassword;
-    const p = prompt("Admin-Passwort eingeben:") || "";
-    if(p) adminSessionPassword = p;
+    const p=prompt("Admin-Passwort eingeben:")||"";
+    if(p) adminSessionPassword=p;
     return p;
   }
-
-  async function adminPatchAccountOnServer(name, patch, message){
-    if(!isAdmin()) return false;
-
-    const pass = getAdminActionPassword();
-    if(!pass){
-      msg("Admin-Passwort fehlt.");
-      return false;
-    }
-
+  async function adminPatchAccountOnServer(name,patch,message){
+    const pass=getAdminActionPassword(); if(!pass){msg("Admin-Passwort fehlt.");return false;}
     try{
-      const res = await fetch("/api/admin/updateAccount",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({target:name, pass, patch})
-      });
-      const data = await res.json();
-
-      if(!data.ok){
-        msg(data.error || "Admin-Aktion fehlgeschlagen.");
-        return false;
-      }
-
-      if(data.accounts){
-        onlineAccountsCache = mergeAccountObjects(getAllKnownAccounts(), data.accounts || {});
-        adminDirectAccountsCache = onlineAccountsCache;
-        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
-        backupAccountsLocally(onlineAccountsCache);
-      }
-
-      renderAdminPlayersList();
-      renderFriendsPage();
-      if(message) msg(message);
-      return true;
-    }catch(e){
-      msg("Server-Fehler bei Admin-Aktion.");
-      return false;
-    }
+      const res=await fetch("/api/admin/updateAccount",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({target:name,pass,patch})});
+      const data=await res.json();
+      if(!data.ok){msg(data.error||"Admin-Aktion fehlgeschlagen.");return false;}
+      if(data.accounts){onlineAccountsCache=normalizeAccounts(data.accounts||{});adminDirectAccountsCache=onlineAccountsCache;localStorage.setItem("safinicraft_accounts",JSON.stringify(onlineAccountsCache));backupAccountsLocally(onlineAccountsCache);}
+      renderAdminPlayersList();renderFriendsPage();if(message)msg(message);return true;
+    }catch(e){msg("Server-Fehler bei Admin-Aktion.");return false;}
   }
-
   function adminSaveAccountsAndRefresh(accounts, message){
     const merged = mergeAccountObjects(getAllKnownAccounts(), accounts || {});
     onlineAccountsCache = merged;
@@ -4782,50 +4632,27 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     if(message) msg(message);
   }
 
-  async function adminSetRole(name, role){
-    if(!isAdmin()) return;
-    const accounts=getAdminVisibleAccounts();
-    if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
-    if(name===currentUser && role!=="admin"){
-      msg("Du kannst dir selbst den Admin-Modus nicht entfernen.");
-      return;
-    }
-
-    accounts[name].role = role;
-    accounts[name].adminModeGranted = role==="admin";
-    adminSaveAccountsAndRefresh(accounts, name+" wird aktualisiert...");
-
-    await adminPatchAccountOnServer(name,{
-      role,
-      adminModeGranted: role==="admin"
-    }, name+" ist jetzt "+(role==="admin"?"Admin":"normaler Spieler")+".");
+  async function adminSetRole(name,role){
+    if(!isAdmin())return;const accounts=getAdminVisibleAccounts();if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
+    if(name===currentUser&&role!=="admin"){msg("Du kannst dir selbst den Admin-Modus nicht entfernen.");return;}
+    accounts[name].role=role;accounts[name].adminModeGranted=role==="admin";adminSaveAccountsAndRefresh(accounts,name+" wird gespeichert...");
+    await adminPatchAccountOnServer(name,{role,adminModeGranted:role==="admin"},name+" ist jetzt "+(role==="admin"?"Admin":"normaler Spieler")+".");
   }
 
-  async function adminSetCreative(name, value){
-    if(!isAdmin()) return;
-    const accounts=getAdminVisibleAccounts();
-    if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
-
-    accounts[name].creativeGrant = !!value;
-    accounts[name].creativeUntil = 0;
-    if(!value) accounts[name].creativeRemovedAt = Date.now();
-    adminSaveAccountsAndRefresh(accounts, name+" wird aktualisiert...");
-
-    await adminPatchAccountOnServer(name,{
-      creativeGrant: !!value,
-      creativeUntil: 0,
-      creativeRemovedAt: !value ? Date.now() : 0
-    }, value ? name+" hat jetzt Creative Mode." : name+" hat keinen Creative Mode mehr.");
+  async function adminSetCreative(name,value){
+    if(!isAdmin())return;const accounts=getAdminVisibleAccounts();if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
+    accounts[name].creativeGrant=!!value;accounts[name].creativeUntil=0;if(!value)accounts[name].creativeRemovedAt=Date.now();adminSaveAccountsAndRefresh(accounts,name+" wird gespeichert...");
+    await adminPatchAccountOnServer(name,{creativeGrant:!!value,creativeUntil:0,creativeRemovedAt:!value?Date.now():0},value?name+" hat jetzt Creative Mode.":name+" hat keinen Creative Mode mehr.");
   }
 
   function adminToggleBan(name){
     adminBanFor(name,0,"permanent");
   }
 
-  async function adminBanFor(name, amount, unit){
+  function adminBanFor(name, amount, unit){
     if(!isAdmin()) return;
-    const accounts=getAdminVisibleAccounts();
-    if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
+    const accounts=getAccounts();
+    if(!accounts[name]) return;
     if(name===currentUser){
       msg("Du kannst dich nicht selbst bannen.");
       return;
@@ -4840,31 +4667,19 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     accounts[name].banned = true;
     accounts[name].bannedUntil = until;
-    accounts[name].bannedReason = until ? "Zeit-Bann" : "Permanent-Bann";
-    adminSaveAccountsAndRefresh(accounts, name+" wird gebannt...");
-
-    await adminPatchAccountOnServer(name,{
-      banned:true,
-      bannedUntil:until,
-      bannedReason:until ? "Zeit-Bann" : "Permanent-Bann"
-    }, name+" wurde gebannt bis: "+adminTimeText(until));
+    accounts[name].bannedReason = amount>0 ? ("Zeitbann: "+amount+" "+unit) : "permanent";
+    accounts[name].online = false;
+    adminSaveAccountsAndRefresh(accounts, name+" wurde gebannt bis: "+adminTimeText(until));
   }
 
-  async function adminUnban(name){
+  function adminUnban(name){
     if(!isAdmin()) return;
-    const accounts=getAdminVisibleAccounts();
-    if(!accounts[name]){msg("Spieler nicht gefunden.");return;}
-
-    accounts[name].banned=false;
-    accounts[name].bannedUntil=0;
-    accounts[name].bannedReason="";
-    adminSaveAccountsAndRefresh(accounts, name+" wird entbannt...");
-
-    await adminPatchAccountOnServer(name,{
-      banned:false,
-      bannedUntil:0,
-      bannedReason:""
-    }, name+" wurde entbannt.");
+    const accounts=getAccounts();
+    if(!accounts[name]) return;
+    accounts[name].banned = false;
+    accounts[name].bannedUntil = 0;
+    accounts[name].bannedReason = "";
+    adminSaveAccountsAndRefresh(accounts, name+" wurde entbannt.");
   }
 
   function adminGiveItemToPlayer(name, itemValue, amount){
@@ -4872,7 +4687,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     const itemId=adminResolveItemInput(itemValue);
     if(!itemId || !defs[itemId]){
-      msg("Item nicht gefunden. Wähle es aus der Liste oder schreibe die Item-ID.");
+      msg("Item nicht gefunden. Schreibe die Item-ID oder wähle es aus dem Menü.");
       return;
     }
 
@@ -4895,7 +4710,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     const itemId=adminResolveItemInput(itemValue);
     if(!itemId || !defs[itemId]){
-      msg("Item nicht gefunden. Wähle es aus der Liste oder schreibe die Item-ID.");
+      msg("Item nicht gefunden. Schreibe die Item-ID oder wähle es aus dem Menü.");
       return;
     }
 
@@ -4914,138 +4729,20 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
 
-  function updateGhostPanel(){
-    const panel=document.getElementById("ghostPanel");
-    if(!panel) return;
-    panel.style.display = adminGhostMode ? "block" : "none";
-
-    const text=document.getElementById("ghostStatusText");
-    if(text){
-      text.textContent = adminGhostMode
-        ? ("Du beobachtest "+adminGhostTarget+" | "+(adminGhostVisible?"SICHTBAR für Spieler":"UNSICHTBAR für Spieler"))
-        : "Nicht aktiv.";
-    }
-
-    const btn=document.getElementById("btnGhostVisibleToggle");
-    if(btn) btn.textContent = adminGhostVisible ? "Unsichtbar machen" : "Sichtbar machen";
-
-    renderGhostActivityPanel();
-  }
-
-  function renderGhostActivityPanel(){
-    const box=document.getElementById("ghostActivityBox");
-    if(!box) return;
-    if(!adminGhostMode || !adminGhostTarget){
-      box.textContent="Noch keine Aktivität.";
-      return;
-    }
-
-    const server=getActiveServer();
-    const events=(server && server.blockEvents ? server.blockEvents : [])
-      .filter(ev=>ev.from===adminGhostTarget || ev.from==="admin")
-      .slice(-12)
-      .reverse();
-
-    if(events.length===0){
-      box.innerHTML="<span class='small'>Noch keine Block-Aktivität sichtbar.</span>";
-      return;
-    }
-
-    box.innerHTML=events.map(ev=>{
-      const verb=ev.action==="break"?"abgebaut":"platziert";
-      const from=ev.from===currentUser?"Du":ev.from;
-      return "<div>• "+escapeHtml(from)+" hat "+escapeHtml(ev.blockName||ev.block)+" "+verb+" bei X:"+ev.x+" Y:"+ev.y+"</div>";
-    }).join("");
-  }
-
-  function setGhostVisible(value){
-    adminGhostVisible=!!value;
-    updateGhostPanel();
-    saveAccountState();
-    msg(adminGhostVisible ? "Geist ist jetzt sichtbar für Spieler." : "Geist ist jetzt unsichtbar.");
-  }
-
-  function exitGhostMode(){
-    adminGhostMode=false;
-    adminGhostTarget=null;
-    adminGhostVisible=false;
-    updateGhostPanel();
-    saveAccountState();
-    msg("Geist-Modus verlassen.");
-  }
-
-  async function adminGhostAction(action, damage=0, text=""){
-    if(!isAdmin() || !adminGhostMode || !adminGhostTarget) return false;
-
-    const pass=getAdminActionPassword();
-    if(!pass) return false;
-
-    try{
-      const res=await fetch("/api/admin/ghostAction",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({target:adminGhostTarget,pass,action,damage,text})
-      });
-      const data=await res.json();
-      if(data.ok && data.accounts){
-        onlineAccountsCache=mergeAccountObjects(getAllKnownAccounts(), data.accounts || {});
-        adminDirectAccountsCache=onlineAccountsCache;
-        localStorage.setItem("safinicraft_accounts",JSON.stringify(onlineAccountsCache));
-        backupAccountsLocally(onlineAccountsCache);
-        renderGhostActivityPanel();
-        return true;
-      }
-      msg((data&&data.error)||"Geist-Aktion fehlgeschlagen.");
-    }catch(e){
-      msg("Geist-Aktion Server-Fehler.");
-    }
-    return false;
-  }
-
-  function applyIncomingGhostEvent(){
-    if(!currentUser || isAdmin()) return;
-    const accounts=getAccounts();
-    const acc=accounts[currentUser];
-    const ev=acc && acc.adminGhostEvent;
-    if(!ev || !ev.time || ev.time<=lastAdminGhostEventTime) return;
-
-    lastAdminGhostEventTime=ev.time;
-    if(ev.damage){
-      player.hp=Math.max(0, player.hp-Number(ev.damage||0));
-      player.hurt=25;
-    }
-    msg(ev.message || "Ein unsichtbarer Geist hat etwas gemacht.");
-    saveAccountState();
-  }
+  function updateGhostPanel(){const p=document.getElementById("ghostPanel");if(p)p.style.display=adminGhostMode?"block":"none";const t=document.getElementById("ghostStatusText");if(t)t.textContent=adminGhostMode?("Du beobachtest "+adminGhostTarget+" | "+(adminGhostVisible?"sichtbar":"unsichtbar")):"Nicht aktiv.";const b=document.getElementById("btnGhostVisibleToggle");if(b)b.textContent=adminGhostVisible?"Unsichtbar machen":"Sichtbar machen";}
+  function setGhostVisible(v){adminGhostVisible=!!v;updateGhostPanel();saveAccountState();msg(adminGhostVisible?"Du bist sichtbar.":"Du bist unsichtbar.");}
+  function exitGhostMode(){adminGhostMode=false;adminGhostTarget=null;adminGhostVisible=false;updateGhostPanel();saveAccountState();msg("Geist-Modus verlassen.");}
+  async function adminGhostAction(action,damage=0,text=""){if(!isAdmin()||!adminGhostMode||!adminGhostTarget)return false;const pass=getAdminActionPassword();if(!pass)return false;try{const r=await fetch("/api/admin/ghostAction",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({target:adminGhostTarget,pass,action,damage,text})});const d=await r.json();if(d.ok&&d.accounts){onlineAccountsCache=normalizeAccounts(d.accounts||{});adminDirectAccountsCache=onlineAccountsCache;localStorage.setItem("safinicraft_accounts",JSON.stringify(onlineAccountsCache));backupAccountsLocally(onlineAccountsCache);return true;}}catch(e){}return false;}
+  function applyIncomingGhostEvent(){if(!currentUser||isAdmin())return;const a=getAccounts()[currentUser];const ev=a&&a.adminGhostEvent;if(!ev||!ev.time||ev.time<=lastAdminGhostEventTime)return;lastAdminGhostEventTime=ev.time;if(ev.damage){player.hp=Math.max(0,player.hp-Number(ev.damage||0));player.hurt=25;}msg(ev.message||"Ein Admin-Geist hat etwas gemacht.");saveAccountState();}
 
   function adminGhostVisit(name){
-    if(!isAdmin()) return;
-    const accounts=getAdminVisibleAccounts();
-    const acc=accounts[name];
-    if(!acc || !acc.live){
-      msg("Keine Live-Welt von "+name+" gefunden. Der Spieler muss online sein.");
-      return;
-    }
-
-    adminGhostMode=true;
-    adminGhostTarget=name;
-    adminGhostVisible=false;
-
-    if(acc.live.serverId) currentServerId=acc.live.serverId;
-    if(acc.live.planet && worlds[acc.live.planet]) switchPlanet(acc.live.planet);
-    else if(acc.live.planet) currentPlanet=acc.live.planet;
-
-    player.x=(acc.live.x||player.x)+80;
-    player.y=acc.live.y||player.y;
-    creativeMode=true;
-    serverGrantedCreative=true;
-    updateCreativeStatus();
-    updateGhostPanel();
-    saveAccountState();
-
-    msg("Geist-Modus: Du beobachtest "+name+" unsichtbar. Du kannst dich sichtbar machen.");
-    switchTab("worldPage","tabWorld");
-    renderAll();
+    if(!isAdmin())return;const accounts=getAdminVisibleAccounts();const acc=accounts[name];
+    if(!acc||!acc.live){msg("Keine Live-Welt von "+name+" gefunden. Spieler muss online sein.");return;}
+    adminGhostMode=true;adminGhostTarget=name;adminGhostVisible=false;
+    if(acc.live.serverId)currentServerId=acc.live.serverId;
+    if(acc.live.planet&&worlds[acc.live.planet])switchPlanet(acc.live.planet);else if(acc.live.planet)currentPlanet=acc.live.planet;
+    player.x=(Number(acc.live.x)||player.x)+70;player.y=Number(acc.live.y)||player.y;creativeMode=true;serverGrantedCreative=true;updateCreativeStatus();updateGhostPanel();saveAccountState();
+    msg("Geist-Modus: unsichtbar bei "+name+".");switchTab("worldPage","tabWorld");renderAll();
   }
 
   function adminResolveItemInput(value){
@@ -5152,47 +4849,16 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
   async function adminDeletePlayerAccount(name){
-    if(!isAdmin()) return;
-
-    if(!name || name==="admin" || name===currentUser){
-      msg("Admin kann sich selbst nicht löschen.");
-      return;
-    }
-
-    const ok = confirm("Spieler '"+name+"' wirklich löschen? Danach kann der Name wieder neu erstellt werden.");
-    if(!ok) return;
-
-    const pass = getAdminActionPassword();
-    if(!pass){msg("Admin-Passwort fehlt.");return;}
-
+    if(!isAdmin())return;if(!name||name==="admin"||name===currentUser){msg("Admin kann sich selbst nicht löschen.");return;}
+    if(!confirm("Spieler '"+name+"' wirklich löschen? Danach kann der Name wieder neu erstellt werden."))return;
+    const pass=getAdminActionPassword();if(!pass){msg("Admin-Passwort fehlt.");return;}
     try{
-      const res = await fetch("/api/admin/deleteAccount",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({target:name, pass})
-      });
-      const data = await res.json();
-
-      if(!data.ok){
-        msg(data.error || "Spieler konnte nicht gelöscht werden.");
-        return;
-      }
-
+      const res=await fetch("/api/admin/deleteAccount",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({target:name,pass})});
+      const data=await res.json();if(!data.ok){msg(data.error||"Spieler konnte nicht gelöscht werden.");return;}
       removeDeletedPlayerFromAllLocalMenus(name);
-
-      if(data.accounts){
-        onlineAccountsCache = normalizeAccounts(data.accounts || {});
-        adminDirectAccountsCache = onlineAccountsCache;
-        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
-        backupAccountsLocally(onlineAccountsCache);
-      }
-
-      renderAdminPlayersList();
-      renderFriendsPage();
-      msg("Spieler gelöscht: "+name+". Der Name kann neu erstellt werden.");
-    }catch(e){
-      msg("Server-Fehler beim Löschen.");
-    }
+      if(data.accounts){onlineAccountsCache=normalizeAccounts(data.accounts||{});adminDirectAccountsCache=onlineAccountsCache;localStorage.setItem("safinicraft_accounts",JSON.stringify(onlineAccountsCache));backupAccountsLocally(onlineAccountsCache);}
+      renderAdminPlayersList();renderFriendsPage();msg("Spieler gelöscht: "+name+". Er kann den Namen neu erstellen.");
+    }catch(e){msg("Server-Fehler beim Löschen.");}
   }
 
   function renderAdminPlayersList(){
@@ -5322,7 +4988,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         "<input id='itemSearch_"+idx+"' class='adminItemGiveSearch' list='itemDatalist_"+idx+"' placeholder='z.B. diamond, Apfel, Schwert'>"+
         "<datalist id='itemDatalist_"+idx+"'>"+adminItemDatalistHtml()+"</datalist>"+
         "<div id='selectedItemLabel_"+idx+"' class='adminSelectedItemText'>Noch kein Item ausgewählt</div>"+
-        "<details class='adminItemGiveMenu' open><summary>⬇ Alle Items öffnen/schließen</summary><div class='adminItemGiveList' id='adminItemGiveList_"+idx+"'>"+adminItemButtonsHtml(idx)+"</div></details>"+
+        "<details class='adminItemGiveMenu'><summary>⬇ Alle Items öffnen</summary><div class='adminItemGiveList' id='adminItemGiveList_"+idx+"'>"+adminItemButtonsHtml(idx)+"</div></details>"+
         "<label>Anzahl</label><input id='itemAmount_"+idx+"' type='number' min='1' value='10'>"+
         "<div class='adminControlBtns'><button class='adminMiniBtn' id='giveItem_"+idx+"'>Item geben</button><button class='dangerBtn adminMiniBtn' id='removeItem_"+idx+"'>Item entfernen</button></div>";
       controls.appendChild(itemBox);
@@ -5340,23 +5006,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
         document.getElementById("banBtn_"+idx).onclick=()=>adminBanFor(name,banAmount.value,banUnit.value);
         document.getElementById("unbanBtn_"+idx).onclick=()=>adminUnban(name);
-        if(itemSelect){
-          itemSelect.onchange=()=>{
-            setAdminGiveItemInput(idx,itemSelect.value);
-            if(itemSearch) itemSearch.value=itemSelect.value;
-          };
-          setAdminGiveItemInput(idx,itemSelect.value);
-        }
+        if(itemSelect){itemSelect.onchange=()=>{setAdminGiveItemInput(idx,itemSelect.value);if(itemSearch)itemSearch.value=itemSelect.value;};setAdminGiveItemInput(idx,itemSelect.value);}
         if(itemSearch){
           itemSearch.oninput=()=>filterAdminItemButtons(idx);
           itemSearch.onchange=()=>setAdminGiveItemInput(idx, adminResolveItemInput(itemSearch.value) || itemSearch.value);
         }
         document.querySelectorAll('[data-admin-item-target="'+idx+'"]').forEach(btn=>{
-          btn.onclick=()=>{
-            const id=btn.getAttribute("data-admin-item-id");
-            setAdminGiveItemInput(idx, id);
-            if(itemSelect) itemSelect.value=id;
-          };
+          btn.onclick=()=>setAdminGiveItemInput(idx, btn.getAttribute("data-admin-item-id"));
         });
         document.getElementById("giveItem_"+idx).onclick=()=>adminGiveItemToPlayer(name,(itemSearch.value||itemSelect.value),itemAmount.value);
         document.getElementById("removeItem_"+idx).onclick=()=>adminRemoveItemFromPlayer(name,(itemSearch.value||itemSelect.value),itemAmount.value);
@@ -6397,13 +6053,18 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   document.getElementById("btnCreatePaintedItem").onclick=()=>{createAdminItem(document.getElementById("adminItemName").value,document.getElementById("adminItemType").value,document.getElementById("adminPaintColor").value,itemPaintPixels,{effect:document.getElementById("adminWeaponEffect").value,function:document.getElementById("adminToolFunction").value,holdStyle:document.getElementById("adminHoldStyle")?.value||"auto"});};
   document.getElementById("btnAdminItemImageUpload")?.addEventListener("click",loadAdminItemImageFromFile);
   document.getElementById("btnAdminItemTextDraw")?.addEventListener("click",drawTextOnAdminItem);
-  document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));  function bindMobileHoldKey(id, keyName){
+  document.querySelectorAll(".modTemplateBtn").forEach(btn=>btn.onclick=()=>applyTemplate(btn.dataset.template));
+
+  
+  function mobileSetKey(key,val,el){keys[key]=!!val;if(el)el.classList.toggle("activeTouch",!!val);if(game&&game.focus)game.focus();}
+  function bindHoldButton(id,key){const el=document.getElementById(id);if(!el)return;const d=e=>{if(e&&e.preventDefault)e.preventDefault();try{if(e.pointerId!==undefined)el.setPointerCapture(e.pointerId)}catch(err){}mobileSetKey(key,true,el)};const u=e=>{if(e&&e.preventDefault)e.preventDefault();mobileSetKey(key,false,el)};["pointerdown","touchstart","mousedown"].forEach(ev=>el.addEventListener(ev,d,{passive:false}));["pointerup","pointercancel","pointerleave","touchend","touchcancel","mouseup","mouseleave"].forEach(ev=>el.addEventListener(ev,u,{passive:false}));}
+  function bindTapButton(id,fn){const el=document.getElementById(id);if(!el)return;let last=0;const r=e=>{if(e&&e.preventDefault)e.preventDefault();const n=Date.now();if(n-last<180)return;last=n;fn();if(game&&game.focus)game.focus()};["pointerdown","touchstart","click"].forEach(ev=>el.addEventListener(ev,r,{passive:false}));}
+  function bindMobileHoldKey(id, keyName){
     const el=document.getElementById(id);
     if(!el) return;
 
     const start=(e)=>{
       if(e && e.preventDefault) e.preventDefault();
-      try{ if(e.pointerId!==undefined) el.setPointerCapture(e.pointerId); }catch(err){}
       keys[keyName]=true;
       if(game && game.focus) game.focus();
     };
@@ -6420,20 +6081,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     el.addEventListener("touchstart",start,{passive:false});
     el.addEventListener("touchend",end,{passive:false});
     el.addEventListener("touchcancel",end,{passive:false});
-    el.addEventListener("mousedown",start);
-    el.addEventListener("mouseup",end);
-    el.addEventListener("mouseleave",end);
   }
 
   function bindMobileTap(id, fn){
     const el=document.getElementById(id);
     if(!el) return;
-    let last=0;
     const run=(e)=>{
       if(e && e.preventDefault) e.preventDefault();
-      const now=Date.now();
-      if(now-last<180) return;
-      last=now;
       if(game && game.focus) game.focus();
       fn();
     };
@@ -6548,12 +6202,11 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     window.addEventListener("mouseup",end);
   }
 
-  holdButton("mobileJumpBtn","jump");
-  bindMobileHoldKey("mobileLeftBtn","left");
-  bindMobileHoldKey("mobileRightBtn","right");
-  bindMobileTap("mobilePlaceBtn",()=>setMobileAction("place"));
-  bindMobileTap("mobileBreakBtn",()=>setMobileAction("break"));
-  setupJoystick("moveJoystick","moveKnob");  function copyInventory(){
+  bindHoldButton("mobileLeftBtn","left");
+  bindHoldButton("mobileRightBtn","right");
+  bindHoldButton("mobileJumpBtn","jump");
+  bindTapButton("mobilePlaceBtn",()=>setMobileAction("place"));
+  bindTapButton("mobileBreakBtn",()=>setMobileAction("break"));  function copyInventory(){
     const data={};
     Object.keys(inv || {}).forEach(id=>{
       if((inv[id]||0)>0) data[id]=inv[id]||0;
@@ -6610,7 +6263,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     };
     accounts[currentUser].live={
       x:player.x,y:player.y,planet:currentPlanet,hp:player.hp,hunger:player.hunger,
-      held:selected,serverId:currentServerId,lastSeen:Date.now(),ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),ghostTarget:adminGhostTarget,ghostMode:adminGhostMode
+      held:selected,serverId:currentServerId,lastSeen:Date.now(),ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),ghostMode:adminGhostMode,ghostTarget:adminGhostTarget
     };
     accounts[currentUser].online=true;
     saveAccounts(accounts);
@@ -6730,9 +6383,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
             held: selected,
             serverId: currentServerId,
             lastSeen: Date.now(),
-            ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),
-            ghostTarget:adminGhostTarget,
-            ghostMode:adminGhostMode
+            ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),ghostMode:adminGhostMode,ghostTarget:adminGhostTarget
           }
         }
       };
@@ -7308,6 +6959,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         }
 
         if(name.toLowerCase()==="admin") adminSessionPassword = pass;
+        if(name.toLowerCase()==="admin") adminSessionPassword=pass;
         enterGameAfterLogin(name, result.account, result.state);
         return;
       }else if(onlineMode){
