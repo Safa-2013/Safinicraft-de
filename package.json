@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.2.8",
-  "description": "Safinicraft All Bugs Hard Fix",
+  "version": "2.2.9",
+  "description": "Safinicraft Server Sync Admin Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
