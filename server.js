@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const DATA_FILE = path.join(ROOT, "server_data.json");
+const ADMIN_TOKEN = crypto.randomBytes(24).toString("hex");
 
 let state = {
   accounts: {},
@@ -15,6 +16,7 @@ let state = {
   adminItems: {},
   worldSettings: {},
   adminChat: [],
+  deletedAccounts: {},
   resetVersion: ""
 };
 
@@ -57,6 +59,12 @@ function adminName(){
 
 function adminPassword(){
   return (process.env.ADMIN_PASSWORD || "2013").trim() || "2013";
+}
+
+function isAdminAuth(data){
+  const pass = String((data && data.pass) || "");
+  const token = String((data && data.adminToken) || "");
+  return pass === adminPassword() || token === ADMIN_TOKEN;
 }
 
 const RESET_ACCOUNTS_VERSION = "2.2.0"
@@ -164,6 +172,7 @@ function loadState(){
       state.adminItems = saved.adminItems || {};
       state.worldSettings = saved.worldSettings || {};
       state.adminChat = Array.isArray(saved.adminChat) ? saved.adminChat : [];
+      state.deletedAccounts = saved.deletedAccounts || {};
       state.resetVersion = saved.resetVersion || "";
     }
   }catch(e){
@@ -249,7 +258,9 @@ function broadcastState(){
 
 function mergeAccounts(incoming){
   ensureAdmin();
+  state.deletedAccounts = state.deletedAccounts || {};
   Object.keys(incoming || {}).forEach(name=>{
+    if(state.deletedAccounts[name] && name !== "admin") return;
     const inc = incoming[name] || {};
     const cur = state.accounts[name] || {};
     const oldPass = cur.pass || inc.pass || "";
@@ -314,8 +325,8 @@ const server = http.createServer(async (req,res)=>{
     const data = await readBody(req);
     const pass = String(data.pass || "");
 
-    if(pass !== adminPassword()){
-      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+    if(!isAdminAuth(data)){
+      sendJson(res, {ok:false, error:"Admin-Login abgelaufen. Bitte neu als admin einloggen."});
       return;
     }
 
@@ -328,8 +339,8 @@ const server = http.createServer(async (req,res)=>{
     const data = await readBody(req);
     const pass = String(data.pass || "");
 
-    if(pass !== adminPassword()){
-      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+    if(!isAdminAuth(data)){
+      sendJson(res, {ok:false, error:"Admin-Login abgelaufen. Bitte neu als admin einloggen."});
       return;
     }
 
@@ -365,7 +376,7 @@ const server = http.createServer(async (req,res)=>{
     const pass = String(data.pass || "");
     const patch = data.patch && typeof data.patch === "object" ? data.patch : {};
     ensureAdmin();
-    if(pass !== adminPassword()){sendJson(res,{ok:false,error:"Admin-Passwort falsch."});return;}
+    if(!isAdminAuth(data)){sendJson(res,{ok:false,error:"Admin-Login abgelaufen. Bitte neu als admin einloggen."});return;}
     if(!target || !state.accounts[target]){const clean=sanitizeState();sendJson(res,{ok:false,error:"Spieler nicht gefunden.",accounts:clean.accounts||{}});return;}
     if(target==="admin" && patch.role && patch.role!=="admin"){sendJson(res,{ok:false,error:"Admin kann nicht entfernt werden."});return;}
     const acc=state.accounts[target];
@@ -382,8 +393,8 @@ const server = http.createServer(async (req,res)=>{
 
     ensureAdmin();
 
-    if(pass !== adminPassword()){
-      sendJson(res, {ok:false, error:"Admin-Passwort falsch."});
+    if(!isAdminAuth(data)){
+      sendJson(res, {ok:false, error:"Admin-Login abgelaufen. Bitte neu als admin einloggen."});
       return;
     }
 
@@ -391,6 +402,9 @@ const server = http.createServer(async (req,res)=>{
       sendJson(res, {ok:false, error:"Admin kann nicht gelöscht werden."});
       return;
     }
+
+    state.deletedAccounts = state.deletedAccounts || {};
+    state.deletedAccounts[target] = Date.now();
 
     if(state.accounts && state.accounts[target]){
       delete state.accounts[target];
@@ -432,7 +446,7 @@ const server = http.createServer(async (req,res)=>{
     const pass = String(data.pass || "");
 
     ensureAdmin();
-    if(pass !== adminPassword()){sendJson(res,{ok:false,error:"Admin-Passwort falsch."});return;}
+    if(!isAdminAuth(data)){sendJson(res,{ok:false,error:"Admin-Login abgelaufen. Bitte neu als admin einloggen."});return;}
 
     if(!target || !itemId || !state.accounts[target]){
       const clean = sanitizeState();
@@ -462,7 +476,7 @@ const server = http.createServer(async (req,res)=>{
 
   if(req.url === "/api/admin/ghostAction" && req.method === "POST"){
     const data=await readBody(req);const target=String(data.target||"").trim();const pass=String(data.pass||"");const action=String(data.action||"ghost");const damage=Math.max(0,Math.min(10,Number(data.damage||0)));const text=String(data.text||"Der Admin-Geist hat etwas gemacht.");
-    ensureAdmin();if(pass!==adminPassword()){sendJson(res,{ok:false,error:"Admin-Passwort falsch."});return;}
+    ensureAdmin();if(!isAdminAuth(data)){sendJson(res,{ok:false,error:"Admin-Login abgelaufen. Bitte neu als admin einloggen."});return;}
     if(!target||!state.accounts[target]){const clean=sanitizeState();sendJson(res,{ok:false,error:"Spieler nicht gefunden.",accounts:clean.accounts||{}});return;}
     const acc=state.accounts[target];acc.adminGhostEvent={time:Date.now(),action,damage,message:text};if(acc.live)acc.live.hp=Math.max(0,Number(acc.live.hp||10)-damage);state.accounts[target]=acc;saveState();broadcastState();
     const clean=sanitizeState();sendJson(res,{ok:true,accounts:clean.accounts||{},target});return;
@@ -478,7 +492,9 @@ const server = http.createServer(async (req,res)=>{
 
       // WICHTIG: Ping darf KEINEN neuen Account ohne Passwort erstellen.
       // Neue Spieler müssen über /api/createAccount erstellt werden.
-      if(name !== "admin" && !state.accounts[name]){
+      state.deletedAccounts = state.deletedAccounts || {};
+      if(name !== "admin" && (state.deletedAccounts[name] || !state.accounts[name])){
+        if(state.accounts && state.accounts[name]) delete state.accounts[name];
         const cleanMissing = sanitizeState();
         sendJson(res, {ok:false, deleted:true, error:"Account wurde gelöscht. Bitte neuen Spieler erstellen.", accounts:cleanMissing.accounts || {}});
         return;
@@ -541,7 +557,7 @@ const server = http.createServer(async (req,res)=>{
 
       const publicAcc = JSON.parse(JSON.stringify(state.accounts.admin));
       delete publicAcc.pass;
-      sendJson(res, {ok:true, account:publicAcc, state:sanitizeState()});
+      sendJson(res, {ok:true, account:publicAcc, state:sanitizeState(), adminToken: ADMIN_TOKEN});
       return;
     }
 
@@ -594,6 +610,9 @@ const server = http.createServer(async (req,res)=>{
       sendJson(res, {ok:false, error:"Der Name admin ist reserviert."});
       return;
     }
+
+    state.deletedAccounts = state.deletedAccounts || {};
+    if(state.deletedAccounts[name]) delete state.deletedAccounts[name];
 
     if(state.accounts[name]){
       sendJson(res, {ok:false, error:"Dieser Name ist schon vergeben."});
@@ -788,6 +807,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de BIG ADMIN MOBILE ITEM FIX 2.2.7 läuft auf Port " + PORT);
+  console.log("Safinicraft.de ALL BUGS HARD FIX 2.2.8 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });
