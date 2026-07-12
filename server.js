@@ -372,6 +372,155 @@ const server = http.createServer(async (req,res)=>{
 
 
 
+
+  if(req.url === "/api/createServer" && req.method === "POST"){
+    const data = await readBody(req);
+    const owner = String(data.owner || "").trim();
+    const name = String(data.name || "").trim() || (owner ? owner + "s Server" : "Safinicraft Server");
+    let maxPlayers = Math.max(2, Math.min(20, Number(data.maxPlayers || 8)));
+
+    ensureAdmin();
+    state.deletedAccounts = state.deletedAccounts || {};
+
+    if(!owner || !state.accounts[owner] || state.deletedAccounts[owner]){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Du bist nicht richtig eingeloggt.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+      return;
+    }
+
+    const id = "srv_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,7);
+    state.servers = state.servers || {};
+    state.servers[id] = {
+      id,
+      name,
+      owner,
+      maxPlayers,
+      players:[owner],
+      created:Date.now(),
+      blockEvents:[]
+    };
+
+    saveState();
+    broadcastState();
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, server:state.servers[id], serverId:id, accounts:clean.accounts || {}, servers:clean.servers || {}});
+    return;
+  }
+
+  if(req.url === "/api/joinServer" && req.method === "POST"){
+    const data = await readBody(req);
+    const name = String(data.name || "").trim();
+    const serverId = String(data.serverId || "").trim();
+
+    ensureAdmin();
+    state.deletedAccounts = state.deletedAccounts || {};
+
+    if(!name || !state.accounts[name] || state.deletedAccounts[name]){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Du bist nicht richtig eingeloggt.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+      return;
+    }
+
+    const s = state.servers && state.servers[serverId];
+    if(!s){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Server nicht gefunden.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+      return;
+    }
+
+    s.players = Array.isArray(s.players) ? s.players : [];
+    const maxPlayers = Number(s.maxPlayers || 8);
+    if(s.players.length >= maxPlayers && !s.players.includes(name)){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Server ist voll.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+      return;
+    }
+
+    if(!s.players.includes(name)) s.players.push(name);
+    state.servers[serverId] = s;
+
+    saveState();
+    broadcastState();
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, server:s, serverId, accounts:clean.accounts || {}, servers:clean.servers || {}});
+    return;
+  }
+
+  if(req.url === "/api/adminJoinPlayerWorld" && req.method === "POST"){
+    const data = await readBody(req);
+    const target = String(data.target || "").trim();
+    const pass = String(data.pass || "");
+    const token = String(data.adminToken || "");
+
+    ensureAdmin();
+
+    if(!(pass === adminPassword() || token === ADMIN_TOKEN)){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Admin-Login abgelaufen. Bitte neu als admin einloggen.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+      return;
+    }
+
+    if(!target || !state.accounts[target] || !state.accounts[target].live){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Spieler ist nicht online oder hat keine Live-Welt.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+      return;
+    }
+
+    const targetLive = state.accounts[target].live || {};
+    let serverId = String(targetLive.serverId || "");
+
+    state.servers = state.servers || {};
+
+    if(!serverId || !state.servers[serverId]){
+      serverId = "srv_admin_" + target + "_" + Date.now().toString(36);
+      state.servers[serverId] = {
+        id:serverId,
+        name: target + "s Live-Welt",
+        owner: target,
+        maxPlayers: 8,
+        players:[target],
+        created:Date.now(),
+        blockEvents:[]
+      };
+    }
+
+    const s = state.servers[serverId];
+    s.players = Array.isArray(s.players) ? s.players : [];
+    if(!s.players.includes(target)) s.players.push(target);
+    if(!s.players.includes("admin")) s.players.push("admin");
+    state.servers[serverId] = s;
+
+    if(state.accounts[target]){
+      state.accounts[target].live = {...targetLive, serverId};
+    }
+
+    if(state.accounts.admin){
+      state.accounts.admin.live = {
+        ...(state.accounts.admin.live || {}),
+        x: Number(targetLive.x || 0) + 26,
+        y: Number(targetLive.y || 0),
+        planet: targetLive.planet || "earth",
+        hp: state.accounts.admin.live ? state.accounts.admin.live.hp : 10,
+        hunger: state.accounts.admin.live ? state.accounts.admin.live.hunger : 10,
+        held: state.accounts.admin.live ? state.accounts.admin.live.held : "hand",
+        serverId,
+        ghostInvisible:true,
+        ghostMode:true,
+        ghostTarget:target,
+        lastSeen:Date.now()
+      };
+    }
+
+    saveState();
+    broadcastState();
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, serverId, targetLive:state.accounts[target].live, accounts:clean.accounts || {}, servers:clean.servers || {}});
+    return;
+  }
+
   if(req.url === "/api/serverInvite" && req.method === "POST"){
     const data = await readBody(req);
     const action = String(data.action || "").trim();
@@ -725,7 +874,7 @@ const server = http.createServer(async (req,res)=>{
       if(name !== "admin" && state.deletedAccounts[name]){
         if(state.accounts && state.accounts[name]) delete state.accounts[name];
         const cleanMissing = sanitizeState();
-        sendJson(res, {ok:false, deleted:true, error:"Account wurde gelöscht. Bitte neuen Spieler erstellen.", accounts:cleanMissing.accounts || {}});
+        sendJson(res, {ok:false, deleted:true, error:"Account wurde gelöscht. Bitte neuen Spieler erstellen.", accounts:cleanMissing.accounts || {}, servers:cleanMissing.servers || {}});
         return;
       }
 
@@ -1052,6 +1201,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de SERVER INVITE FIX 2.3.1 läuft auf Port " + PORT);
+  console.log("Safinicraft.de SERVER + ADMIN WORLD SYNC FIX 2.3.2 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

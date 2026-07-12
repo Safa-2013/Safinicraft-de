@@ -1365,7 +1365,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">SERVER INVITE FIX VERSION 2.3.1</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">SERVER + ADMIN WORLD SYNC FIX VERSION 2.3.2</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -2218,6 +2218,7 @@
   let selected = "hand";
   let inventoryRenderCache = {};
   let lastFullUiRender = 0;
+  let appliedServerBlockEvents = {};
   let craftGridItems = Array(9).fill(null);
   let craftSelectedItem = null;
   let paintMode = "paint";
@@ -2754,27 +2755,47 @@
     drawPixelMatrixScaled(c,icon,0,0,16,16,false);
   }
 
-
-
   function drawOtherPlayers(){
     if(!currentUser) return;
+    const accounts = getAdminVisibleAccounts ? getAdminVisibleAccounts() : getAccounts();
     const server = getActiveServer();
-    if(!server) return;
-    const accounts = getAccounts();
-    (server.players||[]).forEach(name=>{
+
+    const names = new Set();
+    if(server && Array.isArray(server.players)){
+      server.players.forEach(n=>names.add(n));
+    }
+
+    if(isAdmin() && adminGhostMode && adminGhostTarget){
+      names.add(adminGhostTarget);
+    }
+
+    names.forEach(name=>{
       if(name===currentUser) return;
       const acc = accounts[name];
       if(!acc || !acc.live) return;
+
+      // Admin unsichtbar: normale Spieler sehen ihn nicht. Spieler selbst bleibt immer sichtbar.
       if(acc.live.ghostInvisible && !isAdmin()) return;
-      if(acc.live.serverId !== currentServerId) return;
-      if(acc.live.planet !== currentPlanet) return;
-      if(Date.now() - (acc.live.lastSeen||0) > 35000) return;
+
+      // Im Geist-Modus darf der Admin den Zielspieler immer sehen.
+      const isGhostTarget = isAdmin() && adminGhostMode && name===adminGhostTarget;
+
+      if(!isGhostTarget){
+        if(acc.live.serverId !== currentServerId) return;
+        if(acc.live.planet !== currentPlanet) return;
+      }else{
+        if(acc.live.planet && acc.live.planet !== currentPlanet) return;
+      }
+
+      if(Date.now() - (acc.live.lastSeen||0) > 45000) return;
+
       const px = acc.live.x - camX;
       const py = acc.live.y - camY;
       if(px < -80 || px > game.width+80 || py < -120 || py > game.height+120) return;
+
       ctx.fillStyle='rgba(0,0,0,.7)';
       ctx.fillRect(px-10, py-25, 95, 18);
-      ctx.fillStyle='#70ff70';
+      ctx.fillStyle=isGhostTarget?'#4dd0ff':'#70ff70';
       ctx.font='12px Arial';
       ctx.fillText(name, px-2, py-12);
       drawSkinAt(ctx, acc.skin || makeDefaultSkin('photo'), px, py, 2);
@@ -2786,6 +2807,8 @@
 
   function drawBlockEvents(){
     if(!currentUser) return;
+    applyServerBlockEventsToWorld();
+
     const server=getActiveServer();
     if(!server || !server.blockEvents) return;
     const now=Date.now();
@@ -4782,14 +4805,54 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   async function adminGhostAction(action,damage=0,text=""){if(!isAdmin()||!adminGhostMode||!adminGhostTarget)return false;const pass=getAdminActionPassword();if(!pass)return false;try{const r=await fetch("/api/admin/ghostAction",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({target:adminGhostTarget,pass,adminToken:adminSessionToken,action,damage,text})});const d=await r.json();if(d.ok&&d.accounts){onlineAccountsCache=normalizeAccounts(d.accounts||{});adminDirectAccountsCache=onlineAccountsCache;localStorage.setItem("safinicraft_accounts",JSON.stringify(onlineAccountsCache));backupAccountsLocally(onlineAccountsCache);return true;}}catch(e){}return false;}
   function applyIncomingGhostEvent(){if(!currentUser||isAdmin())return;const a=getAccounts()[currentUser];const ev=a&&a.adminGhostEvent;if(!ev||!ev.time||ev.time<=lastAdminGhostEventTime)return;lastAdminGhostEventTime=ev.time;if(ev.damage){player.hp=Math.max(0,player.hp-Number(ev.damage||0));player.hurt=25;}msg(ev.message||"Ein Admin-Geist hat etwas gemacht.");saveAccountState();}
 
-  function adminGhostVisit(name){
-    if(!isAdmin())return;const accounts=getAdminVisibleAccounts();const acc=accounts[name];
-    if(!acc||!acc.live){msg("Keine Live-Welt von "+name+" gefunden. Spieler muss online sein.");return;}
-    adminGhostMode=true;adminGhostTarget=name;adminGhostVisible=false;
-    if(acc.live.serverId)currentServerId=acc.live.serverId;
-    if(acc.live.planet&&worlds[acc.live.planet])switchPlanet(acc.live.planet);else if(acc.live.planet)currentPlanet=acc.live.planet;
-    player.x=(Number(acc.live.x)||player.x)+70;player.y=Number(acc.live.y)||player.y;creativeMode=true;serverGrantedCreative=true;updateCreativeStatus();updateGhostPanel();saveAccountState();
-    msg("Geist-Modus: unsichtbar bei "+name+".");switchTab("worldPage","tabWorld");renderAll();
+  async function adminGhostVisit(name){
+    if(!isAdmin()) return;
+
+    const accounts=getAdminVisibleAccounts();
+    const acc=accounts[name];
+    if(!acc || !acc.live){
+      msg("Keine Live-Welt von "+name+" gefunden. Spieler muss online sein.");
+      return;
+    }
+
+    const pass=getAdminActionPassword ? getAdminActionPassword() : "";
+    try{
+      const res=await fetch("/api/adminJoinPlayerWorld",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({target:name,pass,adminToken:adminSessionToken})
+      });
+      const data=await res.json();
+      if(!data.ok){
+        msg(data.error || "Admin konnte nicht in die Welt.");
+        return;
+      }
+      applyReturnedServerData(data);
+      if(data.serverId) currentServerId=data.serverId;
+    }catch(e){
+      if(acc.live.serverId) currentServerId=acc.live.serverId;
+    }
+
+    adminGhostMode=true;
+    adminGhostTarget=name;
+    adminGhostVisible=false;
+
+    const live=(getAdminVisibleAccounts()[name] && getAdminVisibleAccounts()[name].live) || acc.live;
+
+    if(live.planet && worlds[live.planet]) switchPlanet(live.planet);
+    else if(live.planet) currentPlanet=live.planet;
+
+    player.x=(Number(live.x)||player.x)+26;
+    player.y=Number(live.y)||player.y;
+    creativeMode=true;
+    serverGrantedCreative=true;
+    updateCreativeStatus();
+    updateGhostPanel();
+    saveAccountState();
+
+    msg("Admin ist direkt bei "+name+" gespawnt. Du bist unsichtbar.");
+    switchTab("worldPage","tabWorld");
+    renderAll();
   }
 
   function adminResolveItemInput(value){
@@ -6311,7 +6374,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     };
     accounts[currentUser].live={
       x:player.x,y:player.y,planet:currentPlanet,hp:player.hp,hunger:player.hunger,
-      held:selected,serverId:currentServerId,lastSeen:Date.now(),ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),ghostMode:adminGhostMode,ghostTarget:adminGhostTarget
+      held:selected,facing:player.facing||1,serverId:currentServerId,lastSeen:Date.now(),ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),ghostMode:adminGhostMode,ghostTarget:adminGhostTarget
     };
     accounts[currentUser].online=true;
     saveAccounts(accounts);
@@ -6453,6 +6516,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
             hp: player.hp,
             hunger: player.hunger,
             held: selected,
+            facing:player.facing||1,
             serverId: currentServerId,
             lastSeen: Date.now(),
             ghostInvisible:(isAdmin()&&adminGhostMode&&!adminGhostVisible),ghostMode:adminGhostMode,ghostTarget:adminGhostTarget
@@ -6476,6 +6540,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         return false;
       }
 
+      if(data && data.ok){
+        if(data.servers){
+          onlineServersCache = data.servers || {};
+          localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
+          applyServerBlockEventsToWorld();
+        }
+      }
       if(data && data.ok && data.accounts){
         onlineAccountsCache = filterDeletedAccounts(mergeAccountObjects(getAllKnownAccounts(), mergeAccountObjects(onlineAccountsCache || {}, data.accounts || {})));
         adminDirectAccountsCache = isAdmin() ? onlineAccountsCache : adminDirectAccountsCache;
@@ -6666,6 +6737,47 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
   }
 
+
+  function applyReturnedServerData(data){
+    if(!data) return;
+    if(data.accounts){
+      onlineAccountsCache = filterDeletedAccounts(normalizeAccounts(data.accounts || {}));
+      localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+      backupAccountsLocally(onlineAccountsCache);
+    }
+    if(data.servers){
+      onlineServersCache = data.servers || {};
+      localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
+      applyServerBlockEventsToWorld();
+    }
+  }
+
+  function serverEventKey(ev){
+    return String(ev.serverId||"")+"|"+String(ev.planet||"")+"|"+String(ev.time||"")+"|"+String(ev.from||"")+"|"+String(ev.action||"")+"|"+String(ev.x||"")+"|"+String(ev.y||"");
+  }
+
+  function applyServerBlockEventsToWorld(){
+    if(!currentUser || !currentServerId) return;
+    const server=getActiveServer();
+    if(!server || !Array.isArray(server.blockEvents)) return;
+
+    server.blockEvents.forEach(ev=>{
+      if(!ev || ev.serverId!==currentServerId || ev.planet!==currentPlanet) return;
+      if(ev.from===currentUser) return;
+      const key=serverEventKey(ev);
+      if(appliedServerBlockEvents[key]) return;
+      appliedServerBlockEvents[key]=true;
+
+      if(inBounds(ev.x,ev.y)){
+        if(ev.action==="break"){
+          setBlock(ev.x,ev.y,"air");
+        }else if(ev.action==="place" && ev.block && defs[ev.block]){
+          setBlock(ev.x,ev.y,ev.block);
+        }
+      }
+    });
+  }
+
   function getMessages(key){
     const all = onlineMessagesCache || JSON.parse(localStorage.getItem("safinicraft_messages") || "{}");
     return Array.isArray(all[key]) ? all[key] : [];
@@ -6681,7 +6793,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
   function getServers(){
     try{
-      return onlineServersCache || JSON.parse(localStorage.getItem('safinicraft_servers')||'{}');
+      const raw = onlineServersCache || JSON.parse(localStorage.getItem('safinicraft_servers')||'{}');
+      onlineServersCache = raw || {};
+      localStorage.setItem('safinicraft_servers', JSON.stringify(onlineServersCache));
+      return onlineServersCache;
     }
     catch(e){return {};}
   }
@@ -6782,8 +6897,14 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function addServerBlockEvent(action, block, x, y){
     if(!currentUser || !currentServerId) return;
     const servers=getServers();
-    const server=servers[currentServerId];
-    if(!server) return;
+    let server=servers[currentServerId];
+    if(!server){
+      server={id:currentServerId,name:"Live Server",owner:currentUser,maxPlayers:8,players:[currentUser],created:Date.now(),blockEvents:[]};
+    }
+    server.players=Array.isArray(server.players)?server.players:[];
+    if(!server.players.includes(currentUser)) server.players.push(currentUser);
+    if(adminGhostMode && adminGhostTarget && !server.players.includes(adminGhostTarget)) server.players.push(adminGhostTarget);
+
     server.blockEvents=server.blockEvents||[];
     const blockName=(defs[block]&&defs[block].name)||block;
     const ev={
@@ -6798,11 +6919,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       time:Date.now()
     };
     server.blockEvents.push(ev);
-    server.blockEvents=server.blockEvents.slice(-120);
+    server.blockEvents=server.blockEvents.slice(-200);
     servers[currentServerId]=server;
     saveServers(servers);
 
-    // auch im Online-Chat anzeigen
     const key=getChatKey();
     const messages=getMessages(key);
     const verb=action==='break'?'abgebaut':'platziert';
@@ -7328,22 +7448,73 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     renderFriendsPage();
   }
 
-  function createServer(){
-    if(!currentUser){msg("Du musst eingeloggt sein.");return;}
+  async function createServer(){
+    if(!currentUser){msg("Du musst eingeloggt sein.");return null;}
     const name=(document.getElementById("serverNameInput").value.trim() || (currentUser + "s Server"));
     let max=parseInt(document.getElementById("serverMaxInput").value || "8",10);
     max=Math.max(2,Math.min(20,max));
+
+    if(isRealWebsiteMode()){
+      try{
+        const res=await fetch("/api/createServer",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({owner:currentUser,name,maxPlayers:max})
+        });
+        const data=await res.json();
+        if(!data.ok){
+          msg(data.error || "Server konnte nicht erstellt werden.");
+          const sm=document.getElementById("serverMsg"); if(sm) sm.textContent=data.error || "Server konnte nicht erstellt werden.";
+          return null;
+        }
+        applyReturnedServerData(data);
+        currentServerId=data.serverId;
+        saveAccountState();
+        const sm=document.getElementById("serverMsg"); if(sm) sm.textContent="Server erstellt: "+name;
+        msg("Server erstellt: "+name);
+        renderFriendsPage();
+        return data.serverId;
+      }catch(e){
+        msg("Server-Fehler beim Erstellen.");
+      }
+    }
+
     const servers=getServers();
     const id=makeServerId();
-    servers[id]={id,name,owner:currentUser,maxPlayers:max,players:[currentUser],created:Date.now()};
+    servers[id]={id,name,owner:currentUser,maxPlayers:max,players:[currentUser],created:Date.now(),blockEvents:[]};
     currentServerId=id;
     saveServers(servers);
     saveAccountState();
-    document.getElementById("serverMsg").textContent="Server erstellt: "+name;
+    const sm=document.getElementById("serverMsg"); if(sm) sm.textContent="Server erstellt: "+name;
     renderFriendsPage();
+    return id;
   }
 
-  function joinServer(id){
+  async function joinServer(id){
+    if(isRealWebsiteMode()){
+      try{
+        const res=await fetch("/api/joinServer",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({name:currentUser,serverId:id})
+        });
+        const data=await res.json();
+        if(!data.ok){
+          msg(data.error || "Server beitreten fehlgeschlagen.");
+          return;
+        }
+        applyReturnedServerData(data);
+        currentServerId=id;
+        saveAccountState();
+        msg("Server beigetreten: "+(data.server?.name || "Server"));
+        renderFriendsPage();
+        return;
+      }catch(e){
+        msg("Server-Fehler beim Beitreten.");
+        return;
+      }
+    }
+
     const servers=getServers();
     const s=servers[id];
     if(!s){msg("Server nicht gefunden.");return;}
@@ -7454,7 +7625,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     if(!currentServerId){
       document.getElementById("serverNameInput").value=currentUser+"s Server";
-      createServer();
+      await createServer();
     }
 
     const server=getActiveServer();
