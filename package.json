@@ -1,7 +1,7 @@
 {
   "name": "safinicraft-de",
-  "version": "2.3.0",
-  "description": "Safinicraft Friends Speed Item Stable Fix",
+  "version": "2.3.1",
+  "description": "Safinicraft Server Invite Fix",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

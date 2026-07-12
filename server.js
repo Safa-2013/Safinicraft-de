@@ -371,6 +371,154 @@ const server = http.createServer(async (req,res)=>{
   }
 
 
+
+  if(req.url === "/api/serverInvite" && req.method === "POST"){
+    const data = await readBody(req);
+    const action = String(data.action || "").trim();
+    const from = String(data.from || "").trim();
+    const to = String(data.to || "").trim();
+    const serverId = String(data.serverId || "").trim();
+    const incomingServer = data.server && typeof data.server === "object" ? data.server : null;
+
+    ensureAdmin();
+    state.deletedAccounts = state.deletedAccounts || {};
+
+    if(!from || !state.accounts[from] || state.deletedAccounts[from]){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Du bist nicht richtig eingeloggt.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+      return;
+    }
+
+    if(action === "send"){
+      if(!to || !state.accounts[to] || state.deletedAccounts[to]){
+        const clean = sanitizeState();
+        sendJson(res, {ok:false, error:"Spieler nicht gefunden.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+        return;
+      }
+
+      if(from === to){
+        const clean = sanitizeState();
+        sendJson(res, {ok:false, error:"Du kannst dich nicht selbst einladen.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+        return;
+      }
+
+      if(!serverId){
+        const clean = sanitizeState();
+        sendJson(res, {ok:false, error:"Kein Server ausgewählt.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+        return;
+      }
+
+      if(incomingServer){
+        state.servers = state.servers || {};
+        state.servers[serverId] = {
+          ...(state.servers[serverId] || {}),
+          ...incomingServer,
+          id: serverId,
+          players: Array.isArray(incomingServer.players) ? incomingServer.players : [from],
+          owner: incomingServer.owner || from,
+          maxPlayers: Number(incomingServer.maxPlayers || 8)
+        };
+      }
+
+      const serverRoom = state.servers && state.servers[serverId];
+      if(!serverRoom){
+        const clean = sanitizeState();
+        sendJson(res, {ok:false, error:"Server nicht gefunden. Erstelle oder betrete zuerst einen Server.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+        return;
+      }
+
+      const sender = state.accounts[from];
+      const receiver = state.accounts[to];
+
+      sender.friends = Array.isArray(sender.friends) ? sender.friends : [];
+      receiver.friends = Array.isArray(receiver.friends) ? receiver.friends : [];
+
+      if(!sender.friends.includes(to) && !receiver.friends.includes(from)){
+        const clean = sanitizeState();
+        sendJson(res, {ok:false, error:"Du kannst nur angenommene Freunde einladen.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+        return;
+      }
+
+      receiver.gameInvites = Array.isArray(receiver.gameInvites) ? receiver.gameInvites : [];
+      const invite = {from, serverId, serverName:serverRoom.name || "Server", time:Date.now()};
+      const exists = receiver.gameInvites.some(i => (i && typeof i === "object" && i.serverId === serverId) || i === from);
+      if(!exists) receiver.gameInvites.push(invite);
+
+      state.accounts[to]=receiver;
+      state.accounts[from]=sender;
+      saveState();
+      broadcastState();
+
+      const clean = sanitizeState();
+      sendJson(res, {ok:true, accounts:clean.accounts || {}, servers:clean.servers || {}, invite});
+      return;
+    }
+
+    if(action === "accept"){
+      const me = state.accounts[from];
+
+      if(!serverId){
+        const clean = sanitizeState();
+        sendJson(res, {ok:false, error:"Diese Einladung hat keinen Server.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+        return;
+      }
+
+      const serverRoom = state.servers && state.servers[serverId];
+      if(!serverRoom){
+        me.gameInvites = (Array.isArray(me.gameInvites) ? me.gameInvites : []).filter(i => {
+          if(i && typeof i === "object") return i.serverId !== serverId;
+          return true;
+        });
+        const clean = sanitizeState();
+        sendJson(res, {ok:false, error:"Server existiert nicht mehr.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+        return;
+      }
+
+      serverRoom.players = Array.isArray(serverRoom.players) ? serverRoom.players : [];
+      const maxPlayers = Number(serverRoom.maxPlayers || 8);
+      if(serverRoom.players.length >= maxPlayers && !serverRoom.players.includes(from)){
+        const clean = sanitizeState();
+        sendJson(res, {ok:false, error:"Server ist voll.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+        return;
+      }
+
+      if(!serverRoom.players.includes(from)) serverRoom.players.push(from);
+
+      me.gameInvites = (Array.isArray(me.gameInvites) ? me.gameInvites : []).filter(i => {
+        if(i && typeof i === "object") return i.serverId !== serverId;
+        return i !== String(data.inviter || "");
+      });
+
+      state.accounts[from]=me;
+      state.servers[serverId]=serverRoom;
+      saveState();
+      broadcastState();
+
+      const clean = sanitizeState();
+      sendJson(res, {ok:true, accounts:clean.accounts || {}, servers:clean.servers || {}, joined:serverId});
+      return;
+    }
+
+    if(action === "decline"){
+      const me = state.accounts[from];
+      me.gameInvites = (Array.isArray(me.gameInvites) ? me.gameInvites : []).filter(i => {
+        if(i && typeof i === "object") return i.serverId !== serverId;
+        return i !== String(data.inviter || "");
+      });
+      state.accounts[from]=me;
+      saveState();
+      broadcastState();
+
+      const clean = sanitizeState();
+      sendJson(res, {ok:true, accounts:clean.accounts || {}, servers:clean.servers || {}});
+      return;
+    }
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:false, error:"Unbekannte Server-Einladungs-Aktion.", accounts:clean.accounts || {}, servers:clean.servers || {}});
+    return;
+  }
+
   if(req.url === "/api/friendAction" && req.method === "POST"){
     const data = await readBody(req);
     const action = String(data.action || "").trim();
@@ -904,6 +1052,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de FRIENDS SPEED ITEM STABLE FIX 2.3.0 läuft auf Port " + PORT);
+  console.log("Safinicraft.de SERVER INVITE FIX 2.3.1 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

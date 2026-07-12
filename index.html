@@ -1365,7 +1365,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">FRIENDS SPEED ITEM STABLE FIX VERSION 2.3.0</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">SERVER INVITE FIX VERSION 2.3.1</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -7375,19 +7375,99 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     renderFriendsPage();
   }
 
-  function inviteFriendToRoom(friend){
-    const accounts=getAccounts();
+
+  async function syncServerInviteAction(action, targetOrInvite){
+    if(!currentUser){
+      msg("Du musst eingeloggt sein.");
+      return false;
+    }
+
+    let payload = {action, from:currentUser};
+
+    if(action==="send"){
+      const friend = String(targetOrInvite || "");
+      const server = getActiveServer();
+      if(!server || !currentServerId){
+        msg("Erstelle oder betrete zuerst einen Server.");
+        return false;
+      }
+
+      payload.to = friend;
+      payload.serverId = currentServerId;
+      payload.server = server;
+    }else{
+      const inv = targetOrInvite || {};
+      payload.serverId = typeof inv === "object" ? inv.serverId : currentServerId;
+      payload.inviter = typeof inv === "object" ? inv.from : inv;
+    }
+
+    try{
+      const res = await fetch("/api/serverInvite",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if(!data.ok){
+        msg(data.error || "Server-Einladung fehlgeschlagen.");
+        return false;
+      }
+
+      if(data.accounts){
+        onlineAccountsCache = filterDeletedAccounts(normalizeAccounts(data.accounts || {}));
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+        backupAccountsLocally(onlineAccountsCache);
+      }
+
+      if(data.servers){
+        onlineServersCache = data.servers || {};
+        localStorage.setItem("safinicraft_servers", JSON.stringify(onlineServersCache));
+      }
+
+      if(action==="send"){
+        msg("Server-Einladung an "+payload.to+" gesendet.");
+      }
+
+      if(action==="accept" && data.joined){
+        currentServerId = data.joined;
+        saveAccountState();
+        msg("Server beigetreten.");
+      }
+
+      renderFriendsPage();
+      return true;
+    }catch(e){
+      msg("Server-Fehler bei Server-Einladung.");
+      return false;
+    }
+  }
+
+  async function inviteFriendToRoom(friend){
+    const accounts=getAdminVisibleAccounts ? getAdminVisibleAccounts() : getAccounts();
     const me=accounts[currentUser];
+
     if(!me || !(me.friends||[]).includes(friend)){
       msg("Du kannst nur angenommene Freunde einladen.");
       return;
     }
+
     if(!currentServerId){
       document.getElementById("serverNameInput").value=currentUser+"s Server";
       createServer();
     }
+
     const server=getActiveServer();
-    if(!server){msg("Erstelle zuerst einen Server.");return;}
+    if(!server || !currentServerId){
+      msg("Erstelle zuerst einen Server.");
+      return;
+    }
+
+    if(isRealWebsiteMode()){
+      await syncServerInviteAction("send", friend);
+      return;
+    }
+
     accounts[friend].gameInvites=accounts[friend].gameInvites||[];
     const invite={from:currentUser,serverId:currentServerId,serverName:server.name,time:Date.now()};
     const exists=accounts[friend].gameInvites.some(i=>(typeof i==='object'&&i.serverId===currentServerId)||(i===currentUser));
@@ -7397,17 +7477,26 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     renderFriendsPage();
   }
 
-  function acceptGameInvite(invite){
+  async function acceptGameInvite(invite){
+    if(isRealWebsiteMode()){
+      await syncServerInviteAction("accept", invite);
+      return;
+    }
+
     const accounts=getAccounts();
     const me=accounts[currentUser];
     const serverId=typeof invite==='object' ? invite.serverId : currentServerId;
     const from=typeof invite==='object' ? invite.from : invite;
+
+    if(!me) return;
+
     me.gameInvites=(me.gameInvites||[]).filter(i=>{
       if(typeof i==='object') return i.serverId!==serverId;
       return i!==from;
     });
     accounts[currentUser]=me;
     saveAccounts(accounts);
+
     if(serverId) joinServer(serverId);
     else msg("Diese alte Einladung hat keinen Server mehr.");
   }
@@ -7866,7 +7955,11 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         const yes = document.createElement("button");
         yes.textContent = "Server beitreten";
         yes.onclick = ()=>acceptGameInvite(inv);
+        const no = document.createElement("button");
+        no.textContent = "Einladung löschen";
+        no.onclick = ()=>syncServerInviteAction ? syncServerInviteAction("decline", inv) : null;
         row.appendChild(yes);
+        row.appendChild(no);
         inviteList.appendChild(row);
       });
     }
