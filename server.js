@@ -370,6 +370,86 @@ const server = http.createServer(async (req,res)=>{
     return;
   }
 
+
+  if(req.url === "/api/friendAction" && req.method === "POST"){
+    const data = await readBody(req);
+    const action = String(data.action || "").trim();
+    const from = String(data.from || "").trim();
+    const to = String(data.to || "").trim();
+
+    ensureAdmin();
+    state.deletedAccounts = state.deletedAccounts || {};
+
+    if(!from || !state.accounts[from] || state.deletedAccounts[from]){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Du bist nicht richtig eingeloggt.", accounts:clean.accounts || {}});
+      return;
+    }
+
+    if(!to || !state.accounts[to] || state.deletedAccounts[to]){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Spieler nicht gefunden.", accounts:clean.accounts || {}});
+      return;
+    }
+
+    if(from === to){
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Du kannst dich nicht selbst hinzufügen.", accounts:clean.accounts || {}});
+      return;
+    }
+
+    const a = state.accounts[from];
+    const b = state.accounts[to];
+
+    a.friends = Array.isArray(a.friends) ? a.friends : [];
+    b.friends = Array.isArray(b.friends) ? b.friends : [];
+    a.friendRequests = Array.isArray(a.friendRequests) ? a.friendRequests : [];
+    b.friendRequests = Array.isArray(b.friendRequests) ? b.friendRequests : [];
+    a.sentRequests = Array.isArray(a.sentRequests) ? a.sentRequests : [];
+    b.sentRequests = Array.isArray(b.sentRequests) ? b.sentRequests : [];
+    a.unfriended = Array.isArray(a.unfriended) ? a.unfriended : [];
+    b.unfriended = Array.isArray(b.unfriended) ? b.unfriended : [];
+
+    if(action === "send"){
+      if(!a.friends.includes(to) && !b.friendRequests.includes(from)){
+        b.friendRequests.push(from);
+      }
+      if(!a.sentRequests.includes(to)){
+        a.sentRequests.push(to);
+      }
+      a.unfriended = a.unfriended.filter(x=>x!==to);
+      b.unfriended = b.unfriended.filter(x=>x!==from);
+    }else if(action === "accept"){
+      a.friendRequests = a.friendRequests.filter(x=>x!==to);
+      b.sentRequests = b.sentRequests.filter(x=>x!==from);
+      if(!a.friends.includes(to)) a.friends.push(to);
+      if(!b.friends.includes(from)) b.friends.push(from);
+      a.unfriended = a.unfriended.filter(x=>x!==to);
+      b.unfriended = b.unfriended.filter(x=>x!==from);
+    }else if(action === "decline"){
+      a.friendRequests = a.friendRequests.filter(x=>x!==to);
+      b.sentRequests = b.sentRequests.filter(x=>x!==from);
+    }else if(action === "remove"){
+      a.friends = a.friends.filter(x=>x!==to);
+      b.friends = b.friends.filter(x=>x!==from);
+      if(!a.unfriended.includes(to)) a.unfriended.push(to);
+      if(!b.unfriended.includes(from)) b.unfriended.push(from);
+    }else{
+      const clean = sanitizeState();
+      sendJson(res, {ok:false, error:"Unbekannte Freundschafts-Aktion.", accounts:clean.accounts || {}});
+      return;
+    }
+
+    state.accounts[from]=a;
+    state.accounts[to]=b;
+    saveState();
+    broadcastState();
+
+    const clean = sanitizeState();
+    sendJson(res, {ok:true, accounts:clean.accounts || {}, action, from, to});
+    return;
+  }
+
   if(req.url === "/api/admin/updateAccount" && req.method === "POST"){
     const data = await readBody(req);
     const target = String(data.target || "").trim();
@@ -824,6 +904,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de LOGIN KICK FIX 2.2.9 läuft auf Port " + PORT);
+  console.log("Safinicraft.de FRIENDS SPEED ITEM STABLE FIX 2.3.0 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

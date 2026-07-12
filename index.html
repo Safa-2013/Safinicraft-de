@@ -1365,7 +1365,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">LOGIN KICK FIX VERSION 2.2.9</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">FRIENDS SPEED ITEM STABLE FIX VERSION 2.3.0</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -2216,6 +2216,8 @@
   let creativeMode = false;
   let serverGrantedCreative = false;
   let selected = "hand";
+  let inventoryRenderCache = {};
+  let lastFullUiRender = 0;
   let craftGridItems = Array(9).fill(null);
   let craftSelectedItem = null;
   let paintMode = "paint";
@@ -2928,13 +2930,51 @@
     }
   }
 
-  function renderAll(){renderInventory("gameInventory");renderInventory("craftInventory",true);renderCraftingTable();renderAllCraftItems();renderRecipes();renderSkinCanvas();draw()}
+  function renderAll(){
+    renderInventory("gameInventory");
+    updateWorldTopText();
+    draw();
+  }
+
+  function updateWorldTopText(){
+    const set=(id,text)=>{const el=document.getElementById(id);if(el)el.textContent=text;};
+    set("planetName",planets[currentPlanet]?.name||currentPlanet);
+    set("hpText",Math.max(0,Math.ceil(player.hp))+"/"+player.maxHp);
+    set("hungerText",Math.max(0,Math.ceil(player.hunger))+"/"+player.maxHunger);
+    set("fuelText",Math.floor(player.fuel||0));
+    set("carText",player.inCar?"Ja":"Nein");
+    set("activeModLabel",activeModId||"Keine");
+  }
 
   function renderInventory(targetId){
     loadAdminItemsIntoGame(true);
 
     const box=document.getElementById(targetId);
     if(!box) return;
+
+    const ids=[];
+    inventoryOrder.forEach(id=>{
+      if(defs[id] && id!=="air" && id!=="hand" && (creativeMode || (inv[id]||0)>0) && !ids.includes(id)) ids.push(id);
+    });
+    Object.keys(defs).forEach(id=>{
+      if(defs[id] && id!=="air" && id!=="hand" && (creativeMode || (inv[id]||0)>0) && !ids.includes(id)) ids.push(id);
+    });
+
+    const sig=JSON.stringify({
+      targetId,
+      selected,
+      creativeMode,
+      ids,
+      amounts:ids.map(id=>creativeMode?"∞":(inv[id]||0)),
+      names:ids.map(id=>defs[id]?.name||id)
+    });
+
+    if(inventoryRenderCache[targetId]===sig){
+      updateHeldPreviewOnly();
+      return;
+    }
+    inventoryRenderCache[targetId]=sig;
+
     box.innerHTML="";
 
     const makeBtn=(id)=>{
@@ -2964,24 +3004,23 @@
 
       btn.onclick=()=>{
         selected=id;
+        inventoryRenderCache={};
         renderInventory("gameInventory");
         renderInventory("creativeInventory");
-        renderAll();
+        draw();
       };
 
-      setTimeout(()=>{
-        if(id==="hand"){
-          const c=canvas.getContext("2d");
-          c.imageSmoothingEnabled=false;
-          c.clearRect(0,0,16,16);
-          c.fillStyle="#fff";
-          c.fillRect(5,3,6,10);
-          c.fillStyle="#d8b38a";
-          c.fillRect(4,7,8,7);
-        }else{
-          drawInventoryIcon(canvas,id);
-        }
-      },0);
+      if(id==="hand"){
+        const c=canvas.getContext("2d");
+        c.imageSmoothingEnabled=false;
+        c.clearRect(0,0,16,16);
+        c.fillStyle="#fff";
+        c.fillRect(5,3,6,10);
+        c.fillStyle="#d8b38a";
+        c.fillRect(4,7,8,7);
+      }else{
+        drawInventoryIcon(canvas,id);
+      }
 
       return btn;
     };
@@ -2989,21 +3028,24 @@
     const handBtn=makeBtn("hand");
     if(handBtn) box.appendChild(handBtn);
 
-    const ids=[];
-    inventoryOrder.forEach(id=>{ if(defs[id] && (creativeMode || (inv[id]||0)>0) && !ids.includes(id)) ids.push(id); });
-    Object.keys(defs).forEach(id=>{ if(defs[id] && (creativeMode || (inv[id]||0)>0) && id!=="air" && id!=="hand" && !ids.includes(id)) ids.push(id); });
-
     ids.forEach(id=>{
       const btn=makeBtn(id);
       if(btn) box.appendChild(btn);
     });
 
+    updateHeldPreviewOnly();
+  }
+
+  function updateHeldPreviewOnly(){
     const held=document.getElementById("heldText");
-    if(held && defs[selected]){
-      held.innerHTML = '<span class="heldPreviewBig"><canvas id="heldPreviewCanvas" width="16" height="16" class="invIconCanvas"></canvas>'+escapeHtml(selected==="hand"?"Hand":defs[selected].name)+'</span>';
-      setTimeout(()=>{
-        const canvas=document.getElementById("heldPreviewCanvas");
-        if(!canvas) return;
+    if(!held || !defs[selected]) return;
+
+    const label=selected==="hand"?"Hand":defs[selected].name;
+    if(held.getAttribute("data-selected-held")!==selected){
+      held.setAttribute("data-selected-held",selected);
+      held.innerHTML = '<span class="heldPreviewBig"><canvas id="heldPreviewCanvas" width="16" height="16" class="invIconCanvas"></canvas>'+escapeHtml(label)+'</span>';
+      const canvas=document.getElementById("heldPreviewCanvas");
+      if(canvas){
         if(selected==="hand"){
           const c=canvas.getContext("2d");
           c.imageSmoothingEnabled=false;
@@ -3013,7 +3055,7 @@
         }else{
           drawInventoryIcon(canvas,selected);
         }
-      },0);
+      }
     }
   }
 
@@ -3298,7 +3340,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     if (creativeMode) {
       player.vx = 0;
       player.vy = 0;
-      const flySpeed = 4.2;
+      const flySpeed = 5.8;
       if (keys.left){ player.x -= flySpeed; player.facing=-1; }
       if (keys.right){ player.x += flySpeed; player.facing=1; }
       if (keys.jump) player.y -= flySpeed;
@@ -3315,11 +3357,11 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     const grav=planets[currentPlanet].gravity;
     if(player.inCar){let c=player.inCar;player.x=c.x+22;player.y=c.y+2;player.vx=0;player.vy=0;return}
-    let speed=2.2;
+    let speed=3.25;
     player.vx=0;
     if(keys.left){player.vx=-speed;player.facing=-1;}
     if(keys.right){player.vx=speed;player.facing=1;}
-    if(keys.jump&&player.onGround){player.vy=-9.2;player.onGround=false}
+    if(keys.jump&&player.onGround){player.vy=-10.4;player.onGround=false}
     if(keys.jet&&inv.jetpack>0){
       if(player.fuel<=0 && (inv.fuel_cell||0)>0){
         inv.fuel_cell--;
@@ -7134,8 +7176,47 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     return "none";
   }
 
-  function sendFriendRequest(target){
-    const accounts = getAccounts();
+
+  async function syncFriendAction(action, target, successMsg){
+    if(!currentUser || !target){
+      msg("Du bist nicht richtig eingeloggt.");
+      return false;
+    }
+
+    try{
+      const res = await fetch("/api/friendAction",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action, from:currentUser, to:target})
+      });
+      const data = await res.json();
+
+      if(!data.ok){
+        msg(data.error || "Freundschafts-Aktion fehlgeschlagen.");
+        const result=document.getElementById("searchResult");
+        if(result) result.textContent=data.error || "Freundschafts-Aktion fehlgeschlagen.";
+        return false;
+      }
+
+      if(data.accounts){
+        onlineAccountsCache = filterDeletedAccounts(normalizeAccounts(data.accounts || {}));
+        localStorage.setItem("safinicraft_accounts", JSON.stringify(onlineAccountsCache));
+        backupAccountsLocally(onlineAccountsCache);
+      }
+
+      renderFriendsPage();
+      if(successMsg) msg(successMsg);
+      const result=document.getElementById("searchResult");
+      if(result && successMsg) result.textContent=successMsg;
+      return true;
+    }catch(e){
+      msg("Server-Fehler bei Freundschaft.");
+      return false;
+    }
+  }
+
+  async function sendFriendRequest(target){
+    const accounts = getAdminVisibleAccounts ? getAdminVisibleAccounts() : getAccounts();
 
     if(!currentUser || !accounts[currentUser]){
       msg("Du musst eingeloggt sein.");
@@ -7155,6 +7236,11 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
     if(target === currentUser){
       if(result) result.textContent = "Du kannst dich nicht selbst hinzufügen.";
+      return;
+    }
+
+    if(isRealWebsiteMode()){
+      await syncFriendAction("send", target, "Freundschaftsanfrage an "+target+" gesendet.");
       return;
     }
 
@@ -7180,18 +7266,23 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     accounts[target].friendRequests = accounts[target].friendRequests || [];
     accounts[currentUser].sentRequests = accounts[currentUser].sentRequests || [];
 
-    accounts[target].friendRequests.push(currentUser);
-    accounts[currentUser].sentRequests.push(target);
+    if(!accounts[target].friendRequests.includes(currentUser)) accounts[target].friendRequests.push(currentUser);
+    if(!accounts[currentUser].sentRequests.includes(target)) accounts[currentUser].sentRequests.push(target);
 
     accounts[currentUser].unfriended = (accounts[currentUser].unfriended || []).filter(x=>x!==target);
     accounts[target].unfriended = (accounts[target].unfriended || []).filter(x=>x!==currentUser);
 
     saveAccounts(accounts);
-    if(result) result.textContent = "Freundschaftsanfrage an " + target + " gesendet.";
     renderFriendsPage();
+    if(result) result.textContent = "Freundschaftsanfrage an "+target+" gesendet.";
   }
 
-  function acceptFriendRequest(from){
+  async function acceptFriendRequest(from){
+    if(isRealWebsiteMode()){
+      await syncFriendAction("accept", from, from+" ist jetzt dein Freund.");
+      return;
+    }
+
     const accounts = getAccounts();
     const me = accounts[currentUser];
     const other = accounts[from];
@@ -7216,11 +7307,17 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     renderFriendsPage();
   }
 
-  function declineFriendRequest(from){
+  async function declineFriendRequest(from){
+    if(isRealWebsiteMode()){
+      await syncFriendAction("decline", from, "Anfrage abgelehnt.");
+      return;
+    }
+
     const accounts = getAccounts();
     const me = accounts[currentUser];
     const other = accounts[from];
 
+    if(!me) return;
     me.friendRequests = (me.friendRequests||[]).filter(x=>x!==from);
     if(other) other.sentRequests = (other.sentRequests||[]).filter(x=>x!==currentUser);
 
@@ -7969,7 +8066,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     announceCurrentAccountToServer(true);
     refreshAdminChatFromServer(true);
     if(isAdmin()) fetchAdminAccountsDirect(true).then(()=>renderAdminPlayersList());
-  }},2000);
+  }},4000);
   resetOldLocalAccountsOnce();
   init();
   loadServerState();loop();
