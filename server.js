@@ -256,30 +256,6 @@ function broadcastState(){
   }
 }
 
-
-function mergeServers(incoming){
-  state.servers = state.servers || {};
-  Object.keys(incoming||{}).forEach(id=>{
-    const inc=incoming[id]||{};
-    const cur=state.servers[id]||{};
-    const merged={...cur,...inc};
-    const players=new Set([...(cur.players||[]),...(inc.players||[])]);
-    Object.keys(state.deletedAccounts||{}).forEach(name=>players.delete(name));
-    merged.players=Array.from(players);
-
-    const evs=[...(cur.blockEvents||[]),...(inc.blockEvents||[])];
-    const map=new Map();
-    evs.forEach(ev=>{
-      if(!ev) return;
-      const key=[ev.serverId||id,ev.planet,ev.from,ev.action,ev.block,ev.x,ev.y,ev.time].join("|");
-      map.set(key,ev);
-    });
-    merged.blockEvents=Array.from(map.values()).sort((a,b)=>(a.time||0)-(b.time||0)).slice(-300);
-
-    state.servers[id]=merged;
-  });
-}
-
 function mergeAccounts(incoming){
   ensureAdmin();
   state.deletedAccounts = state.deletedAccounts || {};
@@ -447,11 +423,6 @@ const server = http.createServer(async (req,res)=>{
       });
     });
 
-    Object.keys(state.servers || {}).forEach(id=>{
-      const s=state.servers[id];
-      if(s && Array.isArray(s.players)) s.players=s.players.filter(n=>n!==target);
-    });
-
     Object.keys(state.messages || {}).forEach(key=>{
       if(key.includes(target)){
         delete state.messages[key];
@@ -519,14 +490,31 @@ const server = http.createServer(async (req,res)=>{
     if(name){
       ensureAdmin();
 
-      // WICHTIG: Ping darf KEINEN neuen Account ohne Passwort erstellen.
-      // Neue Spieler müssen über /api/createAccount erstellt werden.
       state.deletedAccounts = state.deletedAccounts || {};
-      if(name !== "admin" && (state.deletedAccounts[name] || !state.accounts[name])){
+
+      // Nur WIRKLICH gelöschte Accounts fliegen raus.
+      // Wenn der Server den Account nur nicht kennt, wird er aus dem lokalen Login wiederhergestellt.
+      if(name !== "admin" && state.deletedAccounts[name]){
         if(state.accounts && state.accounts[name]) delete state.accounts[name];
         const cleanMissing = sanitizeState();
         sendJson(res, {ok:false, deleted:true, error:"Account wurde gelöscht. Bitte neuen Spieler erstellen.", accounts:cleanMissing.accounts || {}});
         return;
+      }
+
+      if(name !== "admin" && !state.accounts[name]){
+        state.accounts[name] = {
+          pass: inc.pass || "",
+          role: inc.role || "player",
+          skin: inc.skin || defaultSkin(),
+          inv: inc.inv || {},
+          friends: Array.isArray(inc.friends) ? inc.friends : [],
+          friendRequests: Array.isArray(inc.friendRequests) ? inc.friendRequests : [],
+          sentRequests: Array.isArray(inc.sentRequests) ? inc.sentRequests : [],
+          gameInvites: Array.isArray(inc.gameInvites) ? inc.gameInvites : [],
+          unfriended: Array.isArray(inc.unfriended) ? inc.unfriended : [],
+          created: inc.created || Date.now(),
+          online: true
+        };
       }
 
       if(state.accounts[name]){
@@ -557,13 +545,6 @@ const server = http.createServer(async (req,res)=>{
         };
 
         if(!state.accounts[name].created) state.accounts[name].created = Date.now();
-
-        if(state.accounts[name].live && state.accounts[name].live.serverId){
-          const sid=state.accounts[name].live.serverId;
-          state.servers=state.servers||{};
-          state.servers[sid]=state.servers[sid]||{id:sid,name:sid,players:[],maxPlayers:10,created:Date.now(),blockEvents:[]};
-          state.servers[sid].players=Array.from(new Set([...(state.servers[sid].players||[]), name]));
-        }
 
         saveState();
         broadcastState();
@@ -689,11 +670,11 @@ const server = http.createServer(async (req,res)=>{
   if(req.url === "/api/servers" && req.method === "POST"){
     const data = await readBody(req);
     if(data.servers && typeof data.servers === "object"){
-      mergeServers(data.servers);
+      state.servers = data.servers;
       saveState();
       broadcastState();
     }
-    sendJson(res, {ok:true, servers:state.servers || {}});
+    sendJson(res, {ok:true});
     return;
   }
 
@@ -843,6 +824,6 @@ server.on("upgrade", (req, socket)=>{
 });
 
 server.listen(PORT, ()=>{
-  console.log("Safinicraft.de SERVER SYNC + ADMIN FIX 2.2.9 läuft auf Port " + PORT);
+  console.log("Safinicraft.de LOGIN KICK FIX 2.2.9 läuft auf Port " + PORT);
   console.log("ADMIN_NAME=" + adminName());
 });

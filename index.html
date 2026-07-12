@@ -1365,7 +1365,7 @@
 <div id="loginPage">
   <div class="loginCard">
     <h2>Spieler anmelden</h2>
-      <div style="color:#00ff99;font-weight:bold;margin:6px 0">SERVER SYNC + ADMIN FIX VERSION 2.2.9</div>
+      <div style="color:#00ff99;font-weight:bold;margin:6px 0">LOGIN KICK FIX VERSION 2.2.9</div>
     <p class="small">
       Erstelle einen Namen mit Passwort oder logge dich mit deinem bestehenden Namen ein.
       Demo-Speicherung läuft im Browser.
@@ -2752,17 +2752,14 @@
     drawPixelMatrixScaled(c,icon,0,0,16,16,false);
   }
 
+
+
   function drawOtherPlayers(){
     if(!currentUser) return;
-    const accounts = getAccounts();
     const server = getActiveServer();
-    const names = new Set(server && Array.isArray(server.players) ? server.players : []);
-    Object.keys(accounts||{}).forEach(n=>{
-      const acc=accounts[n];
-      if(acc && acc.live && acc.live.serverId===currentServerId) names.add(n);
-    });
-
-    names.forEach(name=>{
+    if(!server) return;
+    const accounts = getAccounts();
+    (server.players||[]).forEach(name=>{
       if(name===currentUser) return;
       const acc = accounts[name];
       if(!acc || !acc.live) return;
@@ -2772,7 +2769,7 @@
       if(Date.now() - (acc.live.lastSeen||0) > 35000) return;
       const px = acc.live.x - camX;
       const py = acc.live.y - camY;
-      if(px < -80 || px > game.width+80 || py < -120 || py > game.height+80) return;
+      if(px < -80 || px > game.width+80 || py < -120 || py > game.height+120) return;
       ctx.fillStyle='rgba(0,0,0,.7)';
       ctx.fillRect(px-10, py-25, 95, 18);
       ctx.fillStyle='#70ff70';
@@ -2785,52 +2782,7 @@
     });
   }
 
-
-  function eventKey(ev){
-    return [ev.serverId,ev.planet,ev.from,ev.action,ev.block,ev.x,ev.y,ev.time].join("|");
-  }
-
-  function getAppliedBlockEvents(){
-    try{return JSON.parse(localStorage.getItem("safinicraft_applied_block_events")||"{}")||{};}catch(e){return {};}
-  }
-
-  function saveAppliedBlockEvents(map){
-    const keys=Object.keys(map||{}).slice(-500);
-    const out={};
-    keys.forEach(k=>out[k]=map[k]);
-    localStorage.setItem("safinicraft_applied_block_events",JSON.stringify(out));
-  }
-
-  function applyServerBlockEvents(){
-    if(!currentServerId || !world) return;
-    const server=getActiveServer();
-    if(!server || !Array.isArray(server.blockEvents)) return;
-    const applied=getAppliedBlockEvents();
-    let changed=false;
-
-    server.blockEvents.forEach(ev=>{
-      if(!ev || ev.from===currentUser) return;
-      if(ev.serverId!==currentServerId || ev.planet!==currentPlanet) return;
-      const k=eventKey(ev);
-      if(applied[k]) return;
-      if(!inBounds(ev.x,ev.y)) return;
-
-      if(ev.action==="break"){
-        world[ev.y][ev.x]="air";
-      }else if(ev.action==="place"){
-        world[ev.y][ev.x]=ev.block || "dirt";
-      }
-      applied[k]=Date.now();
-      changed=true;
-    });
-
-    if(changed){
-      saveAppliedBlockEvents(applied);
-    }
-  }
-
   function drawBlockEvents(){
-    applyServerBlockEvents();
     if(!currentUser) return;
     const server=getActiveServer();
     if(!server || !server.blockEvents) return;
@@ -4789,43 +4741,13 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   function applyIncomingGhostEvent(){if(!currentUser||isAdmin())return;const a=getAccounts()[currentUser];const ev=a&&a.adminGhostEvent;if(!ev||!ev.time||ev.time<=lastAdminGhostEventTime)return;lastAdminGhostEventTime=ev.time;if(ev.damage){player.hp=Math.max(0,player.hp-Number(ev.damage||0));player.hurt=25;}msg(ev.message||"Ein Admin-Geist hat etwas gemacht.");saveAccountState();}
 
   function adminGhostVisit(name){
-    if(!isAdmin()) return;
-    const accounts=getAdminVisibleAccounts();
-    const acc=accounts[name];
-
-    if(!acc || !acc.live){
-      msg("Keine Live-Welt von "+name+" gefunden. Spieler muss online sein.");
-      return;
-    }
-
-    adminGhostMode=true;
-    adminGhostTarget=name;
-    adminGhostVisible=false;
-
-    const targetServerId = acc.live.serverId || ("ghost_"+name);
-    currentServerId = targetServerId;
-
-    const servers=getServers();
-    if(!servers[targetServerId]){
-      servers[targetServerId]={id:targetServerId,name:name+" Live-Welt",owner:name,players:[name],maxPlayers:10,created:Date.now(),blockEvents:[]};
-    }
-    servers[targetServerId].players=Array.from(new Set([...(servers[targetServerId].players||[]), name, currentUser]));
-    saveServers(servers);
-
-    if(acc.live.planet && worlds[acc.live.planet]) switchPlanet(acc.live.planet);
-    else if(acc.live.planet) currentPlanet=acc.live.planet;
-
-    player.x=(Number(acc.live.x)||player.x)+70;
-    player.y=Number(acc.live.y)||player.y;
-    creativeMode=true;
-    serverGrantedCreative=true;
-    updateCreativeStatus();
-    updateGhostPanel();
-    saveAccountState();
-
-    msg("Geist-Modus: Du bist unsichtbar in der Live-Welt von "+name+".");
-    switchTab("worldPage","tabWorld");
-    renderAll();
+    if(!isAdmin())return;const accounts=getAdminVisibleAccounts();const acc=accounts[name];
+    if(!acc||!acc.live){msg("Keine Live-Welt von "+name+" gefunden. Spieler muss online sein.");return;}
+    adminGhostMode=true;adminGhostTarget=name;adminGhostVisible=false;
+    if(acc.live.serverId)currentServerId=acc.live.serverId;
+    if(acc.live.planet&&worlds[acc.live.planet])switchPlanet(acc.live.planet);else if(acc.live.planet)currentPlanet=acc.live.planet;
+    player.x=(Number(acc.live.x)||player.x)+70;player.y=Number(acc.live.y)||player.y;creativeMode=true;serverGrantedCreative=true;updateCreativeStatus();updateGhostPanel();saveAccountState();
+    msg("Geist-Modus: unsichtbar bei "+name+".");switchTab("worldPage","tabWorld");renderAll();
   }
 
   function adminResolveItemInput(value){
@@ -4945,51 +4867,6 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }catch(e){msg("Server-Fehler beim Löschen.");}
   }
 
-
-  function adminPlayerOptionsHtml(){
-    const accounts=getAdminVisibleAccounts();
-    return Object.keys(accounts||{})
-      .filter(name=>name!==currentUser && name!=="admin")
-      .sort((a,b)=>a.localeCompare(b))
-      .map(name=>'<option value="'+escapeHtml(name)+'">'+escapeHtml(name)+'</option>')
-      .join("");
-  }
-
-  function renderAdminQuickPanel(){
-    const wrap=document.createElement("div");
-    wrap.className="adminControlBox";
-    wrap.style.marginBottom="12px";
-    wrap.innerHTML =
-      "<h3>⚡ Schnelle Admin-Aktionen</h3>"+
-      "<label>Spieler</label><select id='quickPlayerSelect' class='adminItemGiveSelect'>"+adminPlayerOptionsHtml()+"</select>"+
-      "<label>Item</label><select id='quickItemSelect' class='adminItemGiveSelect'>"+adminItemOptionsHtml()+"</select>"+
-      "<label>Anzahl</label><input id='quickItemAmount' type='number' min='1' value='10'>"+
-      "<div class='adminControlBtns'>"+
-      "<button id='quickGiveItemBtn' class='adminMiniBtn'>Item geben</button>"+
-      "<button id='quickRemoveItemBtn' class='dangerBtn adminMiniBtn'>Item entfernen</button>"+
-      "<button id='quickCreativeBtn' class='adminMiniBtn'>Creative geben</button>"+
-      "<button id='quickAdminBtn' class='adminMiniBtn'>Admin geben</button>"+
-      "<button id='quickGhostBtn' class='ghostBtn adminMiniBtn'>Als Geist rein</button>"+
-      "<button id='quickDeleteBtn' class='dangerBtn adminMiniBtn'>Spieler löschen</button>"+
-      "</div>"+
-      "<div class='small'>Wenn die Karten unten nicht reagieren, benutze diese Schnell-Leiste.</div>";
-
-    setTimeout(()=>{
-      const p=document.getElementById("quickPlayerSelect");
-      const it=document.getElementById("quickItemSelect");
-      const am=document.getElementById("quickItemAmount");
-      const getP=()=>p&&p.value;
-      const getI=()=>it&&it.value;
-      document.getElementById("quickGiveItemBtn")?.addEventListener("click",()=>getP()&&getI()&&adminGiveItemToPlayer(getP(),getI(),am.value));
-      document.getElementById("quickRemoveItemBtn")?.addEventListener("click",()=>getP()&&getI()&&adminRemoveItemFromPlayer(getP(),getI(),am.value));
-      document.getElementById("quickCreativeBtn")?.addEventListener("click",()=>getP()&&adminSetCreative(getP(),true));
-      document.getElementById("quickAdminBtn")?.addEventListener("click",()=>getP()&&adminSetRole(getP(),"admin"));
-      document.getElementById("quickGhostBtn")?.addEventListener("click",()=>getP()&&adminGhostVisit(getP()));
-      document.getElementById("quickDeleteBtn")?.addEventListener("click",()=>getP()&&adminDeletePlayerAccount(getP()));
-    },0);
-    return wrap;
-  }
-
   function renderAdminPlayersList(){
     const box=document.getElementById("adminPlayersList");
     if(!box) return;
@@ -4999,7 +4876,6 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     const showSelf=!!document.getElementById("adminShowSelf")?.checked;
 
     box.innerHTML="";
-    box.appendChild(renderAdminQuickPanel());
 
     let names=Object.keys(accounts || {}).sort((a,b)=>a.localeCompare(b));
 
@@ -5024,7 +4900,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     }
 
     if(names.length===0){
-      box.insertAdjacentHTML("beforeend","<p class='small'>Keine Spieler sichtbar. Suche löschen oder „Spielerliste sofort laden“ klicken. Der Spieler muss einmal mit dieser Version neu einloggen, dann erscheint er sofort.</p>");
+      box.innerHTML="<p class='small'>Keine Spieler sichtbar. Suche löschen oder „Spielerliste sofort laden“ klicken. Der Spieler muss einmal mit dieser Version neu einloggen, dann erscheint er sofort.</p>";
       return;
     }
 
@@ -5118,7 +4994,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         "<input id='itemSearch_"+idx+"' class='adminItemGiveSearch' list='itemDatalist_"+idx+"' placeholder='z.B. diamond, Apfel, Schwert'>"+
         "<datalist id='itemDatalist_"+idx+"'>"+adminItemDatalistHtml()+"</datalist>"+
         "<div id='selectedItemLabel_"+idx+"' class='adminSelectedItemText'>Noch kein Item ausgewählt</div>"+
-        "<details class='adminItemGiveMenu' open><summary>⬇ Alle Items öffnen/schließen</summary><div class='adminItemGiveList' id='adminItemGiveList_"+idx+"'>"+adminItemButtonsHtml(idx)+"</div></details>"+
+        "<details class='adminItemGiveMenu'><summary>⬇ Alle Items öffnen</summary><div class='adminItemGiveList' id='adminItemGiveList_"+idx+"'>"+adminItemButtonsHtml(idx)+"</div></details>"+
         "<label>Anzahl</label><input id='itemAmount_"+idx+"' type='number' min='1' value='10'>"+
         "<div class='adminControlBtns'><button class='adminMiniBtn' id='giveItem_"+idx+"'>Item geben</button><button class='dangerBtn adminMiniBtn' id='removeItem_"+idx+"'>Item entfernen</button></div>";
       controls.appendChild(itemBox);
@@ -6420,12 +6296,10 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       const res = await fetch("/api/state", {cache:"no-store"});
       if(!res.ok) throw new Error("Server antwortet nicht");
       const state = await res.json();
-      mergeDeletedAccountsFromServer(state.deletedAccounts || {});
 
       onlineAccountsCache = filterDeletedAccounts(mergeAccountObjects(getAllKnownAccounts(), normalizeAccounts(state.accounts || {})));
       adminDirectAccountsCache = onlineAccountsCache;
-      onlineServersCache = filterDeletedServersPlayers(state.servers || {});
-      applyServerBlockEvents();
+      onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
       onlineAdminChatCache = setAdminChatCache(Array.isArray(state.adminChat) ? state.adminChat : [], false);
       onlineModsCache = state.mods || defaultMods();
@@ -6483,14 +6357,6 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   }
 
 
-  function mergeDeletedAccountsFromServer(serverDeleted){
-    const local=getDeletedAccountsLocal();
-    Object.keys(serverDeleted||{}).forEach(name=>{
-      if(name!=="admin") local[name]=serverDeleted[name] || Date.now();
-    });
-    saveDeletedAccountsLocal(local);
-  }
-
   function getDeletedAccountsLocal(){
     try{return JSON.parse(localStorage.getItem("safinicraft_deleted_accounts")||"{}")||{};}catch(e){return {};}
   }
@@ -6507,17 +6373,6 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
     if(d[name]) delete d[name];
     saveDeletedAccountsLocal(d);
   }
-  function filterDeletedServersPlayers(servers){
-    const deleted=getDeletedAccountsLocal();
-    const out={...(servers||{})};
-    Object.keys(out).forEach(id=>{
-      const s=out[id]||{};
-      s.players=(s.players||[]).filter(n=>!deleted[n]);
-      out[id]=s;
-    });
-    return out;
-  }
-
   function filterDeletedAccounts(accounts){
     const d=getDeletedAccountsLocal();
     const out={...(accounts||{})};
@@ -6573,7 +6428,9 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         markDeletedAccountLocal(currentUser);
         localStorage.removeItem("safinicraft_current_user");
         msg("Dein Account wurde gelöscht. Erstelle den Spieler neu.");
-        location.href = location.pathname + "?v=deleted";
+        document.body.classList.remove("loggedIn");
+        document.body.classList.add("loggedOut");
+        currentUser=null;
         return false;
       }
 
@@ -6660,12 +6517,11 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
       const res = await fetch("/api/state", {cache:"no-store"});
       if(!res.ok) throw new Error("Server antwortet nicht");
       const state = await res.json();
-      mergeDeletedAccountsFromServer(state.deletedAccounts || {});
 
       const before = new Set(Object.keys(onlineAccountsCache || {}));
 
       onlineAccountsCache = filterDeletedAccounts(mergeAccountObjects(getAllKnownAccounts(), normalizeAccounts(state.accounts || {})));
-      onlineServersCache = filterDeletedServersPlayers(state.servers || {});
+      onlineServersCache = state.servers || {};
       onlineMessagesCache = state.messages || {};
       onlineAdminChatCache = setAdminChatCache(Array.isArray(state.adminChat) ? state.adminChat : [], false);
       onlineModsCache = state.mods || defaultMods();
@@ -6999,6 +6855,12 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
 
   function enterGameAfterLogin(name, account, state){
     currentUser = name;
+    if(name) unmarkDeletedAccountLocal(name);
+
+    const beforeAccounts = getAccounts();
+    beforeAccounts[name] = mergeAccountObjects({[name]:beforeAccounts[name]||{}},{[name]:account||{}})[name];
+    if(!beforeAccounts[name].created) beforeAccounts[name].created = Date.now();
+    saveAccounts(beforeAccounts);
 
     if(state && state.accounts){
       onlineMode = true;
@@ -7126,9 +6988,8 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         onlineMode = true;
 
         if(result.state){
-          mergeDeletedAccountsFromServer(result.state.deletedAccounts || {});
           onlineAccountsCache = normalizeAccounts(result.state.accounts || {});
-          onlineServersCache = filterDeletedServersPlayers(result.state.servers || {});
+          onlineServersCache = result.state.servers || {};
           onlineMessagesCache = result.state.messages || {};
           onlineModsCache = result.state.mods || defaultMods();
           onlineAdminItemsCache = result.state.adminItems || {};
@@ -7144,6 +7005,7 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
         }
 
         if(name.toLowerCase()==="admin"){ adminSessionPassword=pass; adminSessionToken=result.adminToken||adminSessionToken; }
+        if(name) unmarkDeletedAccountLocal(name);
         if(name.toLowerCase()==="admin"){ adminSessionPassword=pass; adminSessionToken=result.adminToken||adminSessionToken; }
         enterGameAfterLogin(name, result.account, result.state);
         return;
@@ -8105,7 +7967,6 @@ function canCraft(r){if(creativeMode)return true;return Object.keys(r.need).ever
   // ADMIN_PLAYER_SYNC_HEARTBEAT
   setInterval(()=>{if(currentUser&&isRealWebsiteMode()){
     announceCurrentAccountToServer(true);
-    refreshServerStateOnly(true);
     refreshAdminChatFromServer(true);
     if(isAdmin()) fetchAdminAccountsDirect(true).then(()=>renderAdminPlayersList());
   }},2000);
